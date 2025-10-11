@@ -1,0 +1,310 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode colors - Professional and clean */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 270 50% 95%;
+    --accent-foreground: 270 50% 20%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 270 50% 80%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark mode colors - Custom theme */
+    --background: 0 0% 7%;  /* #121212 */
+    --foreground: 197 100% 97%;  /* #f3fbff */
+    --card: 0 0% 14%;  /* #232323 */
+    --card-foreground: 197 100% 97%;  /* #f3fbff */
+    --popover: 0 0% 7%;  /* #121212 */
+    --popover-foreground: 197 100% 97%;  /* #f3fbff */
+    --primary: 197 100% 97%;  /* #f3fbff */
+    --primary-foreground: 0 0% 7%;  /* #121212 */
+    --secondary: 0 0% 14%;  /* #232323 */
+    --secondary-foreground: 197 100% 97%;  /* #f3fbff */
+    --muted: 0 0% 14%;  /* #232323 */
+    --muted-foreground: 213 17% 84%;  /* #cbd4e2 - icon unused */
+    --accent: 255 80% 72%;  /* #8d79f3 - icon used */
+    --accent-foreground: 197 100% 97%;  /* #f3fbff */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 197 100% 97%;  /* #f3fbff */
+    --border: 0 0% 14%;  /* #232323 */
+    --input: 0 0% 14%;  /* #232323 */
+    --ring: 255 80% 72%;  /* #8d79f3 - icon used */
+  }
+
+  /* Custom Font */
+  @font-face {
+    font-family: 'Marble Std Text Wide SemiBold';
+    src: url('/fonts/MarbleStdTextWideSemiBold.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  body {
+    font-family: 'Marble Std Text Wide SemiBold', system-ui, sans-serif;
+    @apply bg-background text-foreground;
+    position: relative;
+    min-height: 100vh;
+  }
+}
+
+/* Page transition animations */
+.page-enter {
+  animation: page-enter 0.3s ease forwards;
+}
+
+.page-exit {
+  animation: page-exit 0.3s ease forwards;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Add styles for the modal to ensure it stays fixed in position */
+.fixed-modal {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 9999 !important;
+}
+
+/* Ensure modal overlay is truly fixed */
+.modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  z-index: 1000 !important;
+}
+
+/* Ensure modal content is centered */
+.modal-content {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 1001 !important;
+}
+
+/* Ensure dialog doesn't move with cursor */
+[role="dialog"] {
+  position: fixed !important;
+  pointer-events: auto !important;
+}
+
+/* Fix for nested scrollable content */
+body:has([role="dialog"]),
+body:has(.modal-open) {
+  overflow: hidden !important;
+  position: relative !important;
+  height: 100% !important;
+}
+
+/* Simple modal fixes */
+@media screen and (max-width: 768px) {
+  .fixed {
+    position: fixed !important;
+  }
+}
+
+/* Custom animations */
+@keyframes heartbeat {
+  0% {
+    transform: scale(1);
+  }
+  20% {
+    transform: scale(1.1);
+  }
+  40% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  80% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+@keyframes pulse-soft {
+  0% { box-shadow: 0 0 0 0 rgba(141, 121, 243, 0.3); }  /* #8d79f3 */
+  70% { box-shadow: 0 0 0 10px rgba(141, 121, 243, 0); }  /* #8d79f3 */
+  100% { box-shadow: 0 0 0 0 rgba(141, 121, 243, 0); }  /* #8d79f3 */
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s infinite;
+}
+
+/* Enhanced dark mode styling with improved contrast */
+.dark .glow-text {
+  text-shadow: 0 0 15px rgba(141, 121, 243, 0.5), 0 0 30px rgba(141, 121, 243, 0.3);  /* #8d79f3 */
+}
+
+.dark .glow-effect {
+  box-shadow: 0 0 15px rgba(141, 121, 243, 0.2), 0 0 30px rgba(141, 121, 243, 0.1);  /* #8d79f3 */
+}
+
+/* Card gradients for dark mode with higher contrast */
+.dark .bg-card {
+  background: linear-gradient(to bottom right, hsl(0, 0%, 14%), hsl(0, 0%, 10%));  /* #232323 to #1a1a1a */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Button hover effects in dark mode */
+.dark .hover-glow:hover {
+  box-shadow: 0 0 15px rgba(141, 121, 243, 0.2);  /* #8d79f3 */
+  transform: translateY(-1px);
+  transition: all 0.3s ease;
+}
+
+/* Improved shadows for dark mode - more contrast */
+.dark .shadow-card {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
+/* Gradient text for dark mode with improved contrast */
+.dark .gradient-text {
+  background: linear-gradient(to right, hsl(255, 80%, 72%), hsl(255, 80%, 60%));  /* #8d79f3 to #7a63f2 */
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 600;
+}
+
+/* Transitions for all interactive elements */
+a, button, .card, .btn, .interactive {
+  transition: all 0.25s ease;
+}
+
+/* Hover effects for cards */
+.card:hover, .bg-card:hover {
+  transform: translateY(-2px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Common gradient button style */
+.btn-gradient {
+  @apply bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md hover:from-purple-600 hover:to-indigo-600 transition-all duration-300;
+}
+
+/* Add bottom padding to main content to prevent it from being hidden behind the mobile nav */
+@media (max-width: 640px) {
+  main {
+    padding-bottom: 5rem;
+  }
+}
+
+/* Enhanced scrollbar in dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: hsl(0, 0%, 7%);  /* #121212 */
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(0, 0%, 14%);  /* #232323 */
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(255, 80%, 72%);  /* #8d79f3 */
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+body.modal-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100vw;
+  left: 0;
+  top: 0;
+}
