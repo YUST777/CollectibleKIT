@@ -141,17 +141,13 @@ export const useAppStore = create<AppStore>()(
           const state = get();
           if (state.navigationLevel === 'main') {
             return; // Already at main level
-          } else if (state.currentTertiaryTab) {
-            // Go back from tertiary to secondary
-            set({ currentTertiaryTab: null });
-          } else {
-            // Go back from secondary to main
-            set({ 
-              navigationLevel: 'main', 
-              currentSubTab: null,
-              currentTertiaryTab: null 
-            });
           }
+          // Always go back to main from tools/games level
+          set({ 
+            navigationLevel: 'main', 
+            currentSubTab: 'home',
+            currentTertiaryTab: null 
+          });
         },
         reset: () => set({ ...initialState, isLoading: false, error: null }),
 
