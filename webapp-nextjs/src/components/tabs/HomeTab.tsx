@@ -111,13 +111,13 @@ export const HomeTab: React.FC = () => {
         
         {/* Image on the right side if provided */}
         {image && (
-          <div className="absolute right-0 bottom-0 h-full flex items-end">
+          <div className="absolute right-2 bottom-2 h-[70%] flex items-end">
             <Image
               src={image}
               alt={title}
-              width={120}
-              height={120}
-              className="h-full w-auto object-contain"
+              width={80}
+              height={80}
+              className="h-full w-auto object-contain opacity-90"
               priority
             />
           </div>
