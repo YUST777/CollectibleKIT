@@ -16,3 +16,6 @@ Environment=MINI_APP_URL=https://your-domain.com
 
 [Install]
 WantedBy=multi-user.target
+
+
+

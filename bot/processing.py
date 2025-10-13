@@ -127,3 +127,28 @@ def cut_into_4x3_and_prepare_story_pieces(image: Image.Image, watermark_text: Op
     return outputs
 
 
+def cut_into_3x4_and_prepare_story_pieces(image: Image.Image, watermark_text: Optional[str] = None) -> List[BytesIO]:
+    """Cut an image into 3x4 grid then scale each to 1080x1336 and center
+    on 1080x1920 canvas. Returns in-memory PNGs ready to send to Telegram.
+    If watermark_text is provided, draw it on each story image.
+    """
+
+    rows, cols = 3, 4  # 3 rows, 4 columns (3 pieces per row, 4 rows)
+    pieces = _cut_into_grid(image, rows, cols)
+
+    outputs: List[BytesIO] = []
+    for idx, piece in enumerate(pieces, start=1):
+        scaled = _resize_piece_full_width_and_target_height(piece)
+        story_img = _center_on_story_canvas(scaled)
+        if watermark_text:
+            story_img = _draw_watermark(story_img, watermark_text)
+        bio = BytesIO()
+        story_img.save(bio, format="PNG")
+        bio.seek(0)
+        outputs.append(bio)
+    
+    # Don't reverse - keep natural top-to-bottom order
+    # The numbering will be handled in telegram_bot.py to show decreasing numbers
+    return outputs
+
+

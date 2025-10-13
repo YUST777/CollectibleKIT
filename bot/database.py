@@ -59,6 +59,45 @@ class BotDatabase:
                 )
             """)
             
+            # Daily game tables
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS daily_game_questions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT,
+                    time_slot TEXT,
+                    question_type TEXT,
+                    question_data TEXT,
+                    created_at REAL,
+                    UNIQUE(date, time_slot)
+                )
+            """)
+            
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS daily_game_solves (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    date TEXT,
+                    time_slot TEXT,
+                    answer TEXT,
+                    is_first_solver BOOLEAN DEFAULT 0,
+                    solved_at REAL DEFAULT 0,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id)
+                )
+            """)
+            
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS daily_game_rewards (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    date TEXT,
+                    time_slot TEXT,
+                    amount REAL,
+                    tx_hash TEXT,
+                    paid_at REAL DEFAULT 0,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id)
+                )
+            """)
+            
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS sales (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,6 +132,21 @@ class BotDatabase:
                     session_end REAL DEFAULT NULL,
                     interactions_count INTEGER DEFAULT 0,
                     FOREIGN KEY (user_id) REFERENCES users (user_id)
+                )
+            """)
+            
+            # Referrals table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS referrals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    referrer_id INTEGER NOT NULL,
+                    invited_id INTEGER NOT NULL,
+                    invited_name TEXT DEFAULT '',
+                    invited_photo TEXT DEFAULT '',
+                    created_at REAL NOT NULL,
+                    FOREIGN KEY (referrer_id) REFERENCES users (user_id),
+                    FOREIGN KEY (invited_id) REFERENCES users (user_id),
+                    UNIQUE(referrer_id, invited_id)
                 )
             """)
             
@@ -345,3 +399,180 @@ class BotDatabase:
                 'free_requests': request_breakdown['free_requests'],
                 'paid_requests': request_breakdown['paid_requests']
             }
+    
+    # ========================================
+    # Daily Game Methods
+    # ========================================
+    
+    def get_daily_game_solvers(self, date, time_slot):
+        """Get count of solvers for a specific daily game question"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM daily_game_solves 
+                WHERE date = ? AND time_slot = ?
+            """, (str(date), time_slot))
+            return cursor.fetchone()[0]
+    
+    def check_user_solved_daily_question(self, user_id, date, time_slot):
+        """Check if user already solved today's question"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM daily_game_solves 
+                WHERE user_id = ? AND date = ? AND time_slot = ?
+            """, (user_id, str(date), time_slot))
+            return cursor.fetchone()[0] > 0
+    
+    def is_first_solver_daily_question(self, date, time_slot):
+        """Check if this would be the first solver for today's question"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM daily_game_solves 
+                WHERE date = ? AND time_slot = ? AND is_first_solver = 1
+            """, (str(date), time_slot))
+            return cursor.fetchone()[0] == 0
+    
+    def record_daily_game_solve(self, user_id, date, time_slot, answer, is_first_solver=False):
+        """Record a daily game solve"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO daily_game_solves (user_id, date, time_slot, answer, is_first_solver, solved_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (user_id, str(date), time_slot, answer, is_first_solver, time.time()))
+            conn.commit()
+    
+    def record_daily_game_reward(self, user_id, date, time_slot, amount, tx_hash=None):
+        """Record a daily game reward payment"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO daily_game_rewards (user_id, date, time_slot, amount, tx_hash, paid_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (user_id, str(date), time_slot, amount, tx_hash, time.time()))
+            conn.commit()
+    
+    def get_user_daily_game_stats(self, user_id):
+        """Get user's daily game statistics"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Total solves
+            cursor.execute("SELECT COUNT(*) as total_solves FROM daily_game_solves WHERE user_id = ?", (user_id,))
+            total_solves = cursor.fetchone()['total_solves']
+            
+            # First solver wins
+            cursor.execute("SELECT COUNT(*) as first_solves FROM daily_game_solves WHERE user_id = ? AND is_first_solver = 1", (user_id,))
+            first_solves = cursor.fetchone()['first_solves']
+            
+            # Total rewards earned
+            cursor.execute("SELECT SUM(amount) as total_rewards FROM daily_game_rewards WHERE user_id = ?", (user_id,))
+            total_rewards = cursor.fetchone()['total_rewards'] or 0
+            
+            return {
+                'total_solves': total_solves,
+                'first_solves': first_solves,
+                'total_rewards': total_rewards
+            }
+    
+    def get_user_ton_balance(self, user_id):
+        """Get user's total TON balance from all rewards"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COALESCE(SUM(amount), 0) as total_balance 
+                FROM daily_game_rewards 
+                WHERE user_id = ? AND tx_hash IS NULL
+            """, (user_id,))
+            result = cursor.fetchone()
+            return result[0] if result else 0.0
+    
+    def withdraw_user_ton(self, user_id, amount):
+        """Mark TON rewards as withdrawn (set tx_hash to indicate withdrawal)"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Get unredeemed rewards
+            cursor.execute("""
+                SELECT id, amount FROM daily_game_rewards 
+                WHERE user_id = ? AND tx_hash IS NULL 
+                ORDER BY paid_at ASC
+            """, (user_id,))
+            rewards = cursor.fetchall()
+            
+            remaining_amount = amount
+            for reward_id, reward_amount in rewards:
+                if remaining_amount <= 0:
+                    break
+                
+                # Mark this reward as withdrawn
+                cursor.execute("""
+                    UPDATE daily_game_rewards 
+                    SET tx_hash = 'withdrawn' 
+                    WHERE id = ?
+                """, (reward_id,))
+                
+                remaining_amount -= reward_amount
+            
+            conn.commit()
+            
+            # Return new balance
+            return self.get_user_ton_balance(user_id)
+    
+    def add_referral(self, referrer_id: int, invited_id: int, invited_name: str, invited_photo: str) -> bool:
+        """Add a referral record"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    INSERT OR IGNORE INTO referrals (referrer_id, invited_id, invited_name, invited_photo, created_at) 
+                    VALUES (?, ?, ?, ?, ?)
+                """, (referrer_id, invited_id, invited_name, invited_photo, time.time()))
+                conn.commit()
+                logger.info(f"✅ Added referral: {invited_id} referred by {referrer_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error adding referral: {e}")
+            return False
+    
+    def get_invited_users(self, referrer_id: int) -> list:
+        """Get all users invited by a referrer"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT invited_id, invited_name, invited_photo, created_at 
+                    FROM referrals 
+                    WHERE referrer_id = ? 
+                    ORDER BY created_at DESC
+                """, (referrer_id,))
+                return cursor.fetchall()
+        except Exception as e:
+            logger.error(f"Error getting invited users: {e}")
+            return []
+    
+    def get_referral_stats(self, referrer_id: int) -> dict:
+        """Get referral statistics for a user"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                # Total referrals
+                cursor = conn.execute("""
+                    SELECT COUNT(*) FROM referrals WHERE referrer_id = ?
+                """, (referrer_id,))
+                total_referrals = cursor.fetchone()[0]
+                
+                # Recent referrals (last 7 days)
+                week_ago = time.time() - (7 * 24 * 60 * 60)
+                cursor = conn.execute("""
+                    SELECT COUNT(*) FROM referrals WHERE referrer_id = ? AND created_at > ?
+                """, (referrer_id, week_ago))
+                recent_referrals = cursor.fetchone()[0]
+                
+                return {
+                    'total_referrals': total_referrals,
+                    'recent_referrals': recent_referrals
+                }
+        except Exception as e:
+            logger.error(f"Error getting referral stats: {e}")
+            return {'total_referrals': 0, 'recent_referrals': 0}

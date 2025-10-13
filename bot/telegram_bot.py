@@ -85,11 +85,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     username = update.effective_user.username
     first_name = update.effective_user.first_name
     
+    # Handle referral parameters
+    start_param = context.args[0] if context.args else None
+    if start_param and start_param.startswith('ref_'):
+        try:
+            referrer_id = int(start_param.replace('ref_', ''))
+            if referrer_id and referrer_id != user_id:
+                logger.info(f"🔗 Processing referral: {user_id} referred by {referrer_id}")
+                
+                # Record referral in database
+                db.add_referral(
+                    referrer_id=referrer_id,
+                    invited_id=user_id,
+                    invited_name=f"{first_name} {update.effective_user.last_name or ''}".strip() or f"User {user_id}",
+                    invited_photo=update.effective_user.photo.small_file_id if update.effective_user.photo else ''
+                )
+                
+                logger.info(f"✅ Referral processed successfully: {user_id} referred by {referrer_id}")
+        except (ValueError, Exception) as e:
+            logger.error(f"Error processing referral: {e}")
+    
     # Get or create user record and record start interaction
     user = db.get_user(user_id, username, first_name)
     db.record_interaction(user_id, "start", json.dumps({
         "username": username,
-        "first_name": first_name
+        "first_name": first_name,
+        "start_param": start_param
     }))
     
     # Create keyboard with Mini App button and inline buttons

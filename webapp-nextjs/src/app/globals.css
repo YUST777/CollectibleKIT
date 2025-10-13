@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+@layer base {
+  * {
+    @apply border-gray-600;
+  }
+  
+  body {
+    @apply bg-bg-main text-text-idle font-sans;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  html {
+    height: 100%;
+    height: var(--tg-viewport-height, 100vh);
+  }
+}
+
+/* Component styles */
+@layer components {
+  .tg-button {
+    @apply px-6 py-3 rounded-lg font-medium cursor-pointer transition-all duration-200 min-h-[44px] inline-flex items-center justify-center no-underline;
+  }
+
+  .tg-button-primary {
+    @apply bg-icon-active text-icon-white hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .tg-button-secondary {
+    @apply bg-box-bg text-text-idle border border-icon-idle hover:bg-icon-idle/20;
+  }
+
+  .tg-button-danger {
+    @apply bg-red-600 text-icon-white;
+  }
+
+  .tg-card {
+    @apply bg-box-bg rounded-xl p-4 border border-icon-idle/30;
+  }
+
+  .tg-input {
+    @apply w-full px-4 py-3 bg-box-bg border border-icon-idle/50 rounded-lg text-text-idle text-base transition-colors duration-300 focus:outline-none focus:border-icon-active;
+  }
+
+  .tg-input::placeholder {
+    @apply text-icon-idle opacity-60;
+  }
+
+  .tg-modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/70;
+  }
+
+  .tg-modal-content {
+    @apply bg-box-bg rounded-2xl p-6 max-w-md w-[90%] max-h-[90vh] overflow-y-auto relative animate-slide-up;
+  }
+
+  .tg-nav-button {
+    @apply flex-1 flex flex-col items-center justify-center p-2 bg-transparent border-none text-icon-idle cursor-pointer transition-all duration-300 relative;
+  }
+
+  .tg-nav-button.active {
+    @apply text-icon-active;
+  }
+
+  .tg-nav-button.active::before {
+    @apply content-[''] absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-icon-active rounded-none;
+  }
+
+  .loading-spinner {
+    @apply w-10 h-10 border-2 border-icon-idle/30 border-t-icon-active rounded-full animate-spin mx-auto mb-4;
+  }
+
+  .fade-in {
+    @apply animate-fade-in;
+  }
+
+  .slide-up {
+    @apply animate-slide-up;
+  }
+
+  .slide-down {
+    @apply animate-slide-down;
+  }
+}
+
+/* Utility styles */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceGentle {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-10px); }
+}
+
+/* Telegram WebApp specific */
+.tg-viewport {
+  height: 100vh;
+  height: var(--tg-viewport-height, 100vh);
+}
+
+/* Safe area support */
+.safe-area-top {
+  padding-top: max(60px, env(safe-area-inset-top, 60px));
+}
+
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+
+  /* Collection Tab Styles */
+  .gift-slot {
+    @apply aspect-square min-h-[110px] max-h-[120px];
+  }
+
+  .gift-preview-card {
+    @apply w-full h-full bg-box-bg rounded-lg border border-icon-idle/20 overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-icon-active/20;
+  }
+
+  .gift-preview-placeholder {
+    @apply w-full h-full flex flex-col items-center justify-center text-icon-idle/60 space-y-2;
+  }
+
+  .gift-preview-content {
+    @apply w-full h-full relative;
+  }
+
+  .gift-canvas {
+    @apply w-full h-full object-cover;
+  }
+
+  .gift-info {
+    @apply absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent text-white p-3 text-xs space-y-1;
+  }
+
+  .gift-name {
+    @apply font-semibold block truncate text-sm;
+  }
+
+  .gift-backdrop {
+    @apply text-xs opacity-80 block;
+  }
+
+  /* Telegram-style gift card effects */
+  .gift-preview-card:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(24, 144, 255, 0.2);
+  }
+
+  .gift-preview-card:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* Filter Modal Styles */
+  .filter-option-item {
+    @apply flex items-center p-3 rounded-lg border border-icon-idle/30 hover:bg-box-bg/50 cursor-pointer transition-colors;
+  }
+
+  .filter-option-item.selected {
+    @apply bg-icon-active/10 border-icon-active;
+  }
