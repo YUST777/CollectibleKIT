@@ -124,16 +124,11 @@ export const HomeTab: React.FC = () => {
         )}
         
         <div className={`flex ${getLayoutClasses()} relative z-10 h-full`}>
-          <div className="flex items-center gap-3">
-            <div className={`${getIconSize()} rounded-lg bg-black/15 flex items-center justify-center text-white`}>
-              {icon}
-            </div>
-            <div>
-              <div className={`text-white font-semibold ${getTextSize()} leading-tight`}>{title}</div>
-              {subtitle && (
-                <div className="text-white/80 text-xs mt-0.5">{subtitle}</div>
-              )}
-            </div>
+          <div>
+            <div className={`text-white font-semibold ${getTextSize()} leading-tight`}>{title}</div>
+            {subtitle && (
+              <div className="text-white/80 text-xs mt-0.5">{subtitle}</div>
+            )}
           </div>
           <div className={`${size === 'horizontal' ? 'ml-auto' : 'mt-auto'}`}>
             <span className="inline-flex items-center bg-white/90 text-gray-900 text-xs font-medium px-3 py-1 rounded-lg">
@@ -190,13 +185,13 @@ export const HomeTab: React.FC = () => {
           image="/story-box.png"
         />
 
-        {/* Bottom row: 1 large vertical box - Collection (Cyan Blue) */}
+        {/* Bottom row: 1 large vertical box - Collection (Black) */}
         <Widget 
           title="Collection" 
           subtitle="Design & share"
           icon={<GiftIcon className="w-8 h-8 text-white" />} 
           onClick={goCollection} 
-          gradient="bg-gradient-to-br from-cyan-400 via-[#0bb3fe] to-blue-500" 
+          gradient="bg-gradient-to-br from-gray-900 via-gray-800 to-black" 
           cta="Open Designer"
           size="vertical"
           image="/collection-box.png"
