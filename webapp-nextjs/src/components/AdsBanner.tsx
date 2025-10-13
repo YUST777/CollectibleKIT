@@ -20,11 +20,11 @@ export const AdsBanner: React.FC = () => {
         {/* Content container */}
         <div className="relative flex items-center justify-between h-full px-4">
           {/* Left side - Text content */}
-          <div className="flex flex-col justify-center space-y-1">
-            <h3 className="text-white font-bold text-xl leading-tight">
+          <div className="flex flex-col items-center space-y-0.5">
+            <h3 className="text-white font-bold text-xl leading-tight text-center">
               Put your ad here
             </h3>
-            <p className="text-yellow-100 text-sm font-medium">
+            <p className="text-yellow-100 text-xs font-medium text-center">
               Channels, projects, products
             </p>
           </div>
