@@ -9,47 +9,51 @@ export const AdsBanner: React.FC = () => {
 
   return (
     <div 
-      className="mb-3 mx-4 relative overflow-hidden rounded-xl cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
+      className="mb-3 mx-4 relative overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
       onClick={handleAdClick}
     >
-      {/* Golden gradient background */}
-      <div className="bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 p-4 rounded-xl relative">
-        {/* Subtle pattern overlay */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-2 left-2 w-2 h-2 bg-white rounded-full"></div>
-          <div className="absolute top-4 left-6 w-1 h-1 bg-white rounded-full"></div>
-          <div className="absolute bottom-2 right-2 w-2 h-2 bg-white rounded-full"></div>
-          <div className="absolute bottom-4 right-6 w-1 h-1 bg-white rounded-full"></div>
-        </div>
+      {/* Golden gradient background - slim design */}
+      <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-600 p-3 rounded-full relative h-16">
+        {/* White light effect overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-white/40 rounded-full"></div>
         
         {/* Content container */}
-        <div className="relative flex items-center justify-between h-20">
+        <div className="relative flex items-center justify-between h-full">
           {/* Left side - Text content */}
-          <div className="flex flex-col justify-center space-y-1">
-            <h3 className="text-white font-bold text-xl leading-tight">
+          <div className="flex flex-col justify-center space-y-0.5 ml-2">
+            <h3 className="text-white font-bold text-lg leading-tight">
               Put your ad here
             </h3>
-            <p className="text-yellow-100 text-sm font-medium">
+            <p className="text-yellow-100 text-xs font-medium">
               Channels, projects, products
             </p>
           </div>
           
-          {/* Right side - Duck element */}
-          <div className="flex-shrink-0">
+          {/* Middle - Check now button */}
+          <button className="bg-white text-yellow-600 px-4 py-1.5 rounded-full font-semibold text-sm hover:bg-yellow-50 transition-colors">
+            Check now!
+          </button>
+          
+          {/* Right side - Duck element with white light effect */}
+          <div className="flex-shrink-0 relative">
+            {/* White light glow effect around duck */}
+            <div className="absolute inset-0 bg-white/30 rounded-full blur-sm scale-110"></div>
+            <div className="absolute inset-0 bg-white/20 rounded-full blur-md scale-125"></div>
+            
             <Image
               src="/adno1element.png"
               alt="Duck with megaphone"
-              width={80}
-              height={80}
-              className="w-20 h-20 object-contain"
+              width={60}
+              height={60}
+              className="w-15 h-15 object-contain relative z-10"
               priority
             />
           </div>
         </div>
         
-        {/* Subtle sparkle effects */}
-        <div className="absolute top-3 right-16 text-yellow-200 opacity-60 text-lg">✨</div>
-        <div className="absolute bottom-3 left-16 text-yellow-200 opacity-60 text-lg">⭐</div>
+        {/* Additional sparkle effects */}
+        <div className="absolute top-2 right-20 text-white/60 text-sm">✨</div>
+        <div className="absolute bottom-2 left-20 text-white/60 text-sm">⭐</div>
       </div>
     </div>
   );
