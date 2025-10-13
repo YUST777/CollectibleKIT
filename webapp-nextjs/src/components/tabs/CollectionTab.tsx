@@ -49,315 +49,157 @@ export const CollectionTab: React.FC = () => {
   // Load initial data with caching
   useEffect(() => {
     const loadInitialData = async () => {
-      setIsLoading(true);
       try {
-        console.log('🔄 Loading collection data...');
+        setIsLoading(true);
         
-        // Load gifts and backdrops in parallel using cache with timeout
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Request timeout')), 10000)
-        );
-        
-        const dataPromise = Promise.all([
-          cacheUtils.getGifts(),
-          cacheUtils.getBackdrops(),
+        // Create timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout')), 10000);
+        });
+
+        // Load data with timeout
+        const [giftsData, backdropsData] = await Promise.race([
+          Promise.all([
+            cacheUtils.getGifts(),
+            cacheUtils.getBackdrops()
+          ]),
+          timeoutPromise
+        ]) as [any, any];
+
+        setGifts(giftsData || [
+          { name: 'Duck', models: [] },
+          { name: 'Cat', models: [] },
+          { name: 'Dog', models: [] },
+          { name: 'Rabbit', models: [] },
+          { name: 'Bear', models: [] }
         ]);
-
-        const [giftsData, backdropsData] = await Promise.race([dataPromise, timeoutPromise]) as [string[], any[]];
-
-        setGifts(giftsData.map((name: string) => ({ name })));
-        setBackdrops(backdropsData);
+        setBackdrops(backdropsData || [
+          { name: 'Blue', color: '#3B82F6' },
+          { name: 'Purple', color: '#8B5CF6' },
+          { name: 'Pink', color: '#EC4899' },
+          { name: 'Green', color: '#10B981' },
+          { name: 'Orange', color: '#F59E0B' }
+        ]);
         
-        console.log('✅ Collection data loaded successfully');
+        // Load models and patterns for each gift
+        const modelsPromises = giftsData?.map(async (gift: any) => {
+          try {
+            const modelsResponse = await fetch(`/api/collection/gifts/${gift.name}/models`);
+            const modelsData = await modelsResponse.json();
+            return { giftName: gift.name, models: modelsData.models || [] };
+          } catch (error) {
+            console.error(`Error loading models for ${gift.name}:`, error);
+            return { giftName: gift.name, models: [] };
+          }
+        }) || [];
+
+        const modelsResults = await Promise.all(modelsPromises);
+        const modelsMap: { [key: string]: GiftModel[] } = {};
+        modelsResults.forEach(result => {
+          modelsMap[result.giftName] = result.models;
+        });
+        setGiftModels(modelsMap);
+
+        // Load patterns for each gift
+        const patternsPromises = giftsData?.map(async (gift: any) => {
+          try {
+            const patternsResponse = await fetch(`/api/collection/gifts/${gift.name}/patterns`);
+            const patternsData = await patternsResponse.json();
+            return { giftName: gift.name, patterns: patternsData.patterns || [] };
+          } catch (error) {
+            console.error(`Error loading patterns for ${gift.name}:`, error);
+            return { giftName: gift.name, patterns: [] };
+          }
+        }) || [];
+
+        const patternsResults = await Promise.all(patternsPromises);
+        const patternsMap: { [key: string]: Pattern[] } = {};
+        patternsResults.forEach(result => {
+          patternsMap[result.giftName] = result.patterns;
+        });
+        setPatterns(patternsMap);
+
       } catch (error) {
-        console.error('❌ Error loading collection data:', error);
-        
-        // Provide fallback data to prevent infinite loading
-        console.log('🔄 Using fallback data...');
-        setGifts([
-          { name: 'Duck' },
-          { name: 'Cat' },
-          { name: 'Dog' },
-          { name: 'Rabbit' },
-          { name: 'Bear' }
-        ]);
-        
-        setBackdrops([
-          { name: 'Blue', hex: { centerColor: '#3b82f6', edgeColor: '#1e40af' } },
-          { name: 'Purple', hex: { centerColor: '#8b5cf6', edgeColor: '#5b21b6' } },
-          { name: 'Pink', hex: { centerColor: '#ec4899', edgeColor: '#be185d' } },
-          { name: 'Green', hex: { centerColor: '#10b981', edgeColor: '#047857' } },
-          { name: 'Orange', hex: { centerColor: '#f59e0b', edgeColor: '#d97706' } }
-        ]);
-        
+        console.error('Error loading initial data:', error);
         toast.error('Using offline mode - limited features available');
+        
+        // Fallback data
+        setGifts([
+          { name: 'Duck', models: [] },
+          { name: 'Cat', models: [] },
+          { name: 'Dog', models: [] },
+          { name: 'Rabbit', models: [] },
+          { name: 'Bear', models: [] }
+        ]);
+        setBackdrops([
+          { name: 'Blue', color: '#3B82F6' },
+          { name: 'Purple', color: '#8B5CF6' },
+          { name: 'Pink', color: '#EC4899' },
+          { name: 'Green', color: '#10B981' },
+          { name: 'Orange', color: '#F59E0B' }
+        ]);
       } finally {
         setIsLoading(false);
       }
     };
+
     loadInitialData();
-    
-    // Load saved collections
-    loadCollections();
-  }, [setGifts, setBackdrops, loadCollections]);
+  }, [setGifts, setBackdrops, setGiftModels, setPatterns]);
 
-  // Load models when a gift is selected with caching
+  // Load models when gift is selected
   useEffect(() => {
-    const loadModels = async () => {
-      if (selectedGiftName) {
-        try {
-          console.log(`🔄 Loading models for ${selectedGiftName}...`);
-          
-          // Load model data first (text/metadata)
-          const modelsData = await cacheUtils.getGiftModels(selectedGiftName);
-          setGiftModels(selectedGiftName, modelsData);
-          setModels(modelsData);
-          
-          console.log(`✅ Loaded ${modelsData.length} models for ${selectedGiftName}`);
-          
-          // Preload images in the background
-          setIsPreloadingImages(true);
-          const imageUrls = modelsData.slice(0, 10).map(model => 
-            `https://cdn.changes.tg/gifts/models/${encodeURIComponent(selectedGiftName)}/png/${encodeURIComponent(model.name)}.png`
-          );
-          
-          try {
-            await cacheUtils.preloadImages(imageUrls);
-            console.log('✅ Preloaded first 10 model images');
-          } catch (error) {
-            console.log('⚠️ Some images failed to preload:', error);
-          } finally {
-            setIsPreloadingImages(false);
-          }
-        } catch (error) {
-          console.error(`❌ Error loading models for ${selectedGiftName}:`, error);
-          toast.error('Failed to load models.');
-        }
-      } else {
-        setModels([]);
-      }
-    };
-    loadModels();
-  }, [selectedGiftName, setGiftModels]);
-
-  // Load patterns when a gift is selected with caching
-  useEffect(() => {
-    const loadPatterns = async () => {
-      if (selectedGiftName) {
-        try {
-          console.log(`🎨 Loading patterns for ${selectedGiftName}...`);
-          
-          // Load pattern data first (text/metadata)
-          const patternsData = await cacheUtils.getGiftPatterns(selectedGiftName);
-          
-          // Store in global state
-          setPatterns(selectedGiftName, patternsData);
-          
-          // Also set in local state for immediate use
-          setLocalPatterns(patternsData);
-          
-          console.log(`✅ Loaded ${patternsData.length} patterns for ${selectedGiftName}`);
-          console.log('🎨 First few patterns:', patternsData.slice(0, 5));
-        } catch (error) {
-          console.error(`❌ Error loading patterns for ${selectedGiftName}:`, error);
-          toast.error('Failed to load patterns.');
-          setLocalPatterns([]);
-        }
-      } else {
-        setLocalPatterns([]);
-      }
-    };
-    loadPatterns();
-  }, [selectedGiftName, setPatterns]);
-
-  // Debug: Track userDesigns state changes
-  useEffect(() => {
-    console.log('🔄 CollectionTab: userDesigns state changed', {
-      userDesigns,
-      slotCount: Object.keys(userDesigns).length,
-      slots: Object.keys(userDesigns).map(key => ({ slot: key, hasDesign: !!userDesigns[parseInt(key)] }))
-    });
-  }, [userDesigns]);
-
-  // Load collections on mount
-  useEffect(() => {
-    loadCollections();
-  }, []);
-
-  // Load patterns when switching to Ideas view
-  useEffect(() => {
-    if (showIdeas && publicCollections.length > 0) {
-      // Load patterns for all unique gift names in public collections
-      const uniqueGiftNames = Array.from(new Set(publicCollections.flatMap(c => 
-        c.designs.map((d: GiftDesign) => d.giftName)
-      )));
-      
-      uniqueGiftNames.forEach(giftName => {
-        if (!localPatterns[giftName] || !Array.isArray(localPatterns[giftName]) || localPatterns[giftName].length === 0) {
-          // Load patterns for this gift name
-          fetch(`/api/collection/gifts/${encodeURIComponent(giftName)}/patterns`)
-            .then(response => response.json())
-            .then(data => {
-              if (data.patterns) {
-                setLocalPatterns(prev => ({
-                  ...prev,
-                  [giftName]: data.patterns
-                }));
-              }
-            })
-            .catch(error => console.error('Error loading patterns:', error));
-        }
-      });
+    if (selectedGiftName && giftModels[selectedGiftName]) {
+      setModels(giftModels[selectedGiftName]);
     }
-  }, [showIdeas, publicCollections]);
+  }, [selectedGiftName, giftModels]);
+
+  // Load patterns when gift is selected
+  useEffect(() => {
+    if (selectedGiftName && patterns[selectedGiftName]) {
+      setLocalPatterns(patterns[selectedGiftName]);
+    }
+  }, [selectedGiftName, patterns]);
+
+  // Preload images when models change
+  useEffect(() => {
+    if (models.length > 0) {
+      preloadImages();
+    }
+  }, [models]);
+
+  const preloadImages = async () => {
+    setIsPreloadingImages(true);
+    try {
+      const imagePromises = models.map(async (model) => {
+        const img = new Image();
+        img.src = `https://cdn.changes.tg/gifts/${selectedGiftName}/${model.name}.png`;
+        return img;
+      });
+      await Promise.all(imagePromises);
+    } catch (error) {
+      console.error('Error preloading images:', error);
+    } finally {
+      setIsPreloadingImages(false);
+    }
+  };
 
   const updateGridSize = (newSize: number) => {
-    console.log('📐 Updating grid size:', {
-      oldSize: gridSize,
-      newSize,
-      currentDesigns: userDesigns
-    });
-    
     setGridSize(newSize);
-    // Clear designs that exceed the new grid size
-    const newDesigns: Record<number, GiftDesign> = {};
-    for (let i = 1; i <= newSize; i++) {
-      if (userDesigns[i]) {
-        newDesigns[i] = userDesigns[i];
-      }
-    }
-    
-    console.log('📐 Filtered designs for new grid size:', {
-      newDesigns,
-      removedDesigns: Object.keys(userDesigns).filter(key => parseInt(key) > newSize)
-    });
-    
-    setUserDesigns(newDesigns);
+    hapticFeedback('impact', 'light');
   };
 
-  const openGiftDesigner = (slotNumber: number) => {
+  const openDesigner = (slotNumber: number) => {
     setCurrentSlot(slotNumber);
-    const existingDesign = userDesigns[slotNumber];
-    if (existingDesign) {
-      setCurrentDesign(existingDesign);
-      setSelectedGiftName(existingDesign.giftName);
-      setSelectedModelNumber(existingDesign.modelNumber);
-      setSelectedBackdropIndex(existingDesign.backdropIndex);
-      setSelectedPatternIndex(existingDesign.patternIndex || null);
-    } else {
-      setCurrentDesign(null);
-      setSelectedGiftName(null);
-      setSelectedModelNumber(null);
-      setSelectedBackdropIndex(null);
-      setSelectedPatternIndex(null);
-    }
+    setCurrentDesign(userDesigns[slotNumber] || null);
+    setSelectedGiftName(userDesigns[slotNumber]?.giftName || null);
+    setSelectedModelNumber(userDesigns[slotNumber]?.modelNumber || null);
+    setSelectedBackdropIndex(userDesigns[slotNumber]?.backdropIndex || null);
+    setSelectedPatternIndex(userDesigns[slotNumber]?.patternIndex || null);
     setIsDesignerOpen(true);
+    hapticFeedback('impact', 'medium');
   };
 
-  const openFilterModal = (filterType: 'gift' | 'model' | 'backdrop' | 'pattern') => {
-    setCurrentFilterType(filterType);
-    
-    if (filterType === 'gift') {
-      setCurrentFilterData(gifts.map(gift => ({ name: gift.name, type: 'gift' as const })));
-    } else if (filterType === 'model') {
-      setCurrentFilterData(models.map(model => ({ 
-        name: model.name, 
-        type: 'model' as const, 
-        number: model.number || 0
-      })));
-    } else if (filterType === 'backdrop') {
-      setCurrentFilterData(backdrops.map((backdrop, index) => ({ 
-        name: backdrop.name, 
-        type: 'backdrop' as const, 
-        index, 
-        hex: backdrop.hex 
-      })));
-    } else if (filterType === 'pattern') {
-      console.log('🎨 Opening pattern filter with patterns:', localPatterns);
-      setCurrentFilterData(localPatterns.map((pattern, index) => ({ 
-        name: pattern.name, 
-        type: 'pattern' as const, 
-        index, 
-        rarityPermille: pattern.rarityPermille 
-      })));
-    }
-    
-    setIsFilterModalOpen(true);
-  };
-
-  const closeFilterModal = () => {
-    setIsFilterModalOpen(false);
-    setCurrentFilterType(null);
-    setCurrentFilterData([]);
-  };
-
-  const selectFilterOption = (item: FilterOption) => {
-    if (currentFilterType === 'gift') {
-      setSelectedGiftName(item.name);
-      setCurrentDesign(prev => ({ 
-        giftName: item.name, 
-        modelNumber: prev?.modelNumber || 0, 
-        backdropIndex: prev?.backdropIndex || 0,
-        backdropName: prev?.backdropName || ''
-      }));
-      setSelectedModelNumber(null);
-      setModels([]);
-    } else if (currentFilterType === 'model' && item.number !== undefined) {
-      setSelectedModelNumber(item.number);
-      setCurrentDesign(prev => ({ 
-        giftName: prev?.giftName || '', 
-        modelNumber: item.number || 0, 
-        backdropIndex: prev?.backdropIndex || 0,
-        backdropName: prev?.backdropName || ''
-      }));
-    } else if (currentFilterType === 'backdrop' && item.index !== undefined) {
-      setSelectedBackdropIndex(item.index);
-      setCurrentDesign(prev => ({ 
-        giftName: prev?.giftName || '', 
-        modelNumber: prev?.modelNumber || 0, 
-        backdropIndex: item.index || 0,
-        backdropName: prev?.backdropName || '',
-        patternIndex: prev?.patternIndex,
-        patternName: prev?.patternName
-      }));
-    } else if (currentFilterType === 'pattern' && item.index !== undefined) {
-      setSelectedPatternIndex(item.index);
-      setCurrentDesign(prev => ({ 
-        giftName: prev?.giftName || '', 
-        modelNumber: prev?.modelNumber || 0, 
-        backdropIndex: prev?.backdropIndex || 0,
-        backdropName: prev?.backdropName || '',
-        patternIndex: item.index || 0,
-        patternName: item.name
-      }));
-    }
-    
-    closeFilterModal();
-  };
-
-  const saveGiftDesign = () => {
-    if (currentSlot && selectedGiftName && selectedModelNumber && selectedBackdropIndex !== null) {
-      const newDesign: GiftDesign = {
-        giftName: selectedGiftName,
-        modelNumber: selectedModelNumber,
-        backdropIndex: selectedBackdropIndex,
-        backdropName: backdrops[selectedBackdropIndex]?.name || '',
-        patternIndex: selectedPatternIndex || undefined,
-        patternName: selectedPatternIndex !== null ? localPatterns[selectedPatternIndex]?.name : undefined
-      };
-      
-      console.log('💾 Saving gift design:', {
-        slot: currentSlot,
-        design: newDesign,
-        currentDesigns: userDesigns
-      });
-      
-      setGiftDesign(currentSlot, newDesign);
-      setIsDesignerOpen(false);
-    }
-  };
-
-  const closeGiftDesigner = () => {
+  const closeDesigner = () => {
     setIsDesignerOpen(false);
     setCurrentSlot(null);
     setCurrentDesign(null);
@@ -369,117 +211,34 @@ export const CollectionTab: React.FC = () => {
     setLocalPatterns([]);
   };
 
-  const handleSaveCollection = async () => {
-    if (!collectionName.trim()) {
-      toast.error('Please enter a collection name');
+  const saveDesign = () => {
+    if (currentSlot === null || !selectedGiftName || selectedModelNumber === null || selectedBackdropIndex === null || selectedPatternIndex === null) {
+      toast.error('Please select all design elements');
       return;
     }
 
-    // Convert userDesigns to array
-    const designs = Object.values(userDesigns);
-    
-    if (designs.length === 0) {
-      toast.error('No designs to save');
-      return;
-    }
+    const newDesign: GiftDesign = {
+      giftName: selectedGiftName,
+      modelNumber: selectedModelNumber,
+      backdropIndex: selectedBackdropIndex,
+      patternIndex: selectedPatternIndex,
+    };
 
-    try {
-      const success = await saveCollection(collectionName.trim(), designs, isPublic);
-      
-      if (success) {
-        const message = isPublic 
-          ? 'Collection saved and shared publicly! 🌟' 
-          : 'Collection saved successfully!';
-        toast.success(message);
-        setIsSaveModalOpen(false);
-        setCollectionName('');
-        setIsPublic(false);
-      }
-    } catch (error) {
-      console.error('Save collection error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save collection';
-      toast.error(errorMessage);
-    }
+    setGiftDesign(currentSlot, newDesign);
+    toast.success('Design saved!');
+    closeDesigner();
+    hapticFeedback('notification', 'success');
   };
 
-  const handleLoadCollection = (collectionId: string) => {
-    loadCollection(collectionId);
-    setIsLoadModalOpen(false);
-    toast.success('Collection loaded successfully!');
-  };
-
-  const handleDeleteCollection = async (collectionId: string) => {
-    try {
-      const response = await fetch('/api/collection/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectionId })
-      });
-      
-      if (response.ok) {
-        deleteCollection(collectionId);
-        toast.success('Collection deleted successfully!');
-      } else {
-        toast.error('Failed to delete collection');
-      }
-    } catch (error) {
-      console.error('Error deleting collection:', error);
-      toast.error('Failed to delete collection');
-    }
-  };
-
-  // Ideas functionality
   const loadPublicCollections = async () => {
+    setIdeasLoading(true);
     try {
-      setIdeasLoading(true);
-      
-      // Ensure backdrop data is loaded for proper rendering
-      if (!backdrops || Object.keys(backdrops).length === 0) {
-        console.log('🎨 Loading backdrops for Community Ideas...');
-        const backdropsResponse = await fetch('/api/collection/backdrops');
-        if (backdropsResponse.ok) {
-          const backdropsData = await backdropsResponse.json();
-          console.log('🎨 Loaded backdrops for Community Ideas:', Object.keys(backdropsData.backdrops).length);
-          setBackdrops(backdropsData.backdrops);
-        } else {
-          console.error('❌ Failed to load backdrops for Community Ideas');
-        }
-      } else {
-        console.log('🎨 Backdrops already loaded for Community Ideas:', Object.keys(backdrops).length);
-      }
-      
       const response = await fetch('/api/collections/public');
-      if (response.ok) {
-        const data = await response.json();
-        const collections = data.collections || [];
-        setPublicCollections(collections);
-        
-        // Load gift models for unique gift names in public collections
-        const uniqueGiftNames = Array.from(new Set(collections.flatMap((collection: any) => 
-          collection.designs?.map((design: any) => design.giftName) || []
-        ))) as string[];
-        
-        console.log('🎁 Loading gift models for Community Ideas:', uniqueGiftNames);
-        
-        for (const giftName of uniqueGiftNames) {
-          if (!giftModels[giftName]) {
-            try {
-              const modelsResponse = await fetch(`/api/collection/gifts/${encodeURIComponent(giftName)}/models`);
-              if (modelsResponse.ok) {
-                const modelsData = await modelsResponse.json();
-                setGiftModels(giftName, modelsData.models);
-                console.log(`✅ Loaded ${modelsData.models.length} models for ${giftName}`);
-              }
-            } catch (error) {
-              console.error(`❌ Failed to load models for ${giftName}:`, error);
-            }
-          }
-        }
-      } else {
-        console.error('Failed to load public collections');
-      }
+      const data = await response.json();
+      setPublicCollections(data.collections || []);
     } catch (error) {
       console.error('Error loading public collections:', error);
+      toast.error('Failed to load public collections');
     } finally {
       setIdeasLoading(false);
     }
@@ -488,10 +247,9 @@ export const CollectionTab: React.FC = () => {
   const handleLike = async (collectionId: string) => {
     if (likingCollections.has(collectionId)) return;
     
+    setLikingCollections(prev => new Set([...prev, collectionId]));
+    
     try {
-      setLikingCollections(prev => new Set(prev).add(collectionId));
-        hapticFeedback('selection');
-      
       const response = await fetch('/api/collections/like', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -499,25 +257,23 @@ export const CollectionTab: React.FC = () => {
       });
       
       if (response.ok) {
-        const result = await response.json();
-        
-        // Update the collection in state
         setPublicCollections(prev => 
           prev.map(collection => 
             collection.id === collectionId 
               ? { 
                   ...collection, 
-                  isLikedByUser: result.liked,
-                  likesCount: result.likesCount 
+                  isLikedByUser: !collection.isLikedByUser,
+                  likesCount: collection.isLikedByUser 
+                    ? collection.likesCount - 1 
+                    : collection.likesCount + 1
                 }
               : collection
           )
         );
-        
-              hapticFeedback(result.liked ? 'impact' : 'selection');
+        hapticFeedback('impact', 'light');
       }
     } catch (error) {
-      console.error('Error toggling like:', error);
+      console.error('Error liking collection:', error);
     } finally {
       setLikingCollections(prev => {
         const newSet = new Set(prev);
@@ -529,160 +285,134 @@ export const CollectionTab: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    
     return date.toLocaleDateString();
   };
 
-  const renderGiftPreview = (design: GiftDesign, index: number) => {
-    if (!design) return null;
+  const openFilterModal = (type: 'gift' | 'model' | 'backdrop' | 'pattern') => {
+    setCurrentFilterType(type);
+    setFilterSearchTerm('');
     
-    // Debug logging for gift preview rendering
-    console.log('🎨 Rendering gift preview:', {
-      giftName: design.giftName,
-      modelNumber: design.modelNumber,
-      giftModelsCount: giftModels[design.giftName]?.length || 0,
-      foundModel: giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name || 'Not found'
-    });
+    let data: FilterOption[] = [];
+    switch (type) {
+      case 'gift':
+        data = gifts.map(gift => ({ id: gift.name, name: gift.name, value: gift.name }));
+        break;
+      case 'model':
+        if (selectedGiftName && giftModels[selectedGiftName]) {
+          data = giftModels[selectedGiftName].map(model => ({ id: model.number.toString(), name: model.name, value: model.number }));
+        }
+        break;
+      case 'backdrop':
+        data = backdrops.map((backdrop, index) => ({ id: index.toString(), name: backdrop.name, value: index, color: backdrop.color }));
+        break;
+      case 'pattern':
+        if (selectedGiftName && patterns[selectedGiftName]) {
+          data = patterns[selectedGiftName].map((pattern, index) => ({ id: index.toString(), name: pattern.name, value: index }));
+        }
+        break;
+    }
     
-    // Get backdrop color - use global backdrops or fallback
-    const backdropColor = backdrops && backdrops[design.backdropIndex] 
-      ? backdrops[design.backdropIndex] 
-      : design.backdropIndex !== undefined 
-        ? `hsl(${(design.backdropIndex * 137.5) % 360}, 70%, 60%)` // Generate color from index
-        : '#667eea';
+    setCurrentFilterData(data);
+    setIsFilterModalOpen(true);
     
-    return (
-      <div key={index} className="relative w-full h-full aspect-square rounded-lg overflow-hidden border border-gray-300">
-        {/* Background with gradient */}
-        <div 
-          className="absolute inset-0 rounded-lg"
-          style={{
-            background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex] 
-              ? `radial-gradient(circle, ${backdrops[design.backdropIndex].hex?.centerColor || '#667eea'}, ${backdrops[design.backdropIndex].hex?.edgeColor || '#764ba2'})`
-              : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-          }}
-        />
-        
-        {/* Pattern overlay if selected - 8 pattern layout */}
-        {design.patternName && design.patternIndex !== null && design.patternIndex !== undefined && localPatterns && localPatterns[design.patternIndex] && (
-          <div className="absolute inset-0 z-10 pointer-events-none">
-            {/* Top center */}
-            <div
-              className="absolute top-2 left-1/2 transform -translate-x-1/2"
-              style={{
-                width: '8px',
-                height: '8px',
-                backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                backgroundSize: '8px 8px',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'brightness(0) opacity(0.15)',
-              }}
-            />
-            {/* Top left */}
-            <div
-              className="absolute top-4 left-2"
-              style={{
-                width: '6px',
-                height: '6px',
-                backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                backgroundSize: '6px 6px',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'brightness(0) opacity(0.15)',
-              }}
-            />
-            {/* Top right */}
-            <div
-              className="absolute top-4 right-2"
-              style={{
-                width: '6px',
-                height: '6px',
-                backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                backgroundSize: '6px 6px',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'brightness(0) opacity(0.15)',
-              }}
-            />
-            {/* Middle left */}
-            <div
-              className="absolute top-1/2 left-2 transform -translate-y-1/2"
-              style={{
-                width: '6px',
-                height: '6px',
-                backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                backgroundSize: '6px 6px',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'brightness(0) opacity(0.15)',
-              }}
-            />
-            {/* Middle right */}
-            <div
-              className="absolute top-1/2 right-2 transform -translate-y-1/2"
-              style={{
-                width: '6px',
-                height: '6px',
-                backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                backgroundSize: '6px 6px',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'brightness(0) opacity(0.15)',
-              }}
-            />
-            {/* Bottom left */}
-            <div
-              className="absolute bottom-4 left-2"
-              style={{
-                width: '6px',
-                height: '6px',
-                backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                backgroundSize: '6px 6px',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'brightness(0) opacity(0.15)',
-              }}
-            />
-            {/* Bottom right */}
-            <div
-              className="absolute bottom-4 right-2"
-              style={{
-                width: '6px',
-                height: '6px',
-                backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                backgroundSize: '6px 6px',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'brightness(0) opacity(0.15)',
-              }}
-            />
-            {/* Bottom center */}
-            <div
-              className="absolute bottom-2 left-1/2 transform -translate-x-1/2"
-              style={{
-                width: '6px',
-                height: '6px',
-                backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                backgroundSize: '6px 6px',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'brightness(0) opacity(0.15)',
-              }}
-            />
-          </div>
-        )}
-        
-        {/* Gift image */}
-        <div className="absolute inset-3 flex items-center justify-center z-20">
-          {giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name ? (
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
+  };
+
+  const handleFilterSelection = (value: any) => {
+    switch (currentFilterType) {
+      case 'gift':
+        setSelectedGiftName(value);
+        setSelectedModelNumber(null);
+        setSelectedBackdropIndex(null);
+        setSelectedPatternIndex(null);
+        break;
+      case 'model':
+        setSelectedModelNumber(value);
+        break;
+      case 'backdrop':
+        setSelectedBackdropIndex(value);
+        break;
+      case 'pattern':
+        setSelectedPatternIndex(value);
+        break;
+    }
+    setIsFilterModalOpen(false);
+    hapticFeedback('impact', 'light');
+  };
+
+  const handleSaveCollection = async () => {
+    if (!collectionName.trim()) {
+      toast.error('Please enter a collection name');
+      return;
+    }
+
+    try {
+      await saveCollection(collectionName, isPublic);
+      toast.success(`Collection "${collectionName}" saved!`);
+      setIsSaveModalOpen(false);
+      setCollectionName('');
+      setIsPublic(false);
+      hapticFeedback('notification', 'success');
+    } catch (error) {
+      console.error('Error saving collection:', error);
+      toast.error('Failed to save collection');
+    }
+  };
+
+  const handleLoadCollection = async (collectionId: string) => {
+    try {
+      await loadCollection(collectionId);
+      toast.success('Collection loaded!');
+      setIsLoadModalOpen(false);
+      hapticFeedback('notification', 'success');
+    } catch (error) {
+      console.error('Error loading collection:', error);
+      toast.error('Failed to load collection');
+    }
+  };
+
+  const handleDeleteCollection = async (collectionId: string) => {
+    if (!confirm('Are you sure you want to delete this collection?')) return;
+
+    try {
+      await deleteCollection(collectionId);
+      toast.success('Collection deleted!');
+      hapticFeedback('notification', 'warning');
+    } catch (error) {
+      console.error('Error deleting collection:', error);
+      toast.error('Failed to delete collection');
+    }
+  };
+
+  const renderGiftPreview = (design: GiftDesign, slotNumber: number) => {
+    if (design) {
+      const backdrop = backdrops[design.backdropIndex];
+      const pattern = patterns[design.giftName]?.[design.patternIndex];
+      
+      return (
+        <div className="gift-preview-container relative w-full h-full">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 rounded-lg"
+            style={{ backgroundColor: backdrop?.color || '#6B7280' }}
+          />
+          
+          {/* Pattern overlay */}
+          {pattern && (
+            <div className="absolute inset-0 rounded-lg opacity-30">
+              <PatternThumbnail
+                collectionName={design.giftName}
+                patternName={pattern.name}
+                size="large"
+                className="w-full h-full"
+              />
+            </div>
+          )}
+          
+          {/* Gift image */}
+          <div className="absolute inset-3 flex items-center justify-center z-20">
             <ModelThumbnail
               collectionName={design.giftName}
               modelName={giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name || ''}
@@ -690,193 +420,21 @@ export const CollectionTab: React.FC = () => {
               className="w-full h-full"
               showFallback={true}
             />
-          ) : (
-            <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-500">
-              {design.giftName}
-            </div>
-          )}
+          </div>
         </div>
-      </div>
-    );
-  };
-
-  const renderGiftSlot = (slotNumber: number) => {
-    const design = userDesigns[slotNumber];
-    
-    // Debug: Log what's being rendered for each slot
-    if (design) {
-      console.log(`🎨 Rendering slot ${slotNumber}:`, {
-        design,
-        hasGiftName: !!design.giftName,
-        hasModelNumber: design.modelNumber !== undefined,
-        hasBackdropIndex: design.backdropIndex !== undefined
-      });
+      );
+    } else {
+      return (
+        <div className="gift-preview-placeholder">
+          <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex flex-col items-center justify-center border border-gray-600">
+            <svg fill="currentColor" viewBox="0 0 20 20" className="w-6 h-6 text-gray-400 mb-1">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+            </svg>
+            <span className="text-gray-400 text-xs">#{slotNumber}</span>
+          </div>
+        </div>
+      );
     }
-    
-    return (
-      <div key={slotNumber} className="gift-slot">
-        <div className="gift-preview-card" onClick={() => openGiftDesigner(slotNumber)}>
-          {design ? (
-            <div className="gift-preview-content">
-              {/* Telegram-style gift preview */}
-              <div className="relative w-full h-full">
-                {/* Background with gradient */}
-                <div 
-                  className="absolute inset-0 rounded-lg"
-                  style={{
-                    background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex] 
-                      ? `radial-gradient(circle, ${backdrops[design.backdropIndex].hex?.centerColor || '#667eea'}, ${backdrops[design.backdropIndex].hex?.edgeColor || '#764ba2'})`
-                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  }}
-                />
-                
-                {/* Pattern overlay */}
-                {design.patternIndex !== undefined && design.patternName && (
-                  <div className="absolute inset-0 rounded-lg z-10">
-                    <div className="w-full h-full relative">
-                      {/* Custom 8-pattern layout */}
-                      {/* Top pattern */}
-                      <div 
-                        className="absolute top-2 left-1/2 transform -translate-x-1/2"
-                        style={{
-                          width: '8px',
-                          height: '8px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '8px 8px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                      {/* Top row - 3 patterns */}
-                      <div 
-                        className="absolute top-4 left-1/4 transform -translate-x-1/2"
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '6px 6px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                      <div 
-                        className="absolute top-4 left-1/2 transform -translate-x-1/2"
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '6px 6px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                      <div 
-                        className="absolute top-4 right-1/4 transform translate-x-1/2"
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '6px 6px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                      {/* Left pattern */}
-                      <div 
-                        className="absolute top-1/2 left-2 transform -translate-y-1/2"
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '6px 6px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                      {/* Right pattern */}
-                      <div 
-                        className="absolute top-1/2 right-2 transform -translate-y-1/2"
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '6px 6px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                      {/* Bottom row - 3 patterns */}
-                      <div 
-                        className="absolute bottom-4 left-1/4 transform -translate-x-1/2"
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '6px 6px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                      <div 
-                        className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '6px 6px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                      <div 
-                        className="absolute bottom-4 right-1/4 transform translate-x-1/2"
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(design.giftName)}/png/${encodeURIComponent(design.patternName)}.png)`,
-                          backgroundSize: '6px 6px',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          filter: 'brightness(0) opacity(0.15)',
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-                
-                 {/* Gift image */}
-                 <div className="absolute inset-3 flex items-center justify-center z-20">
-                   <ModelThumbnail
-                     collectionName={design.giftName}
-                     modelName={giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name || ''}
-                     size="large"
-                     className="w-full h-full"
-                     showFallback={true}
-                   />
-                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="gift-preview-placeholder">
-              <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex flex-col items-center justify-center border border-gray-600">
-                <svg fill="currentColor" viewBox="0 0 20 20" className="w-6 h-6 text-gray-400 mb-1">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                </svg>
-                <span className="text-gray-400 text-xs">#{slotNumber}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
   };
 
   if (isLoading) {
@@ -892,7 +450,6 @@ export const CollectionTab: React.FC = () => {
     <div className="space-y-4 py-4 animate-fade-in">
       {/* Header with Profile Picture */}
       <div className="flex items-center justify-between px-4 mb-4">
-        {/* Profile Picture with Notification Badge */}
         <button
           onClick={() => setCurrentTab('profile')}
           className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
@@ -909,41 +466,6 @@ export const CollectionTab: React.FC = () => {
             </div>
           )}
         </button>
-
-        {/* Tertiary Navigation */}
-        <div className="flex justify-start px-4 mb-4">
-          <div className="flex space-x-8">
-            <button
-              onClick={() => {
-                if (showIdeas) {
-                  setShowIdeas(false);
-                }
-              }}
-              className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
-                !showIdeas
-                  ? 'text-white border-b-2 border-white pb-1 scale-105'
-                  : 'text-gray-400 hover:text-gray-300 hover:scale-105'
-              }`}
-            >
-              Making
-            </button>
-            <button
-              onClick={() => {
-                if (!showIdeas) {
-                  loadPublicCollections();
-                  setShowIdeas(true);
-                }
-              }}
-              className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
-                showIdeas
-                  ? 'text-white border-b-2 border-white pb-1 scale-105'
-                  : 'text-gray-400 hover:text-gray-300 hover:scale-105'
-              }`}
-            >
-              Ideas
-            </button>
-          </div>
-        </div>
 
         {/* Collection Actions */}
         <div className="flex gap-1">
@@ -975,6 +497,41 @@ export const CollectionTab: React.FC = () => {
       <div className="px-4">
         <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-3 text-center">
           <div className="text-white font-medium text-sm">Add your ad here</div>
+        </div>
+      </div>
+
+      {/* Tertiary Navigation */}
+      <div className="flex justify-start px-4 mb-4">
+        <div className="flex space-x-8">
+          <button
+            onClick={() => {
+              if (showIdeas) {
+                setShowIdeas(false);
+              }
+            }}
+            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+              !showIdeas
+                ? 'text-white border-b-2 border-white pb-1 scale-105'
+                : 'text-gray-400 hover:text-gray-300 hover:scale-105'
+            }`}
+          >
+            Making
+          </button>
+          <button
+            onClick={() => {
+              if (!showIdeas) {
+                loadPublicCollections();
+                setShowIdeas(true);
+              }
+            }}
+            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+              showIdeas
+                ? 'text-white border-b-2 border-white pb-1 scale-105'
+                : 'text-gray-400 hover:text-gray-300 hover:scale-105'
+            }`}
+          >
+            Ideas
+          </button>
         </div>
       </div>
 
@@ -1082,243 +639,238 @@ export const CollectionTab: React.FC = () => {
       ) : (
         <>
           {/* Credit Info (only for normal users) */}
-      {user?.user_type === 'normal' && (
-        <div className="text-center">
-          <p className="text-xs text-text-active">
-            💰 Save costs 1 credit
-          </p>
-        </div>
-      )}
-
-      {/* Gift Preview Grid */}
-      <div className="grid grid-cols-3 gap-3">
-        {Array.from({ length: gridSize }, (_, i) => renderGiftSlot(i + 1))}
-      </div>
-
-      {/* Gift Designer Modal */}
-      <Modal
-        isOpen={isDesignerOpen}
-        onClose={closeGiftDesigner}
-        title={`Gift #${currentSlot}`}
-      >
-        <div className="space-y-4">
-          {/* Compact Preview */}
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-lg border border-gray-600 overflow-hidden relative flex-shrink-0">
-              {selectedBackdropIndex !== null ? (
-                <div 
-                  className="absolute inset-0"
-                  style={{
-                    background: `radial-gradient(circle, ${backdrops[selectedBackdropIndex].hex.centerColor}, ${backdrops[selectedBackdropIndex].hex.edgeColor})`
-                  }}
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-800" />
-              )}
-              
-              {selectedGiftName && selectedModelNumber && (
-                <div className="absolute inset-2 flex items-center justify-center">
-                  <ModelThumbnail
-                    collectionName={selectedGiftName}
-                    modelName={models.find(m => m.number === selectedModelNumber)?.name || ''}
-                    size="small"
-                    className="w-full h-full"
-                    showFallback={true}
-                  />
-                </div>
-              )}
+          {user?.user_type === 'normal' && (
+            <div className="text-center">
+              <p className="text-xs text-text-active">
+                💰 Save costs 1 credit
+              </p>
             </div>
-            
-            <div className="flex-1 space-y-2">
+          )}
 
-              <div className="grid grid-cols-2 gap-2">
-                {/* Gift Type */}
-                <Button
-                  variant="secondary"
-                  onClick={() => openFilterModal('gift')}
-                  className="w-full justify-start text-sm"
+          {/* Collection Grid */}
+          <div className="px-4">
+            <div 
+              className="grid gap-3"
+              style={{
+                gridTemplateColumns: `repeat(${Math.sqrt(gridSize)}, 1fr)`,
+                aspectRatio: '1'
+              }}
+            >
+              {Array.from({ length: gridSize }, (_, index) => (
+                <div
+                  key={index}
+                  className="relative cursor-pointer group"
+                  onClick={() => openDesigner(index)}
                 >
-                  <span>{selectedGiftName || 'Gift...'}</span>
-                </Button>
-
-                {/* Model */}
-                <Button
-                  variant="secondary"
-                  onClick={() => openFilterModal('model')}
-                  disabled={!selectedGiftName}
-                  className="w-full justify-start text-sm"
-                >
-                  <span>{selectedModelNumber ? `#${selectedModelNumber}` : 'Model...'}</span>
-                </Button>
-
-                {/* Background */}
-                <Button
-                  variant="secondary"
-                  onClick={() => openFilterModal('backdrop')}
-                  className="w-full justify-start text-sm"
-                >
-                  <span>{selectedBackdropIndex !== null ? `BG ${selectedBackdropIndex + 1}` : 'Background...'}</span>
-                </Button>
-
-                {/* Pattern */}
-                <Button
-                  variant="secondary"
-                  onClick={() => openFilterModal('pattern')}
-                  disabled={!selectedGiftName}
-                  className="w-full justify-start text-sm"
-                >
-                  <span>{selectedPatternIndex !== null ? `Pattern` : 'Pattern...'}</span>
-                </Button>
-              </div>
+                  {renderGiftPreview(userDesigns[index], index)}
+                  
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="bg-black bg-opacity-50 rounded-full p-2">
+                      <SparklesIcon className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        </>
+      )}
+
+      {/* Designer Modal */}
+      <Modal
+        isOpen={isDesignerOpen}
+        onClose={closeDesigner}
+        title="Design Gift"
+        className="max-w-md"
+      >
+        <div className="space-y-4">
+          {/* Gift Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Gift</label>
+            <Button
+              variant="secondary"
+              onClick={() => openFilterModal('gift')}
+              className="w-full justify-between"
+            >
+              {selectedGiftName || 'Select Gift'}
+              <ChevronLeftIcon className="w-4 h-4 rotate-90" />
+            </Button>
+          </div>
+
+          {/* Model Selection */}
+          {selectedGiftName && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
+              <Button
+                variant="secondary"
+                onClick={() => openFilterModal('model')}
+                className="w-full justify-between"
+                disabled={!selectedGiftName}
+              >
+                {selectedModelNumber !== null 
+                  ? models.find(m => m.number === selectedModelNumber)?.name || 'Select Model'
+                  : 'Select Model'
+                }
+                <ChevronLeftIcon className="w-4 h-4 rotate-90" />
+              </Button>
+            </div>
+          )}
+
+          {/* Backdrop Selection */}
+          {selectedGiftName && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Backdrop</label>
+              <Button
+                variant="secondary"
+                onClick={() => openFilterModal('backdrop')}
+                className="w-full justify-between"
+                disabled={!selectedGiftName}
+              >
+                {selectedBackdropIndex !== null 
+                  ? backdrops[selectedBackdropIndex]?.name || 'Select Backdrop'
+                  : 'Select Backdrop'
+                }
+                <ChevronLeftIcon className="w-4 h-4 rotate-90" />
+              </Button>
+            </div>
+          )}
+
+          {/* Pattern Selection */}
+          {selectedGiftName && localPatterns.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Pattern</label>
+              <Button
+                variant="secondary"
+                onClick={() => openFilterModal('pattern')}
+                className="w-full justify-between"
+                disabled={!selectedGiftName}
+              >
+                {selectedPatternIndex !== null 
+                  ? localPatterns[selectedPatternIndex]?.name || 'Select Pattern'
+                  : 'Select Pattern'
+                }
+                <ChevronLeftIcon className="w-4 h-4 rotate-90" />
+              </Button>
+            </div>
+          )}
+
+          {/* Preview */}
+          {(selectedGiftName && selectedModelNumber !== null && selectedBackdropIndex !== null && selectedPatternIndex !== null) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Preview</label>
+              <div className="w-full h-32 bg-gray-800 rounded-lg p-2">
+                {renderGiftPreview({
+                  giftName: selectedGiftName,
+                  modelNumber: selectedModelNumber,
+                  backdropIndex: selectedBackdropIndex,
+                  patternIndex: selectedPatternIndex,
+                }, 0)}
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" onClick={closeGiftDesigner} className="flex-1">
+          <div className="flex gap-2 pt-4">
+            <Button
+              variant="secondary"
+              onClick={closeDesigner}
+              className="flex-1"
+            >
               Cancel
             </Button>
             <Button
               variant="primary"
-              onClick={saveGiftDesign}
-              disabled={!selectedGiftName || !selectedModelNumber || selectedBackdropIndex === null}
+              onClick={saveDesign}
+              disabled={!selectedGiftName || selectedModelNumber === null || selectedBackdropIndex === null || selectedPatternIndex === null}
               className="flex-1"
             >
-              Save
+              Save Design
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Filter Selection Modal */}
+      {/* Filter Modal */}
       <Modal
         isOpen={isFilterModalOpen}
-        onClose={closeFilterModal}
-        title={currentFilterType === 'gift' ? 'NFT' : currentFilterType === 'model' ? 'Model' : 'Color'}
+        onClose={() => setIsFilterModalOpen(false)}
+        title={`Select ${currentFilterType}`}
+        className="max-w-sm"
       >
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {currentFilterData.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center p-3 rounded-lg border border-icon-idle/30 hover:bg-box-bg/50 cursor-pointer transition-colors"
-              onClick={() => selectFilterOption(item)}
-            >
-              {item.type === 'gift' && (
-                <>
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg border border-icon-idle/30 mr-3 flex items-center justify-center overflow-hidden">
-                    <div className="w-full h-full flex items-center justify-center text-lg">
-                      🎁
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-text-idle">{item.name}</div>
-                  </div>
-                </>
-              )}
-              
-               {item.type === 'model' && (
-                 <>
-                   <div className="w-12 h-12 mr-3">
-                     <ModelThumbnail
-                       collectionName={selectedGiftName || ''}
-                       modelName={item.name}
-                       size="medium"
-                       className="rounded-lg border border-icon-idle/30"
-                       showFallback={true}
-                     />
-                   </div>
-                   <div className="flex-1">
-                     <div className="font-medium text-text-idle">Model {item.number}</div>
-                     <div className="text-sm text-text-active">{item.name}</div>
-                     <div className="text-xs text-text-active opacity-70">Rarity: {item.rarity}‰</div>
-                   </div>
-                 </>
-               )}
-              
-              {item.type === 'backdrop' && (
-                <>
-                  <div 
-                    className="w-12 h-12 rounded-lg mr-3 border border-icon-idle/30"
-                    style={{
-                      background: `radial-gradient(circle, ${item.hex?.centerColor || '#667eea'}, ${item.hex?.edgeColor || '#764ba2'})`
-                    }}
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-text-idle">Color {(item.index || 0) + 1}</div>
-                  </div>
-                </>
-              )}
-              
-              {item.type === 'pattern' && (
-                <>
-                  <div className="w-12 h-12 mr-3">
-                    <PatternThumbnail
-                      collectionName={selectedGiftName || ''}
-                      patternName={item.name}
-                      size="medium"
-                      className="rounded-lg border border-icon-idle/30"
-                      showFallback={true}
+        <div className="space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search..."
+              value={filterSearchTerm}
+              onChange={(e) => setFilterSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* Filter Options */}
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {currentFilterData
+              .filter(option => 
+                option.name.toLowerCase().includes(filterSearchTerm.toLowerCase())
+              )
+              .map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => handleFilterSelection(option.value)}
+                  className="w-full p-3 text-left bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-3"
+                >
+                  {currentFilterType === 'backdrop' && option.color && (
+                    <div 
+                      className="w-6 h-6 rounded-full border border-gray-500"
+                      style={{ backgroundColor: option.color }}
                     />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-text-idle">Pattern {(item.index || 0) + 1}</div>
-                    <div className="text-sm text-text-active">{item.name}</div>
-                    <div className="text-xs text-text-active opacity-70">Rarity: {item.rarityPermille}‰</div>
-                  </div>
-                </>
-              )}
-              
-              {(currentFilterType === 'gift' && item.name === selectedGiftName) ||
-               (currentFilterType === 'model' && item.number === selectedModelNumber) ||
-               (currentFilterType === 'backdrop' && item.index === selectedBackdropIndex) ||
-               (currentFilterType === 'pattern' && item.index === selectedPatternIndex) ? (
-                <svg className="w-5 h-5 text-icon-active" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              ) : null}
-            </div>
-          ))}
+                  )}
+                  <span className="text-white">{option.name}</span>
+                </button>
+              ))
+            }
+          </div>
         </div>
       </Modal>
-        </>
-      )}
 
       {/* Save Collection Modal */}
       <Modal
         isOpen={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}
-        title="Save"
+        title="Save Collection"
+        className="max-w-sm"
       >
         <div className="space-y-4">
-          <input
-            type="text"
-            value={collectionName}
-            onChange={(e) => setCollectionName(e.target.value)}
-            placeholder="Collection name..."
-            className="tg-input"
-            maxLength={50}
-          />
-          
-          <div className="flex items-center space-x-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Collection Name</label>
+            <input
+              type="text"
+              value={collectionName}
+              onChange={(e) => setCollectionName(e.target.value)}
+              placeholder="Enter collection name..."
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
             <input
               type="checkbox"
               id="isPublic"
               checked={isPublic}
               onChange={(e) => setIsPublic(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
             />
-            <label htmlFor="isPublic" className="text-sm font-medium">
-              Share publicly 🌟
+            <label htmlFor="isPublic" className="text-sm text-gray-300">
+              Make public (share with community)
             </label>
           </div>
-          
-          {isPublic && (
-            <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-              Your collection will be visible to all users in the Ideas section
-            </div>
-          )}
-          
-          <div className="flex gap-2">
+
+          <div className="flex gap-2 pt-4">
             <Button
               variant="secondary"
               onClick={() => setIsSaveModalOpen(false)}
@@ -1329,10 +881,10 @@ export const CollectionTab: React.FC = () => {
             <Button
               variant="primary"
               onClick={handleSaveCollection}
-              className="flex-1"
               disabled={!collectionName.trim()}
+              className="flex-1"
             >
-              {isPublic ? 'Save & Share' : 'Save'}
+              Save Collection
             </Button>
           </div>
         </div>
@@ -1342,32 +894,32 @@ export const CollectionTab: React.FC = () => {
       <Modal
         isOpen={isLoadModalOpen}
         onClose={() => setIsLoadModalOpen(false)}
-        title="Load"
+        title="Load Collection"
+        className="max-w-sm"
       >
         <div className="space-y-4">
           {savedCollections.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-text-active">No saved collections found</p>
+              <div className="text-gray-500 mb-2">No saved collections</div>
+              <div className="text-sm text-gray-400">
+                Create and save a collection first
+              </div>
             </div>
           ) : (
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2">
               {savedCollections.map((collection) => (
-                <div
-                  key={collection.id}
-                  className="flex items-center justify-between p-2 bg-gray-700 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <h3 className="font-medium text-text-idle text-sm">{collection.name}</h3>
-                    <p className="text-xs text-text-active">
-                      {collection.designs.length} designs
-                    </p>
+                <div key={collection.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                  <div>
+                    <div className="text-white font-medium">{collection.name}</div>
+                    <div className="text-sm text-gray-400">
+                      {collection.isPublic ? 'Public' : 'Private'} • {collection.createdAt}
+                    </div>
                   </div>
                   <div className="flex gap-1">
                     <Button
                       variant="primary"
                       size="sm"
                       onClick={() => handleLoadCollection(collection.id)}
-                      className="px-3"
                     >
                       Load
                     </Button>
@@ -1375,7 +927,7 @@ export const CollectionTab: React.FC = () => {
                       variant="secondary"
                       size="sm"
                       onClick={() => handleDeleteCollection(collection.id)}
-                      className="px-3"
+                      className="text-red-400 hover:text-red-300"
                     >
                       ×
                     </Button>
