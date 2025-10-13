@@ -161,15 +161,15 @@ export const HomeTab: React.FC = () => {
           />
         </div>
 
-        {/* Middle row: 1 large horizontal box */}
+        {/* Middle row: 1 large vertical box */}
         <Widget 
           title="Create Story" 
           subtitle="Cut your photo into 12 pieces and share them"
-          icon={<CameraIcon className="w-6 h-6 text-white" />} 
+          icon={<CameraIcon className="w-8 h-8 text-white" />} 
           onClick={goStory} 
           gradient="bg-gradient-to-br from-sky-600 to-cyan-600" 
           cta="Start Creating"
-          size="horizontal"
+          size="vertical"
         />
 
         {/* Bottom row: 1 large vertical box */}
