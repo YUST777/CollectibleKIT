@@ -957,26 +957,6 @@ export const CollectionTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid Size Selector - Only show in Creation mode */}
-      {!showIdeas && (
-        <div className="flex items-center justify-center px-4">
-          <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2 border border-gray-700">
-            <span className="text-sm text-gray-400">Grid:</span>
-            <select
-              value={gridSize}
-              onChange={(e) => updateGridSize(parseInt(e.target.value))}
-              className="bg-transparent text-sm text-white focus:outline-none"
-            >
-              <option value={3}>3</option>
-              <option value={6}>6</option>
-              <option value={9}>9</option>
-              <option value={12}>12</option>
-              <option value={15}>15</option>
-              <option value={18}>18</option>
-            </select>
-          </div>
-        </div>
-      )}
 
       {/* Ideas View */}
       {showIdeas ? (
@@ -1074,8 +1054,26 @@ export const CollectionTab: React.FC = () => {
         {Array.from({ length: gridSize }, (_, i) => renderGiftSlot(i + 1))}
       </div>
 
-      {/* Collection Actions - Save/Load buttons under the grid */}
-      <div className="flex justify-center gap-3 px-4">
+      {/* Combined Control Block - Grid Size + Load + Save */}
+      <div className="flex items-center justify-center gap-3 px-4">
+        {/* Grid Size Selector */}
+        <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2 border border-gray-700">
+          <span className="text-sm text-gray-400">Grid Size</span>
+          <select
+            value={gridSize}
+            onChange={(e) => updateGridSize(parseInt(e.target.value))}
+            className="bg-gray-700 text-sm text-white rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={3}>3</option>
+            <option value={6}>6</option>
+            <option value={9}>9</option>
+            <option value={12}>12</option>
+            <option value={15}>15</option>
+            <option value={18}>18</option>
+          </select>
+        </div>
+
+        {/* Load Button */}
         <Button
           variant="secondary"
           size="sm"
@@ -1084,16 +1082,18 @@ export const CollectionTab: React.FC = () => {
             setIsLoadModalOpen(true);
           }}
           disabled={savedCollections.length === 0}
-          className="px-4"
+          className="px-4 py-2"
         >
           📂 Load
         </Button>
+
+        {/* Save Button */}
         <Button
           variant="primary"
           size="sm"
           onClick={() => setIsSaveModalOpen(true)}
           disabled={Object.keys(userDesigns).length === 0}
-          className="px-4"
+          className="px-4 py-2"
         >
           💾 Save
         </Button>
