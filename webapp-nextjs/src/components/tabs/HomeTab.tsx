@@ -111,13 +111,13 @@ export const HomeTab: React.FC = () => {
         
         {/* Image on the right side if provided */}
         {image && (
-          <div className={`absolute ${size === 'small' ? 'right-0 bottom-0 h-[55%]' : 'right-2 bottom-2 h-[70%]'} flex items-end`}>
+          <div className={`absolute ${size === 'small' ? 'right-0 bottom-0 h-[55%]' : 'right-0 bottom-0 h-full'} flex items-end`}>
             <Image
               src={image}
               alt={title}
-              width={size === 'small' ? 60 : 80}
-              height={size === 'small' ? 60 : 80}
-              className="h-full w-auto object-contain opacity-90"
+              width={size === 'small' ? 60 : 120}
+              height={size === 'small' ? 60 : 120}
+              className="h-full w-auto object-contain"
               priority
             />
           </div>
