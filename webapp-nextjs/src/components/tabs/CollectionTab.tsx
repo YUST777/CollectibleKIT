@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ModelThumbnail } from '@/components/ModelThumbnail';
 import { PatternThumbnail } from '@/components/PatternThumbnail';
+import { AdsBanner } from '@/components/AdsBanner';
 import { cacheUtils } from '@/lib/cache';
 import { useAppActions, useAppStore, useCurrentTab } from '@/store/useAppStore';
 import { Backdrop, GiftModel, GiftDesign, FilterOption, Pattern } from '@/types';
@@ -889,10 +890,10 @@ export const CollectionTab: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 py-4 animate-fade-in">
+    <div className="space-y-6 py-4 animate-fade-in">
       {/* Header with Profile Picture */}
       <div className="flex items-center justify-between px-4 mb-4">
-        {/* Profile Picture with Notification Badge */}
+        {/* Profile Picture */}
         <button
           onClick={() => setCurrentTab('profile')}
           className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
@@ -910,71 +911,49 @@ export const CollectionTab: React.FC = () => {
           )}
         </button>
 
-        {/* Tertiary Navigation */}
-        <div className="flex justify-start px-4 mb-4">
-          <div className="flex space-x-8">
-            <button
-              onClick={() => {
-                if (showIdeas) {
-                  setShowIdeas(false);
-                }
-              }}
-              className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
-                !showIdeas
-                  ? 'text-white border-b-2 border-white pb-1 scale-105'
-                  : 'text-gray-400 hover:text-gray-300 hover:scale-105'
-              }`}
-            >
-              Making
-            </button>
-            <button
-              onClick={() => {
-                if (!showIdeas) {
-                  loadPublicCollections();
-                  setShowIdeas(true);
-                }
-              }}
-              className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
-                showIdeas
-                  ? 'text-white border-b-2 border-white pb-1 scale-105'
-                  : 'text-gray-400 hover:text-gray-300 hover:scale-105'
-              }`}
-            >
-              Ideas
-            </button>
-          </div>
-        </div>
-
-        {/* Collection Actions */}
-        <div className="flex gap-1">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              loadCollections();
-              setIsLoadModalOpen(true);
-            }}
-            disabled={savedCollections.length === 0}
-            className="px-3"
-          >
-            📂
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsSaveModalOpen(true)}
-            disabled={Object.keys(userDesigns).length === 0}
-            className="px-3"
-          >
-            💾
-          </Button>
-        </div>
+        {/* Hamburger Menu */}
+        <button className="w-6 h-6 flex flex-col justify-center space-y-1">
+          <div className="w-full h-0.5 bg-gray-400"></div>
+          <div className="w-full h-0.5 bg-gray-400"></div>
+          <div className="w-full h-0.5 bg-gray-400"></div>
+        </button>
       </div>
 
       {/* Ads Banner */}
-      <div className="px-4">
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-3 text-center">
-          <div className="text-white font-medium text-sm">Add your ad here</div>
+      <AdsBanner />
+
+      {/* Tertiary Navigation */}
+      <div className="flex justify-start px-4">
+        <div className="flex space-x-8">
+          <button
+            onClick={() => {
+              if (showIdeas) {
+                setShowIdeas(false);
+              }
+            }}
+            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+              !showIdeas
+                ? 'text-white border-b-2 border-white pb-1 scale-105'
+                : 'text-gray-400 hover:text-gray-300 hover:scale-105'
+            }`}
+          >
+            Making
+          </button>
+          <button
+            onClick={() => {
+              if (!showIdeas) {
+                loadPublicCollections();
+                setShowIdeas(true);
+              }
+            }}
+            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+              showIdeas
+                ? 'text-white border-b-2 border-white pb-1 scale-105'
+                : 'text-gray-400 hover:text-gray-300 hover:scale-105'
+            }`}
+          >
+            Ideas
+          </button>
         </div>
       </div>
 
@@ -1093,6 +1072,31 @@ export const CollectionTab: React.FC = () => {
       {/* Gift Preview Grid */}
       <div className="grid grid-cols-3 gap-3">
         {Array.from({ length: gridSize }, (_, i) => renderGiftSlot(i + 1))}
+      </div>
+
+      {/* Collection Actions - Save/Load buttons under the grid */}
+      <div className="flex justify-center gap-3 px-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            loadCollections();
+            setIsLoadModalOpen(true);
+          }}
+          disabled={savedCollections.length === 0}
+          className="px-4"
+        >
+          📂 Load
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => setIsSaveModalOpen(true)}
+          disabled={Object.keys(userDesigns).length === 0}
+          className="px-4"
+        >
+          💾 Save
+        </Button>
       </div>
 
       {/* Gift Designer Modal */}
