@@ -18,21 +18,16 @@ export const AdsBanner: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-white/40 rounded-xl"></div>
         
         {/* Content container */}
-        <div className="relative flex items-center justify-between h-full">
+        <div className="relative flex items-center justify-between h-full px-4">
           {/* Left side - Text content */}
-          <div className="flex flex-col justify-center space-y-0.5 ml-2">
-            <h3 className="text-white font-bold text-lg leading-tight">
+          <div className="flex flex-col justify-center space-y-1">
+            <h3 className="text-white font-bold text-xl leading-tight">
               Put your ad here
             </h3>
-            <p className="text-yellow-100 text-xs font-medium">
+            <p className="text-yellow-100 text-sm font-medium">
               Channels, projects, products
             </p>
           </div>
-          
-          {/* Middle - Check now button */}
-          <button className="bg-white text-yellow-600 px-4 py-1.5 rounded-lg font-semibold text-sm hover:bg-yellow-50 transition-colors">
-            Check now!
-          </button>
           
           {/* Right side - Duck element with white light effect */}
           <div className="flex-shrink-0 relative">
@@ -43,9 +38,9 @@ export const AdsBanner: React.FC = () => {
             <Image
               src="/adno1element.png"
               alt="Duck with megaphone"
-              width={60}
-              height={60}
-              className="w-15 h-15 object-contain relative z-10"
+              width={70}
+              height={70}
+              className="w-17 h-17 object-contain relative z-10"
               priority
             />
           </div>
