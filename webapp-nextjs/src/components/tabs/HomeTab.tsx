@@ -158,18 +158,20 @@ export const HomeTab: React.FC = () => {
             subtitle="Daily"
             icon={<PuzzlePieceIcon className="w-4 h-4 text-white" />} 
             onClick={goZoom} 
-            gradient="bg-gradient-to-br from-purple-600 to-blue-600" 
+            gradient="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-700" 
             cta="Play"
             size="small"
+            image="/zoom-box.png"
           />
           <Widget 
             title="Emoji Game" 
             subtitle="Hints"
             icon={<PhotoIcon className="w-4 h-4 text-white" />} 
             onClick={goEmoji} 
-            gradient="bg-gradient-to-br from-fuchsia-600 to-purple-600" 
+            gradient="bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600" 
             cta="Play"
             size="small"
+            image="/emoji-box.png"
           />
         </div>
 
