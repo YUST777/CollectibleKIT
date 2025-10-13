@@ -111,7 +111,7 @@ export const HomeTab: React.FC = () => {
         
         {/* Image on the right side if provided */}
         {image && (
-          <div className={`absolute ${size === 'small' ? 'right-0 bottom-0 h-[55%]' : 'right-0 bottom-0 h-full'} flex items-end`}>
+          <div className={`absolute ${size === 'small' ? 'right-[-4px] bottom-0 h-[60%]' : 'right-0 bottom-0 h-full'} flex items-end`}>
             <Image
               src={image}
               alt={title}
