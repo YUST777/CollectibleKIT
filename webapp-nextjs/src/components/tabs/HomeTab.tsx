@@ -127,7 +127,7 @@ export const HomeTab: React.FC = () => {
           <div>
             <div className={`text-white font-semibold ${getTextSize()} leading-tight`}>{title}</div>
             {subtitle && (
-              <div className="text-white/80 text-xs mt-0.5">{subtitle}</div>
+              <div className={`text-white/80 ${size === 'small' ? 'text-[10px]' : 'text-xs'} mt-0.5 leading-tight`}>{subtitle}</div>
             )}
           </div>
           <div className={`${size === 'horizontal' ? 'ml-auto' : 'mt-auto'}`}>
