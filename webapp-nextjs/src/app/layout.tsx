@@ -46,17 +46,26 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              let analyticsRetryCount = 0;
+              const maxRetries = 3;
+              
               function initTelegramAnalytics() {
                 if (window.telegramAnalytics && typeof window.telegramAnalytics.init === 'function') {
-                  window.telegramAnalytics.init({
-                    token: 'YOUR_TOKEN_FROM_TON_BUILDERS',
-                    appName: 'story-canvas-cutter',
-                  });
-                  console.log('✅ Telegram Analytics initialized');
+                  try {
+                    window.telegramAnalytics.init({
+                      token: 'YOUR_TOKEN_FROM_TON_BUILDERS',
+                      appName: 'story-canvas-cutter',
+                    });
+                    console.log('✅ Telegram Analytics initialized');
+                  } catch (error) {
+                    console.warn('⚠️ Telegram Analytics init failed:', error);
+                  }
+                } else if (analyticsRetryCount < maxRetries) {
+                  analyticsRetryCount++;
+                  console.warn(\`⚠️ Telegram Analytics not loaded yet, retry \${analyticsRetryCount}/\${maxRetries}\`);
+                  setTimeout(initTelegramAnalytics, 2000);
                 } else {
-                  console.warn('⚠️ Telegram Analytics not loaded yet');
-                  // Retry after a delay
-                  setTimeout(initTelegramAnalytics, 1000);
+                  console.warn('⚠️ Telegram Analytics failed to load after multiple retries, continuing without analytics');
                 }
               }
               
