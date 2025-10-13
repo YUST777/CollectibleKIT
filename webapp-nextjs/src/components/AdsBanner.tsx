@@ -12,10 +12,10 @@ export const AdsBanner: React.FC = () => {
       className="mb-3 mx-4 relative overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
       onClick={handleAdClick}
     >
-      {/* Golden gradient background - slim design */}
-      <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-600 p-3 rounded-full relative h-16">
+      {/* Golden gradient background - slim horizontal design */}
+      <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-600 p-3 rounded-xl relative h-16">
         {/* White light effect overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-white/40 rounded-full"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-white/40 rounded-xl"></div>
         
         {/* Content container */}
         <div className="relative flex items-center justify-between h-full">
@@ -30,7 +30,7 @@ export const AdsBanner: React.FC = () => {
           </div>
           
           {/* Middle - Check now button */}
-          <button className="bg-white text-yellow-600 px-4 py-1.5 rounded-full font-semibold text-sm hover:bg-yellow-50 transition-colors">
+          <button className="bg-white text-yellow-600 px-4 py-1.5 rounded-lg font-semibold text-sm hover:bg-yellow-50 transition-colors">
             Check now!
           </button>
           
