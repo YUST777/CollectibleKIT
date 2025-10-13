@@ -1054,49 +1054,52 @@ export const CollectionTab: React.FC = () => {
         {Array.from({ length: gridSize }, (_, i) => renderGiftSlot(i + 1))}
       </div>
 
-      {/* Combined Control Block - Grid Size + Load + Save */}
-      <div className="flex items-center justify-center gap-3 px-4">
-        {/* Grid Size Selector */}
-        <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2 border border-gray-700">
-          <span className="text-sm text-gray-400">Grid Size</span>
-          <select
-            value={gridSize}
-            onChange={(e) => updateGridSize(parseInt(e.target.value))}
-            className="bg-gray-700 text-sm text-white rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* Combined Control Block - Compact & Minimalistic */}
+      <div className="flex items-center justify-center px-4">
+        <div className="flex items-center gap-2 bg-gray-800/50 rounded-xl px-4 py-2.5 border border-gray-700/50 backdrop-blur-sm">
+          {/* Grid Size Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400 font-medium">Grid Size</span>
+            <select
+              value={gridSize}
+              onChange={(e) => updateGridSize(parseInt(e.target.value))}
+              className="bg-white/10 text-sm text-white rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer hover:bg-white/15 transition-colors"
+            >
+              <option value={3}>3</option>
+              <option value={6}>6</option>
+              <option value={9}>9</option>
+              <option value={12}>12</option>
+              <option value={15}>15</option>
+              <option value={18}>18</option>
+            </select>
+          </div>
+
+          {/* Separator */}
+          <div className="w-px h-6 bg-gray-600/50"></div>
+
+          {/* Load Button */}
+          <button
+            onClick={() => {
+              loadCollections();
+              setIsLoadModalOpen(true);
+            }}
+            disabled={savedCollections.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option value={3}>3</option>
-            <option value={6}>6</option>
-            <option value={9}>9</option>
-            <option value={12}>12</option>
-            <option value={15}>15</option>
-            <option value={18}>18</option>
-          </select>
+            <span>📂</span>
+            <span>Load</span>
+          </button>
+
+          {/* Save Button */}
+          <button
+            onClick={() => setIsSaveModalOpen(true)}
+            disabled={Object.keys(userDesigns).length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>💾</span>
+            <span>Save</span>
+          </button>
         </div>
-
-        {/* Load Button */}
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            loadCollections();
-            setIsLoadModalOpen(true);
-          }}
-          disabled={savedCollections.length === 0}
-          className="px-4 py-2"
-        >
-          📂 Load
-        </Button>
-
-        {/* Save Button */}
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setIsSaveModalOpen(true)}
-          disabled={Object.keys(userDesigns).length === 0}
-          className="px-4 py-2"
-        >
-          💾 Save
-        </Button>
       </div>
 
       {/* Gift Designer Modal */}
