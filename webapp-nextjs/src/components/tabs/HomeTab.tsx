@@ -111,7 +111,7 @@ export const HomeTab: React.FC = () => {
         
         {/* Image on the right side if provided */}
         {image && (
-          <div className={`absolute ${size === 'small' ? 'right-[-12px] bottom-0 h-[60%]' : 'right-0 bottom-0 h-full'} flex items-end`}>
+          <div className={`absolute ${size === 'small' ? 'right-[5px] bottom-0 h-[60%]' : 'right-0 bottom-0 h-full'} flex items-end`}>
             <Image
               src={image}
               alt={title}
@@ -155,7 +155,7 @@ export const HomeTab: React.FC = () => {
         <div className="grid grid-cols-2 gap-3">
           <Widget 
             title="Zoom Game" 
-            subtitle="Daily"
+            subtitle="What is this gift photo?"
             icon={<PuzzlePieceIcon className="w-4 h-4 text-white" />} 
             onClick={goZoom} 
             gradient="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-700" 
@@ -165,7 +165,7 @@ export const HomeTab: React.FC = () => {
           />
           <Widget 
             title="Emoji Game" 
-            subtitle="Hints"
+            subtitle="What gift is that emoji?"
             icon={<PhotoIcon className="w-4 h-4 text-white" />} 
             onClick={goEmoji} 
             gradient="bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600" 
@@ -178,7 +178,7 @@ export const HomeTab: React.FC = () => {
         {/* Middle row: 1 large vertical box - Story (Golden) */}
         <Widget 
           title="Create Story" 
-          subtitle="Cut your photo into 12 pieces and share them"
+          subtitle="Make your profile like @etosirius profile."
           icon={<CameraIcon className="w-8 h-8 text-white" />} 
           onClick={goStory} 
           gradient="bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600" 
@@ -190,7 +190,7 @@ export const HomeTab: React.FC = () => {
         {/* Bottom row: 1 large vertical box - Collection (Black) */}
         <Widget 
           title="Collection" 
-          subtitle="Design & share"
+          subtitle="Build your dream collection."
           icon={<GiftIcon className="w-8 h-8 text-white" />} 
           onClick={goCollection} 
           gradient="bg-gradient-to-br from-gray-900 via-gray-800 to-black" 
