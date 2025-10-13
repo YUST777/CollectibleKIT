@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useAppActions, useUser } from '@/store/useAppStore';
 import { Button } from '@/components/ui/Button';
 import { 
@@ -46,7 +47,8 @@ export const HomeTab: React.FC = () => {
     gradient: string; 
     cta: string;
     size?: 'small' | 'horizontal' | 'vertical';
-  }> = ({ title, subtitle, icon, onClick, gradient, cta, size = 'small' }) => {
+    image?: string;
+  }> = ({ title, subtitle, icon, onClick, gradient, cta, size = 'small', image }) => {
     const getSizeClasses = () => {
       switch (size) {
         case 'small':
@@ -106,6 +108,21 @@ export const HomeTab: React.FC = () => {
           <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-white/20 rounded-full" />
           <div className="absolute -right-14 bottom-4 w-16 h-16 bg-white/10 rounded-full" />
         </div>
+        
+        {/* Image on the right side if provided */}
+        {image && (
+          <div className="absolute right-0 bottom-0 h-full flex items-end">
+            <Image
+              src={image}
+              alt={title}
+              width={120}
+              height={120}
+              className="h-full w-auto object-contain"
+              priority
+            />
+          </div>
+        )}
+        
         <div className={`flex ${getLayoutClasses()} relative z-10 h-full`}>
           <div className="flex items-center gap-3">
             <div className={`${getIconSize()} rounded-lg bg-black/15 flex items-center justify-center text-white`}>
@@ -161,26 +178,28 @@ export const HomeTab: React.FC = () => {
           />
         </div>
 
-        {/* Middle row: 1 large vertical box */}
+        {/* Middle row: 1 large vertical box - Story (Golden) */}
         <Widget 
           title="Create Story" 
           subtitle="Cut your photo into 12 pieces and share them"
           icon={<CameraIcon className="w-8 h-8 text-white" />} 
           onClick={goStory} 
-          gradient="bg-gradient-to-br from-sky-600 to-cyan-600" 
+          gradient="bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600" 
           cta="Start Creating"
           size="vertical"
+          image="/story-box.png"
         />
 
-        {/* Bottom row: 1 large vertical box */}
+        {/* Bottom row: 1 large vertical box - Collection (Cyan Blue) */}
         <Widget 
           title="Collection" 
           subtitle="Design & share"
           icon={<GiftIcon className="w-8 h-8 text-white" />} 
           onClick={goCollection} 
-          gradient="bg-gradient-to-br from-emerald-600 to-teal-600" 
+          gradient="bg-gradient-to-br from-cyan-400 via-[#0bb3fe] to-blue-500" 
           cta="Open Designer"
           size="vertical"
+          image="/collection-box.png"
         />
       </div>
     </div>
