@@ -152,9 +152,18 @@ export const AdsBanner: React.FC = () => {
                 
                 {/* Right side - Element with white light effect */}
                 <div className="flex-shrink-0 relative">
-                  {/* White light glow effect */}
-                  <div className="absolute inset-0 bg-white/30 rounded-full blur-sm scale-110"></div>
-                  <div className="absolute inset-0 bg-white/20 rounded-full blur-md scale-125"></div>
+                  {/* White light glow effect - reduced for ad 2 */}
+                  {ad.id === 1 ? (
+                    <>
+                      <div className="absolute inset-0 bg-white/30 rounded-full blur-sm scale-110"></div>
+                      <div className="absolute inset-0 bg-white/20 rounded-full blur-md scale-125"></div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="absolute inset-0 bg-white/10 rounded-full blur-sm scale-105"></div>
+                      <div className="absolute inset-0 bg-white/5 rounded-full blur-md scale-110"></div>
+                    </>
+                  )}
                   
                   <Image
                     src={ad.elementImage}
@@ -167,9 +176,13 @@ export const AdsBanner: React.FC = () => {
                 </div>
               </div>
               
-              {/* Additional sparkle effects */}
-              <div className="absolute top-2 right-20 text-white/60 text-sm">✨</div>
-              <div className="absolute bottom-2 left-20 text-white/60 text-sm">⭐</div>
+              {/* Additional sparkle effects - only for ad 1 */}
+              {ad.id === 1 && (
+                <>
+                  <div className="absolute top-2 right-20 text-white/60 text-sm">✨</div>
+                  <div className="absolute bottom-2 left-20 text-white/60 text-sm">⭐</div>
+                </>
+              )}
             </div>
           </div>
         ))}
