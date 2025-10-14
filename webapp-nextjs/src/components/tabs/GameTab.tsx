@@ -287,27 +287,15 @@ export const GameTab: React.FC = () => {
   };
 
   const skipQuestion = () => {
-    // Reveal the answer and give a small penalty
-    if (currentQuestion) {
-      const correctAnswer = currentQuestion.model_name;
-      setGameMessage(`Answer revealed: "${correctAnswer}". No reward earned.`);
-      hapticFeedback('notification', 'warning', webApp);
-      
-      // Auto-load next question after showing answer for 3 seconds
-      setTimeout(() => {
-        loadDailyQuestion();
-      }, 3000);
-    }
-  };
-
-  const nextQuestion = () => {
-    loadDailyQuestion();
+    // Reset state and load new question
     setUserAnswer('');
     setAttempts([]);
     setGameMessage('');
     setSelectedGiftName(null);
     setSelectedModelNumber(null);
     setSelectedModelName(null);
+    toast('Loading new question...');
+    loadDailyQuestion();
   };
 
 
@@ -631,23 +619,14 @@ export const GameTab: React.FC = () => {
         )}
 
         {/* Game Controls */}
-        <div className="flex gap-3">
+        <div className="w-full">
           <Button
-            variant="secondary"
             size="sm"
             onClick={skipQuestion}
-            className="flex-1"
-            disabled={isLoading}
-          >
-            🤷 Give Up
-          </Button>
-          <Button
-            size="sm"
-            onClick={nextQuestion}
-            className="flex-1"
+            className="w-full"
             loading={isLoading}
           >
-            🎁 Next Gift
+            Skip
           </Button>
         </div>
 
