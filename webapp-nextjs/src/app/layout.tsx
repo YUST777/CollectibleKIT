@@ -7,8 +7,8 @@ import { Toaster } from 'react-hot-toast';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Story Canvas Cutter',
-  description: 'Transform your photos into puzzle stories!',
+  title: 'CollectibleKIT',
+  description: 'Create amazing stories with Telegram collectible gifts!',
 };
 
 export const viewport = {
@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Telegram WebApp SDK */}
         <script src="https://telegram.org/js/telegram-web-app.js" />
@@ -35,14 +35,15 @@ export default function RootLayout({
         {/* TON Connect UI */}
         <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js" />
         
-        {/* Telegram Analytics SDK */}
+        {/* Telegram Analytics SDK - Disabled until token is configured */}
+        {/* Uncomment and add your token from https://t.me/TonBuilders_bot */}
+        {/*
         <script
           async
           src="https://tganalytics.xyz/index.js"
           type="text/javascript"
         />
         
-        {/* Telegram Analytics Initialization */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -50,17 +51,15 @@ export default function RootLayout({
                 if (window.telegramAnalytics && typeof window.telegramAnalytics.init === 'function') {
                   window.telegramAnalytics.init({
                     token: 'YOUR_TOKEN_FROM_TON_BUILDERS',
-                    appName: 'story-canvas-cutter',
+                    appName: 'collectiblekit',
                   });
                   console.log('✅ Telegram Analytics initialized');
                 } else {
                   console.warn('⚠️ Telegram Analytics not loaded yet');
-                  // Retry after a delay
                   setTimeout(initTelegramAnalytics, 1000);
                 }
               }
               
-              // Initialize when script loads
               if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', initTelegramAnalytics);
               } else {
@@ -69,6 +68,7 @@ export default function RootLayout({
             `,
           }}
         />
+        */}
       </head>
       <body className={inter.className}>
         <TelegramProvider>

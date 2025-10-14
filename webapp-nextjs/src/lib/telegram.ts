@@ -160,9 +160,8 @@ export const hapticFeedback = (
 export const trackTelegramAnalytics = (event: string, data?: any) => {
   if (typeof window !== 'undefined' && window.telegramAnalytics && typeof window.telegramAnalytics.track === 'function') {
     window.telegramAnalytics.track(event, data);
-  } else {
-    console.log('Telegram Analytics track:', event, data);
   }
+  // Analytics disabled - no logging to keep console clean
 };
 
 // Helper function for API routes to get user from Telegram WebApp data
