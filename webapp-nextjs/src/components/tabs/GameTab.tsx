@@ -9,13 +9,14 @@ import { useTelegram } from '@/components/providers/TelegramProvider';
 import { AdsBanner } from '@/components/AdsBanner';
 import { hapticFeedback } from '@/lib/telegram';
 import { cacheUtils } from '@/lib/cache';
+import { Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FaceSmileIcon, MagnifyingGlassIcon, XMarkIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { GiftModel, FilterOption } from '@/types';
 
 export const GameTab: React.FC = () => {
   const dailyGame = useDailyGame();
-  const { setDailyGame } = useAppActions();
+  const { setDailyGame, setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
   const { webApp, user: telegramUser } = useTelegram();
   const user = useUser();
   const currentSubTab = useCurrentSubTab();
@@ -41,12 +42,14 @@ export const GameTab: React.FC = () => {
   const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Load gifts data on mount
+  // Load gifts data from CDN on mount
   useEffect(() => {
     const loadGifts = async () => {
       try {
+        // Load ALL gifts from CDN for answer selection (not database)
         const giftsData = await cacheUtils.getGifts();
         setGifts(giftsData.map((name: string) => ({ name })));
+        console.log(`✅ Loaded ${giftsData.length} gifts from CDN for answers`);
       } catch (error) {
         console.error('Error loading gifts:', error);
         // Fallback data
@@ -66,13 +69,15 @@ export const GameTab: React.FC = () => {
     loadDailyQuestion();
   }, []);
 
-  // Load models when a gift is selected
+  // Load ALL models from CDN when a gift is selected (for harder gameplay)
   useEffect(() => {
     const loadModels = async () => {
       if (selectedGiftName) {
         try {
+          // Load ALL models from CDN (50-70+ models per gift for harder game)
           const modelsData = await cacheUtils.getGiftModels(selectedGiftName);
           setModels(modelsData);
+          console.log(`✅ Loaded ${modelsData.length} models for ${selectedGiftName} from CDN`);
         } catch (error) {
           console.error(`Error loading models for ${selectedGiftName}:`, error);
           toast.error('Failed to load models.');
@@ -119,10 +124,12 @@ export const GameTab: React.FC = () => {
     }
   }, [selectedGame]);
 
-  // Update selectedGame based on navigation
+  // Update selectedGame based on navigation and reload question
   useEffect(() => {
     if (currentSubTab) {
       setSelectedGame(currentSubTab as 'emoji' | 'zoom');
+      // Load new question when switching game types
+      loadDailyQuestion();
     }
   }, [currentSubTab]);
 
@@ -130,7 +137,14 @@ export const GameTab: React.FC = () => {
     try {
       setIsLoading(true);
       const userId = webApp?.initDataUnsafe?.user?.id;
-      const url = userId ? `/api/game/daily-question?userId=${userId}` : '/api/game/daily-question';
+      
+      // Determine game type based on current sub tab
+      const gameType = currentSubTab === 'emoji' ? 'emoji' : 'zoom';
+      
+      const url = userId 
+        ? `/api/game/daily-question?userId=${userId}&gameType=${gameType}` 
+        : `/api/game/daily-question?gameType=${gameType}`;
+      
       const response = await fetch(url);
       const data = await response.json();
       
@@ -145,7 +159,8 @@ export const GameTab: React.FC = () => {
         setUserAnswer('');
         setGameMessage('');
         
-        console.log('🎮 New random game loaded:', data.question.gift_name);
+        console.log('🎮 New random game loaded:', data.question.gift_name, '-', data.question.model_name);
+        console.log('🎮 Game type:', data.question.game_type);
       } else {
         toast.error(data.error || 'Failed to load game');
       }
@@ -178,6 +193,7 @@ export const GameTab: React.FC = () => {
         body: JSON.stringify({
           userId: webApp?.initDataUnsafe?.user?.id,
           answer: selectedModelName, // Submit the model name as the answer
+          gameType: currentQuestion.game_type, // Pass the game type
         }),
       });
       
@@ -185,7 +201,7 @@ export const GameTab: React.FC = () => {
       
       if (result.success) {
         if (result.correct) {
-          setGameMessage('🎉 Correct! Well done!');
+          setGameMessage('Correct! Well done!');
           hapticFeedback('notification', 'success', webApp);
           
           if (result.reward > 0) {
@@ -255,7 +271,7 @@ export const GameTab: React.FC = () => {
       setSelectedModelNumber(item.number || 0);
       setSelectedModelName(item.name);
     }
-    hapticFeedback('selection_change', 'light', webApp);
+    hapticFeedback('selection', undefined, webApp);
   };
 
   const openFilterDrawer = () => {
@@ -271,13 +287,17 @@ export const GameTab: React.FC = () => {
   };
 
   const skipQuestion = () => {
-    setUserAnswer('');
-    setAttempts([]);
-    setGameMessage('');
-    setSelectedGiftName(null);
-    setSelectedModelNumber(null);
-    setSelectedModelName(null);
-    toast('Question skipped');
+    // Reveal the answer and give a small penalty
+    if (currentQuestion) {
+      const correctAnswer = currentQuestion.model_name;
+      setGameMessage(`Answer revealed: "${correctAnswer}". No reward earned.`);
+      hapticFeedback('notification', 'warning', webApp);
+      
+      // Auto-load next question after showing answer for 3 seconds
+      setTimeout(() => {
+        loadDailyQuestion();
+      }, 3000);
+    }
   };
 
   const nextQuestion = () => {
@@ -412,7 +432,7 @@ export const GameTab: React.FC = () => {
         ctx.fillStyle = '#6b7280';
         ctx.font = 'bold 18px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('🎁 Gift Model', canvas.width / 2, canvas.height / 2 - 40);
+        ctx.fillText('Gift Model', canvas.width / 2, canvas.height / 2 - 40);
         
         ctx.fillStyle = '#9ca3af';
         ctx.font = '14px Arial';
@@ -471,12 +491,20 @@ export const GameTab: React.FC = () => {
     );
   };
 
+  const goToProfile = () => {
+    setNavigationLevel('main');
+    setCurrentSubTab('profile');
+    setCurrentTertiaryTab(null);
+    hapticFeedback('selection', 'light', webApp);
+  };
+
   return (
     <div className="space-y-4 py-4 animate-fade-in">
       {/* Header with Profile Picture */}
       <div className="flex items-center justify-between px-4 mb-4">
         {/* Profile Picture with Notification Badge */}
         <button
+          onClick={goToProfile}
           className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
         >
           {telegramUser?.photo_url ? (
@@ -609,8 +637,9 @@ export const GameTab: React.FC = () => {
             size="sm"
             onClick={skipQuestion}
             className="flex-1"
+            disabled={isLoading}
           >
-            Skip
+            🤷 Give Up
           </Button>
           <Button
             size="sm"
@@ -618,7 +647,7 @@ export const GameTab: React.FC = () => {
             className="flex-1"
             loading={isLoading}
           >
-            New Random Gift
+            🎁 Next Gift
           </Button>
         </div>
 
@@ -690,11 +719,13 @@ export const GameTab: React.FC = () => {
                 onClick={() => {
                   if (selectedGiftName) {
                     setCurrentFilterType('model');
-                    setCurrentFilterData(models.map(model => ({ 
+                    const modelData = models.map(model => ({ 
                       name: model.name, 
                       type: 'model' as const, 
                       number: model.number || 0
-                    })));
+                    }));
+                    console.log(`🎨 Setting ${modelData.length} models for ${selectedGiftName} in drawer`);
+                    setCurrentFilterData(modelData);
                     setDrawerSearchTerm('');
                   } else {
                     toast.error('Please select a gift collection first');
@@ -743,7 +774,15 @@ export const GameTab: React.FC = () => {
             </div>
 
             {/* Filter Options List */}
-            <div className="space-y-2 max-h-[35vh] overflow-y-auto">
+            {currentFilterType === 'model' && (
+              <div className="text-xs text-gray-400 mb-2 px-1">
+                Showing {currentFilterData.filter(item => {
+                  if (!drawerSearchTerm) return true;
+                  return item.name.toLowerCase().includes(drawerSearchTerm.toLowerCase());
+                }).length} of {currentFilterData.length} models
+              </div>
+            )}
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
               {currentFilterData
                 .filter(item => {
                   if (!drawerSearchTerm) return true;
@@ -779,9 +818,7 @@ export const GameTab: React.FC = () => {
                         {item.type === 'gift' && (
                           <>
                             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
-                              <div className="w-full h-full flex items-center justify-center text-lg">
-                                🎁
-                              </div>
+                              <Gift className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex-1">
                               <div className="font-medium text-white">{item.name}</div>
