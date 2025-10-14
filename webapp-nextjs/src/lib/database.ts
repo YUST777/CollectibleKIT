@@ -360,7 +360,7 @@ class DatabaseService {
 
   // User methods
   async getUser(userId: number): Promise<User | null> {    try {
-      const user = await this.dbGet(`SELECT * FROM users WHERE user_id = ${userId}`) as User | undefined;
+      const user = await this.dbGet(`SELECT * FROM users WHERE user_id = ?`, [userId]) as User | undefined;
       return user || null;
     } catch (error) {
       console.error('Error getting user:', error);
@@ -371,18 +371,20 @@ class DatabaseService {
   async createUser(userId: number, username?: string, firstName?: string): Promise<boolean> {    
     try {
       // Check if user already exists
-      const existingUser = await this.dbGet(`SELECT * FROM users WHERE user_id = ${userId}`);
+      const existingUser = await this.dbGet(`SELECT * FROM users WHERE user_id = ?`, [userId]);
       
       if (existingUser) {
         // User exists, just update basic info and last_activity
         await this.dbRun(
-          `UPDATE users SET username = '${username}', first_name = '${firstName}', last_activity = ${Date.now()} WHERE user_id = ${userId}`
+          `UPDATE users SET username = ?, first_name = ?, last_activity = ? WHERE user_id = ?`,
+          [username, firstName, Date.now(), userId]
         );
         console.log('✅ Updated existing user:', { userId, user_type: (existingUser as any).user_type, credits: (existingUser as any).credits });
       } else {
         // New user, create with default values
         await this.dbRun(
-          `INSERT INTO users (user_id, username, first_name, created_at, last_activity, user_type, credits) VALUES (${userId}, '${username}', '${firstName}', ${Date.now()}, ${Date.now()}, 'normal', 0)`
+          `INSERT INTO users (user_id, username, first_name, created_at, last_activity, user_type, credits) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [userId, username, firstName, Date.now(), Date.now(), 'normal', 0]
         );
         console.log('✅ Created new user:', { userId, user_type: 'normal', credits: 0 });
       }
@@ -396,10 +398,12 @@ class DatabaseService {
   async updateUser(userId: number, updates: Partial<User>): Promise<boolean> {    try {
       const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
       const values = Object.values(updates);
+      values.push(Date.now());
       values.push(userId);
 
       await this.dbRun(
-        `UPDATE users SET ${setClause}, last_activity = ${Date.now()} WHERE user_id = ${userId}`
+        `UPDATE users SET ${setClause}, last_activity = ? WHERE user_id = ?`,
+        values
       );
       return true;
     } catch (error) {
@@ -411,10 +415,10 @@ class DatabaseService {
   async updateUserCredits(userId: number, creditChange: number): Promise<User | null> {    
     try {
       // Update credits
-      await this.dbRun(`UPDATE users SET credits = credits + ${creditChange}, last_activity = ${Date.now()} WHERE user_id = ${userId}`);
+      await this.dbRun(`UPDATE users SET credits = credits + ?, last_activity = ? WHERE user_id = ?`, [creditChange, Date.now(), userId]);
       
       // Get updated user data
-      const user = await this.dbGet(`SELECT * FROM users WHERE user_id = ${userId}`) as User | undefined;
+      const user = await this.dbGet(`SELECT * FROM users WHERE user_id = ?`, [userId]) as User | undefined;
       return user || null;
     } catch (error) {
       console.error('Error updating user credits:', error);
@@ -1053,9 +1057,9 @@ class DatabaseService {
     try {
       await this.dbRun(`
         UPDATE game_stats 
-        SET stat_value = stat_value + 1, updated_at = ${Date.now()}
+        SET stat_value = stat_value + 1, updated_at = ?
         WHERE stat_key = ?
-      `, [statKey]);
+      `, [Date.now(), statKey]);
       
       const newValue = await this.getGameStat(statKey);
       console.log(`📊 Incremented ${statKey} to ${newValue}`);
@@ -1113,3 +1117,4 @@ export async function updateUserCredits(telegramId: number, creditChange: number
     return null;
   }
 }
+
