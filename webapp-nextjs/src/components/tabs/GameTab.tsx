@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDailyGame, useAppActions, useUser, useCurrentSubTab } from '@/store/useAppStore';
 import { Button } from '@/components/ui/Button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
+import { ModelThumbnail } from '@/components/ModelThumbnail';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { AdsBanner } from '@/components/AdsBanner';
 import { hapticFeedback } from '@/lib/telegram';
+import { cacheUtils } from '@/lib/cache';
 import toast from 'react-hot-toast';
 import { FaceSmileIcon, MagnifyingGlassIcon, XMarkIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { GiftModel, FilterOption } from '@/types';
 
 export const GameTab: React.FC = () => {
   const dailyGame = useDailyGame();
@@ -25,9 +29,60 @@ export const GameTab: React.FC = () => {
   const [revealedEmojis, setRevealedEmojis] = useState(1); // Start with 1 emoji revealed
   const [currentZoomLevel, setCurrentZoomLevel] = useState(500); // For zoom game
 
+  // Filter drawer states
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [gifts, setGifts] = useState<{ name: string }[]>([]);
+  const [selectedGiftName, setSelectedGiftName] = useState<string | null>(null);
+  const [selectedModelNumber, setSelectedModelNumber] = useState<number | null>(null);
+  const [selectedModelName, setSelectedModelName] = useState<string | null>(null);
+  const [models, setModels] = useState<GiftModel[]>([]);
+  const [currentFilterType, setCurrentFilterType] = useState<'gift' | 'model'>('gift');
+  const [currentFilterData, setCurrentFilterData] = useState<FilterOption[]>([]);
+  const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Load gifts data on mount
+  useEffect(() => {
+    const loadGifts = async () => {
+      try {
+        const giftsData = await cacheUtils.getGifts();
+        setGifts(giftsData.map((name: string) => ({ name })));
+      } catch (error) {
+        console.error('Error loading gifts:', error);
+        // Fallback data
+        setGifts([
+          { name: 'Duck' },
+          { name: 'Cat' },
+          { name: 'Dog' },
+          { name: 'Rabbit' },
+          { name: 'Bear' }
+        ]);
+      }
+    };
+    loadGifts();
+  }, []);
+
   useEffect(() => {
     loadDailyQuestion();
   }, []);
+
+  // Load models when a gift is selected
+  useEffect(() => {
+    const loadModels = async () => {
+      if (selectedGiftName) {
+        try {
+          const modelsData = await cacheUtils.getGiftModels(selectedGiftName);
+          setModels(modelsData);
+        } catch (error) {
+          console.error(`Error loading models for ${selectedGiftName}:`, error);
+          toast.error('Failed to load models.');
+        }
+      } else {
+        setModels([]);
+      }
+    };
+    loadModels();
+  }, [selectedGiftName]);
 
   // Force canvas render when component mounts and zoom game is available
   useEffect(() => {
@@ -103,12 +158,15 @@ export const GameTab: React.FC = () => {
   };
 
   const submitAnswer = async () => {
-    if (!userAnswer.trim() || !currentQuestion) return;
+    if (!selectedGiftName || !selectedModelName || !currentQuestion) {
+      toast.error('Please select a gift collection and model');
+      return;
+    }
     
     setIsLoading(true);
     
-    // Add attempt to list
-    const newAttempt = userAnswer.trim();
+    // Add attempt to list with both gift name and model name
+    const newAttempt = `${selectedGiftName} - ${selectedModelName}`;
     setAttempts(prev => [newAttempt, ...prev]);
     
     try {
@@ -119,7 +177,7 @@ export const GameTab: React.FC = () => {
         },
         body: JSON.stringify({
           userId: webApp?.initDataUnsafe?.user?.id,
-          answer: newAttempt,
+          answer: selectedModelName, // Submit the model name as the answer
         }),
       });
       
@@ -133,6 +191,11 @@ export const GameTab: React.FC = () => {
           if (result.reward > 0) {
             toast.success(`You earned ${result.reward} credits!`);
           }
+          
+          // Clear selection
+          setSelectedGiftName(null);
+          setSelectedModelNumber(null);
+          setSelectedModelName(null);
           
           // Auto-load next random game after 2 seconds
           setTimeout(() => {
@@ -180,15 +243,41 @@ export const GameTab: React.FC = () => {
       toast.error('Failed to submit answer');
     } finally {
       setIsLoading(false);
-      setUserAnswer('');
     }
+  };
+
+  const selectFilterOption = (item: FilterOption) => {
+    if (item.type === 'gift') {
+      setSelectedGiftName(item.name);
+      setSelectedModelNumber(null);
+      setSelectedModelName(null);
+    } else if (item.type === 'model') {
+      setSelectedModelNumber(item.number || 0);
+      setSelectedModelName(item.name);
+    }
+    hapticFeedback('selection_change', 'light', webApp);
+  };
+
+  const openFilterDrawer = () => {
+    setIsFilterDrawerOpen(true);
+    setCurrentFilterType('gift');
+    setCurrentFilterData(gifts.map(gift => ({ name: gift.name, type: 'gift' as const })));
+    setDrawerSearchTerm('');
+  };
+
+  const handleSubmitSelection = () => {
+    setIsFilterDrawerOpen(false);
+    submitAnswer();
   };
 
   const skipQuestion = () => {
     setUserAnswer('');
     setAttempts([]);
     setGameMessage('');
-        toast('Question skipped');
+    setSelectedGiftName(null);
+    setSelectedModelNumber(null);
+    setSelectedModelName(null);
+    toast('Question skipped');
   };
 
   const nextQuestion = () => {
@@ -196,6 +285,9 @@ export const GameTab: React.FC = () => {
     setUserAnswer('');
     setAttempts([]);
     setGameMessage('');
+    setSelectedGiftName(null);
+    setSelectedModelNumber(null);
+    setSelectedModelName(null);
   };
 
 
@@ -342,16 +434,16 @@ export const GameTab: React.FC = () => {
   };
 
   const renderZoomGame = () => {
-    if (!currentQuestion || currentQuestion.game_type !== 'zoom') return null;
+    if (!currentQuestion || currentQuestion.game_type !== 'zoom') {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-400">Loading game session...</p>
+        </div>
+      );
+    }
     
     return (
       <div className="mb-4">
-        <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg p-4 text-center mb-4">
-          <p className="text-icon-white font-medium">
-            Zoom Game: {currentQuestion.question}
-          </p>
-        </div>
-        
         {/* Zoom Canvas */}
         <div className="relative bg-gray-800 rounded-lg p-4">
           <canvas 
@@ -369,9 +461,6 @@ export const GameTab: React.FC = () => {
           />
           <div className="absolute top-6 right-6 bg-black/80 text-white text-sm px-3 py-1 rounded-full font-mono">
             {currentZoomLevel}%
-          </div>
-          <div className="absolute bottom-6 left-6 bg-black/80 text-white text-xs px-2 py-1 rounded">
-            {currentQuestion?.gift_name} - {currentQuestion?.model_name}
           </div>
         </div>
         
@@ -446,26 +535,42 @@ export const GameTab: React.FC = () => {
             {currentSubTab === 'emoji' ? 'Each try unlocks an emoji.' : 'Each wrong guess zooms out 15%.'}
           </p>
 
-        {/* Answer Input */}
-        <div className="flex gap-3 mb-4">
-          <input
-            type="text"
-            value={userAnswer}
-            onChange={(e) => setUserAnswer(e.target.value)}
-            placeholder="Type gift model name..."
-            className="flex-1 px-4 py-3 bg-icon-idle/10 border-2 border-icon-idle/30 rounded-lg text-text-idle text-sm focus:outline-none focus:border-purple-400"
-            onKeyPress={(e) => e.key === 'Enter' && submitAnswer()}
-          />
-          
-          <Button
-            size="sm"
-            onClick={submitAnswer}
-            disabled={!userAnswer.trim() || isLoading}
-            loading={isLoading}
-            className="px-4 py-3"
-          >
-            ✓
-          </Button>
+        {/* Answer Selection */}
+        <div className="space-y-3 mb-4">
+          {/* Selected Answer Display */}
+          {(selectedGiftName || selectedModelName) && (
+            <div className="bg-blue-900/30 border border-blue-600/30 rounded-lg p-3">
+              <div className="text-sm text-blue-300 mb-1">Your Selection:</div>
+              <div className="font-medium text-white">
+                {selectedGiftName && <span className="text-purple-300">{selectedGiftName}</span>}
+                {selectedGiftName && selectedModelName && <span className="text-gray-400"> → </span>}
+                {selectedModelName && <span className="text-blue-300">{selectedModelName}</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Selection Buttons */}
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={openFilterDrawer}
+              className="flex-1"
+            >
+              <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
+              {selectedGiftName || selectedModelName ? 'Change Selection' : 'Select Gift & Model'}
+            </Button>
+            
+            <Button
+              size="sm"
+              onClick={submitAnswer}
+              disabled={!selectedGiftName || !selectedModelName || isLoading}
+              loading={isLoading}
+              className="px-6"
+            >
+              Submit
+            </Button>
+          </div>
         </div>
 
         {/* Game Message */}
@@ -518,14 +623,219 @@ export const GameTab: React.FC = () => {
         </div>
 
           {/* People Found Counter */}
-          <div className="text-center p-4 bg-icon-idle/10 rounded-lg">
+          <div className="text-center text-text-idle text-sm">
             <span className="text-yellow-600 font-bold">
-              {currentQuestion?.solvers_count || '47,276'}
+              {currentQuestion?.solvers_count?.toLocaleString() || '0'}
             </span>{' '}
             people already found out!
           </div>
         </div>
       )}
+
+      {/* Filter Selection Drawer */}
+      <Sheet open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+        <SheetContent className="bg-[#1c1c1d]">
+          <SheetHeader>
+            <SheetTitle className="text-white text-center">
+              Select Gift & Model
+            </SheetTitle>
+          </SheetHeader>
+          
+          {/* Gift Preview */}
+          <div className="mt-4 mb-4">
+            <div className="w-32 h-32 mx-auto rounded-2xl overflow-hidden relative border-2 border-gray-600 bg-gradient-to-br from-gray-700 to-gray-800">
+              {selectedGiftName && selectedModelName ? (
+                <div className="absolute inset-3 flex items-center justify-center z-20">
+                  <ModelThumbnail
+                    collectionName={selectedGiftName}
+                    modelName={selectedModelName}
+                    size="large"
+                    className="w-full h-full"
+                    showFallback={true}
+                  />
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <span className="text-gray-400 text-xs">No selection</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Selection Info */}
+            <div className="text-center mt-2">
+              <span className="text-gray-400 text-sm">
+                {selectedGiftName ? `${selectedGiftName}${selectedModelName ? ` - ${selectedModelName}` : ''}` : 'Select a gift and model'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {/* Filter Type Tabs */}
+            <div className="bg-[#282627] rounded-xl p-1 grid grid-cols-2 gap-1">
+              <button
+                onClick={() => {
+                  setCurrentFilterType('gift');
+                  setCurrentFilterData(gifts.map(gift => ({ name: gift.name, type: 'gift' as const })));
+                  setDrawerSearchTerm('');
+                }}
+                className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
+                  currentFilterType === 'gift'
+                    ? 'bg-[#424242] text-white shadow-sm'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Gift Collection
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedGiftName) {
+                    setCurrentFilterType('model');
+                    setCurrentFilterData(models.map(model => ({ 
+                      name: model.name, 
+                      type: 'model' as const, 
+                      number: model.number || 0
+                    })));
+                    setDrawerSearchTerm('');
+                  } else {
+                    toast.error('Please select a gift collection first');
+                  }
+                }}
+                disabled={!selectedGiftName}
+                className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
+                  currentFilterType === 'model'
+                    ? 'bg-[#424242] text-white shadow-sm'
+                    : selectedGiftName 
+                      ? 'text-gray-400 hover:text-white'
+                      : 'text-gray-600 cursor-not-allowed'
+                }`}
+              >
+                Gift Model
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative">
+              <input
+                type="text"
+                value={drawerSearchTerm}
+                onChange={(e) => setDrawerSearchTerm(e.target.value)}
+                placeholder={`Search ${currentFilterType === 'gift' ? 'collections' : 'models'}...`}
+                className="w-full px-4 py-2.5 pl-10 bg-[#424242] text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <svg 
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {drawerSearchTerm && (
+                <button
+                  onClick={() => setDrawerSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Filter Options List */}
+            <div className="space-y-2 max-h-[35vh] overflow-y-auto">
+              {currentFilterData
+                .filter(item => {
+                  if (!drawerSearchTerm) return true;
+                  const searchLower = drawerSearchTerm.toLowerCase();
+                  return item.name.toLowerCase().includes(searchLower);
+                })
+                .length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                    <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <p className="text-sm">No results found</p>
+                    <p className="text-xs mt-1">Try a different search term</p>
+                  </div>
+                ) : (
+                  currentFilterData
+                    .filter(item => {
+                      if (!drawerSearchTerm) return true;
+                      const searchLower = drawerSearchTerm.toLowerCase();
+                      return item.name.toLowerCase().includes(searchLower);
+                    })
+                    .map((item, index) => (
+                      <div
+                        key={index}
+                        className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
+                          (currentFilterType === 'gift' && item.name === selectedGiftName) ||
+                          (currentFilterType === 'model' && item.name === selectedModelName)
+                            ? 'ring-2 ring-blue-500'
+                            : ''
+                        }`}
+                        onClick={() => selectFilterOption(item)}
+                      >
+                        {item.type === 'gift' && (
+                          <>
+                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
+                              <div className="w-full h-full flex items-center justify-center text-lg">
+                                🎁
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-white">{item.name}</div>
+                            </div>
+                          </>
+                        )}
+                        
+                        {item.type === 'model' && (
+                          <>
+                            <div className="w-12 h-12 mr-3">
+                              <ModelThumbnail
+                                collectionName={selectedGiftName || ''}
+                                modelName={item.name}
+                                size="medium"
+                                className="rounded-lg"
+                                showFallback={true}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-white">Model {item.number}</div>
+                              <div className="text-sm text-gray-400">{item.name}</div>
+                            </div>
+                          </>
+                        )}
+                        
+                        {(currentFilterType === 'gift' && item.name === selectedGiftName) ||
+                         (currentFilterType === 'model' && item.name === selectedModelName) ? (
+                          <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        ) : null}
+                      </div>
+                    ))
+                )
+              }
+            </div>
+            
+            {/* OK Button */}
+            <div className="mt-6 pt-4 border-t border-gray-700">
+              <button
+                onClick={handleSubmitSelection}
+                disabled={!selectedGiftName || !selectedModelName}
+                className={`w-full py-3 px-4 rounded-xl font-semibold text-white transition-all ${
+                  selectedGiftName && selectedModelName
+                    ? 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                    : 'bg-gray-600 cursor-not-allowed opacity-50'
+                }`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

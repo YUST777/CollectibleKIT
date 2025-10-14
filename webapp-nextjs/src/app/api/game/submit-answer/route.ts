@@ -8,24 +8,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, answer } = body;
 
+    console.log('📥 Received submission:', {
+      userId,
+      answer,
+      bodyKeys: Object.keys(body)
+    });
+
     // Validate required fields
-    if (!userId || !answer) {
+    if (!answer) {
       return NextResponse.json(
-        { success: false, error: 'Missing userId or answer' },
+        { success: false, error: 'Missing answer' },
         { status: 400 }
       );
     }
 
-    // Validate userId
-    const userIdNum = parseInt(userId);
-    if (isNaN(userIdNum) || userIdNum <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
+    // Validate userId if provided
+    let userIdNum = 0; // Default for anonymous
+    if (userId) {
+      userIdNum = parseInt(userId);
+      if (isNaN(userIdNum) || userIdNum < 0) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid user ID' },
+          { status: 400 }
+        );
+      }
     }
 
-    console.log('Answer submission:', {
+    console.log('✅ Answer submission validated:', {
       userId: userIdNum,
       answer: answer
     });

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.1.5",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@telegram-apps/analytics": "^1.4.4",
     "autoprefixer": "^10.0.1",
     "clsx": "^2.1.1",

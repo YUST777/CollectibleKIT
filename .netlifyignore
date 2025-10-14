@@ -1,0 +1,33 @@
+# Ignore study projects
+study me /
+study me/
+
+# Ignore bot files (if not needed for deployment)
+bot/
+bot_data.db
+*.db
+
+# Ignore temporary files
+temp_uploads/
+
+# Ignore Python files
+*.py
+__pycache__/
+.venv/
+venv/
+
+# Ignore docs
+docs/
+
+# Ignore assets not used in webapp
+assets/
+
+# Ignore scripts
+*.sh
+*.bat
+*.ps1
+start_bot.py
+start_mini_app.py
+
+# Keep only webapp-nextjs
+

@@ -81,6 +81,13 @@ export interface UserTaskProgress {
   last_updated: number;
 }
 
+export interface GameStats {
+  id: number;
+  stat_key: string;
+  stat_value: number;
+  updated_at: number;
+}
+
 export interface DailyGameReward {
   id: number;
   user_id: number;
@@ -123,12 +130,38 @@ class DatabaseService {
     }
   }
 
-  private async initDatabase(): Promise<void> {
-    const run = promisify(this.db.run.bind(this.db));
-    
+  // Helper methods for promisified database operations
+  private dbRun(sql: string, params: any[] = []): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.db.run(sql, params, function(err) {
+        if (err) reject(err);
+        else resolve(this);
+      });
+    });
+  }
+
+  private dbGet(sql: string, params: any[] = []): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.db.get(sql, params, (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  }
+
+  private dbAll(sql: string, params: any[] = []): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
+  private async initDatabase(): Promise<void> {    
     try {
       // Users table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS users (
           user_id INTEGER PRIMARY KEY,
           username TEXT,
@@ -143,7 +176,7 @@ class DatabaseService {
       `);
 
       // Payments table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS payments (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER,
@@ -159,7 +192,7 @@ class DatabaseService {
       `);
 
       // Requests table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS requests (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER,
@@ -175,7 +208,7 @@ class DatabaseService {
       `);
 
       // Saved collections table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS saved_collections (
           id TEXT PRIMARY KEY,
           user_id INTEGER,
@@ -189,7 +222,7 @@ class DatabaseService {
       `);
 
       // Collection likes table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS collection_likes (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           collection_id TEXT NOT NULL,
@@ -202,7 +235,7 @@ class DatabaseService {
       `);
 
       // Daily game tables
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS daily_game_solves (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER,
@@ -215,7 +248,7 @@ class DatabaseService {
         )
       `);
 
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS daily_game_rewards (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER,
@@ -229,7 +262,7 @@ class DatabaseService {
       `);
 
       // Sales table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS sales (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER,
@@ -243,7 +276,7 @@ class DatabaseService {
       `);
 
       // Referrals table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS referrals (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           referrer_id INTEGER NOT NULL,
@@ -258,7 +291,7 @@ class DatabaseService {
       `);
 
       // Tasks table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS tasks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           task_id TEXT UNIQUE NOT NULL,
@@ -273,7 +306,7 @@ class DatabaseService {
       `);
 
       // Task completions table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS task_completions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
@@ -287,7 +320,7 @@ class DatabaseService {
       `);
 
       // User task progress table
-      await run(`
+      await this.dbRun(`
         CREATE TABLE IF NOT EXISTS user_task_progress (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
@@ -300,6 +333,22 @@ class DatabaseService {
         )
       `);
 
+      // Game stats table for global counters
+      await this.dbRun(`
+        CREATE TABLE IF NOT EXISTS game_stats (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          stat_key TEXT UNIQUE NOT NULL,
+          stat_value INTEGER NOT NULL DEFAULT 0,
+          updated_at REAL NOT NULL
+        )
+      `);
+
+      // Initialize total_solves counter if not exists
+      await this.dbRun(`
+        INSERT OR IGNORE INTO game_stats (stat_key, stat_value, updated_at)
+        VALUES ('total_solves', 0, ${Date.now()})
+      `);
+
       console.log('✅ Database initialized successfully');
       
       // Initialize default tasks
@@ -310,10 +359,8 @@ class DatabaseService {
   }
 
   // User methods
-  async getUser(userId: number): Promise<User | null> {
-    const get = promisify(this.db.get.bind(this.db));
-    try {
-      const user = await get(`SELECT * FROM users WHERE user_id = ${userId}`) as User | undefined;
+  async getUser(userId: number): Promise<User | null> {    try {
+      const user = await this.dbGet(`SELECT * FROM users WHERE user_id = ${userId}`) as User | undefined;
       return user || null;
     } catch (error) {
       console.error('Error getting user:', error);
@@ -321,23 +368,20 @@ class DatabaseService {
     }
   }
 
-  async createUser(userId: number, username?: string, firstName?: string): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    const get = promisify(this.db.get.bind(this.db));
-    
+  async createUser(userId: number, username?: string, firstName?: string): Promise<boolean> {    
     try {
       // Check if user already exists
-      const existingUser = await get(`SELECT * FROM users WHERE user_id = ${userId}`);
+      const existingUser = await this.dbGet(`SELECT * FROM users WHERE user_id = ${userId}`);
       
       if (existingUser) {
         // User exists, just update basic info and last_activity
-        await run(
+        await this.dbRun(
           `UPDATE users SET username = '${username}', first_name = '${firstName}', last_activity = ${Date.now()} WHERE user_id = ${userId}`
         );
         console.log('✅ Updated existing user:', { userId, user_type: (existingUser as any).user_type, credits: (existingUser as any).credits });
       } else {
         // New user, create with default values
-        await run(
+        await this.dbRun(
           `INSERT INTO users (user_id, username, first_name, created_at, last_activity, user_type, credits) VALUES (${userId}, '${username}', '${firstName}', ${Date.now()}, ${Date.now()}, 'normal', 0)`
         );
         console.log('✅ Created new user:', { userId, user_type: 'normal', credits: 0 });
@@ -349,14 +393,12 @@ class DatabaseService {
     }
   }
 
-  async updateUser(userId: number, updates: Partial<User>): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    try {
+  async updateUser(userId: number, updates: Partial<User>): Promise<boolean> {    try {
       const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
       const values = Object.values(updates);
       values.push(userId);
 
-      await run(
+      await this.dbRun(
         `UPDATE users SET ${setClause}, last_activity = ${Date.now()} WHERE user_id = ${userId}`
       );
       return true;
@@ -366,17 +408,14 @@ class DatabaseService {
     }
   }
 
-  async updateUserCredits(userId: number, creditChange: number): Promise<User | null> {
-    const run = promisify(this.db.run.bind(this.db));
-    const get = promisify(this.db.get.bind(this.db));
-    
+  async updateUserCredits(userId: number, creditChange: number): Promise<User | null> {    
     try {
       // Update credits
-      await run(`UPDATE users SET credits = credits + ${creditChange}, last_activity = ${Date.now()} WHERE user_id = ${userId}`);
+      await this.dbRun(`UPDATE users SET credits = credits + ${creditChange}, last_activity = ${Date.now()} WHERE user_id = ${userId}`);
       
       // Get updated user data
-      const user = await get('SELECT * FROM users WHERE user_id = ?', [userId]);
-      return user;
+      const user = await this.dbGet(`SELECT * FROM users WHERE user_id = ${userId}`) as User | undefined;
+      return user || null;
     } catch (error) {
       console.error('Error updating user credits:', error);
       return null;
@@ -385,63 +424,78 @@ class DatabaseService {
 
   // Saved collections methods
   async saveCollection(collectionId: string, userId: number, name: string, designs: any[], createdAt: string, isPublic: boolean = false): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    
-    try {
-      const designsJson = JSON.stringify(designs);
-      await run(
-        'INSERT OR REPLACE INTO saved_collections (id, user_id, name, designs, created_at, is_public) VALUES (?, ?, ?, ?, ?, ?)',
-        [collectionId, userId, name, designsJson, createdAt, isPublic ? 1 : 0]
-      );
-      console.log(`💾 Saved collection "${name}" to database (public: ${isPublic})`);
-      return true;
-    } catch (error) {
-      console.error('Error saving collection:', error);
-      return false;
-    }
+    return new Promise((resolve, reject) => {
+      try {
+        const designsJson = JSON.stringify(designs);
+        this.db.run(
+          'INSERT OR REPLACE INTO saved_collections (id, user_id, name, designs, created_at, is_public) VALUES (?, ?, ?, ?, ?, ?)',
+          [collectionId, userId, name, designsJson, createdAt, isPublic ? 1 : 0],
+          (err) => {
+            if (err) {
+              console.error('Error saving collection:', err);
+              resolve(false);
+            } else {
+              console.log(`💾 Saved collection "${name}" to database (public: ${isPublic})`);
+              resolve(true);
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error saving collection:', error);
+        resolve(false);
+      }
+    });
   }
 
   async getUserCollections(userId: number): Promise<any[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    
-    try {
-      const rows = await all('SELECT * FROM saved_collections WHERE user_id = ? ORDER BY created_at DESC', [userId]);
-      const collections = rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        designs: JSON.parse(row.designs),
-        createdAt: row.created_at,
-        userId: row.user_id,
-        isPublic: Boolean(row.is_public),
-        likesCount: row.likes_count || 0
-      }));
-      console.log(`📂 Loaded ${collections.length} collections for user ${userId}`);
-      return collections;
-    } catch (error) {
-      console.error('Error loading user collections:', error);
-      return [];
-    }
+    return new Promise((resolve) => {
+      this.db.all(
+        'SELECT * FROM saved_collections WHERE user_id = ? ORDER BY created_at DESC',
+        [userId],
+        (err, rows) => {
+          if (err) {
+            console.error('Error loading user collections:', err);
+            resolve([]);
+          } else {
+            const collections = rows.map((row: any) => ({
+              id: row.id,
+              name: row.name,
+              designs: JSON.parse(row.designs),
+              createdAt: row.created_at,
+              userId: row.user_id,
+              isPublic: Boolean(row.is_public),
+              likesCount: row.likes_count || 0
+            }));
+            console.log(`📂 Loaded ${collections.length} collections for user ${userId}`);
+            resolve(collections);
+          }
+        }
+      );
+    });
   }
 
   async deleteCollection(collectionId: string, userId: number): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    
-    try {
-      const result = await run('DELETE FROM saved_collections WHERE id = ? AND user_id = ?', [collectionId, userId]);
-      console.log(`🗑️ Deleted collection ${collectionId} for user ${userId}`);
-      return true;
-    } catch (error) {
-      console.error('Error deleting collection:', error);
-      return false;
-    }
+    return new Promise((resolve) => {
+      this.db.run(
+        'DELETE FROM saved_collections WHERE id = ? AND user_id = ?',
+        [collectionId, userId],
+        (err) => {
+          if (err) {
+            console.error('Error deleting collection:', err);
+            resolve(false);
+          } else {
+            console.log(`🗑️ Deleted collection ${collectionId} for user ${userId}`);
+            resolve(true);
+          }
+        }
+      );
+    });
   }
 
   // Public collections methods
   async getPublicCollections(limit: number = 50, offset: number = 0): Promise<any[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    
     try {
-      const rows = await all(`
+      const rows = await this.dbAll(`
         SELECT sc.*, u.first_name, u.username 
         FROM saved_collections sc
         JOIN users u ON sc.user_id = u.user_id
@@ -450,7 +504,7 @@ class DatabaseService {
         LIMIT ? OFFSET ?
       `, [limit, offset]);
       
-      const collections = rows.map(row => ({
+      const collections = rows.map((row: any) => ({
         id: row.id,
         name: row.name,
         designs: JSON.parse(row.designs),
@@ -472,40 +526,37 @@ class DatabaseService {
 
   // Like system methods
   async toggleLike(collectionId: string, userId: number): Promise<{ liked: boolean; likesCount: number }> {
-    const run = promisify(this.db.run.bind(this.db));
-    const get = promisify(this.db.get.bind(this.db));
-    
     try {
       // Check if user already liked this collection
-      const existingLike = await get(
+      const existingLike = await this.dbGet(
         'SELECT id FROM collection_likes WHERE collection_id = ? AND user_id = ?',
         [collectionId, userId]
       );
       
       if (existingLike) {
         // Unlike: remove the like
-        await run('DELETE FROM collection_likes WHERE collection_id = ? AND user_id = ?', [collectionId, userId]);
+        await this.dbRun('DELETE FROM collection_likes WHERE collection_id = ? AND user_id = ?', [collectionId, userId]);
         
         // Decrease likes count
-        await run('UPDATE saved_collections SET likes_count = likes_count - 1 WHERE id = ?', [collectionId]);
+        await this.dbRun('UPDATE saved_collections SET likes_count = likes_count - 1 WHERE id = ?', [collectionId]);
         
         // Get new likes count
-        const result = await get('SELECT likes_count FROM saved_collections WHERE id = ?', [collectionId]);
+        const result = await this.dbGet('SELECT likes_count FROM saved_collections WHERE id = ?', [collectionId]);
         
         console.log(`👎 Unliked collection ${collectionId}`);
         return { liked: false, likesCount: result?.likes_count || 0 };
       } else {
         // Like: add the like
-        await run(
+        await this.dbRun(
           'INSERT INTO collection_likes (collection_id, user_id, created_at) VALUES (?, ?, ?)',
           [collectionId, userId, Date.now()]
         );
         
         // Increase likes count
-        await run('UPDATE saved_collections SET likes_count = likes_count + 1 WHERE id = ?', [collectionId]);
+        await this.dbRun('UPDATE saved_collections SET likes_count = likes_count + 1 WHERE id = ?', [collectionId]);
         
         // Get new likes count
-        const result = await get('SELECT likes_count FROM saved_collections WHERE id = ?', [collectionId]);
+        const result = await this.dbGet('SELECT likes_count FROM saved_collections WHERE id = ?', [collectionId]);
         
         console.log(`👍 Liked collection ${collectionId}`);
         return { liked: true, likesCount: result?.likes_count || 0 };
@@ -517,11 +568,9 @@ class DatabaseService {
   }
 
   async getUserLikes(userId: number): Promise<string[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    
     try {
-      const rows = await all('SELECT collection_id FROM collection_likes WHERE user_id = ?', [userId]);
-      const likedCollectionIds = rows.map(row => row.collection_id);
+      const rows = await this.dbAll('SELECT collection_id FROM collection_likes WHERE user_id = ?', [userId]);
+      const likedCollectionIds = rows.map((row: any) => row.collection_id);
       console.log(`❤️ User ${userId} has liked ${likedCollectionIds.length} collections`);
       return likedCollectionIds;
     } catch (error) {
@@ -531,9 +580,8 @@ class DatabaseService {
   }
 
   async decrementFreeUses(userId: number): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
     try {
-      const result = await run(
+      const result = await this.dbRun(
         'UPDATE users SET free_uses = free_uses - 1, last_activity = ? WHERE user_id = ? AND free_uses > 0',
         [Date.now(), userId]
       );
@@ -545,9 +593,8 @@ class DatabaseService {
   }
 
   async decrementCredits(userId: number, amount: number): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
     try {
-      const result = await run(
+      const result = await this.dbRun(
         'UPDATE users SET credits = credits - ?, last_activity = ? WHERE user_id = ? AND credits >= ?',
         [amount, Date.now(), userId, amount]
       );
@@ -567,9 +614,8 @@ class DatabaseService {
     watermarked: boolean,
     creditsUsed: number = 0
   ): Promise<number | null> {
-    const run = promisify(this.db.run.bind(this.db));
     try {
-      const result = await run(
+      const result = await this.dbRun(
         'INSERT INTO requests (user_id, request_type, image_size, pieces_count, watermarked, credits_used, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [userId, requestType, imageSize, piecesCount, watermarked, creditsUsed, Date.now()]
       );
@@ -582,9 +628,8 @@ class DatabaseService {
   }
 
   async updateRequestProcessingTime(requestId: number, processingTime: number): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
     try {
-      await run(
+      await this.dbRun(
         'UPDATE requests SET processing_time = ? WHERE id = ?',
         [processingTime, requestId]
       );
@@ -601,10 +646,8 @@ class DatabaseService {
     memo: string,
     amountNano: number,
     creditsToGrant: number
-  ): Promise<number | null> {
-    const run = promisify(this.db.run.bind(this.db));
-    try {
-      const result = await run(
+  ): Promise<number | null> {    try {
+      const result = await this.dbRun(
         'INSERT INTO payments (user_id, memo, amount_nano, credits_to_grant, created_at) VALUES (?, ?, ?, ?, ?)',
         [userId, memo, amountNano, creditsToGrant, Date.now()]
       );
@@ -619,10 +662,8 @@ class DatabaseService {
     paymentId: number,
     status: 'completed' | 'failed',
     transactionHash?: string
-  ): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    try {
-      await run(
+  ): Promise<boolean> {    try {
+      await this.dbRun(
         'UPDATE payments SET status = ?, completed_at = ?, transaction_hash = ? WHERE id = ?',
         [status, Date.now(), transactionHash, paymentId]
       );
@@ -640,10 +681,8 @@ class DatabaseService {
     timeSlot: string,
     answer: string,
     isFirstSolver: boolean = false
-  ): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    try {
-      await run(
+  ): Promise<boolean> {    try {
+      await this.dbRun(
         'INSERT INTO daily_game_solves (user_id, date, time_slot, answer, is_first_solver, solved_at) VALUES (?, ?, ?, ?, ?, ?)',
         [userId, date, timeSlot, answer, isFirstSolver, Date.now()]
       );
@@ -654,10 +693,8 @@ class DatabaseService {
     }
   }
 
-  async hasUserSolvedToday(userId: number, date: string, timeSlot: string): Promise<boolean> {
-    const get = promisify(this.db.get.bind(this.db));
-    try {
-      const result = await get(
+  async hasUserSolvedToday(userId: number, date: string, timeSlot: string): Promise<boolean> {    try {
+      const result = await this.dbGet(
         'SELECT id FROM daily_game_solves WHERE user_id = ? AND date = ? AND time_slot = ?',
         [userId, date, timeSlot]
       );
@@ -668,10 +705,8 @@ class DatabaseService {
     }
   }
 
-  async getTodaySolversCount(date: string, timeSlot: string): Promise<number> {
-    const get = promisify(this.db.get.bind(this.db));
-    try {
-      const result = await get(
+  async getTodaySolversCount(date: string, timeSlot: string): Promise<number> {    try {
+      const result = await this.dbGet(
         'SELECT COUNT(*) as count FROM daily_game_solves WHERE date = ? AND time_slot = ?',
         [date, timeSlot]
       );
@@ -688,10 +723,8 @@ class DatabaseService {
     paymentId: number,
     amountTon: number,
     creditsPurchased: number
-  ): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    try {
-      await run(
+  ): Promise<boolean> {    try {
+      await this.dbRun(
         'INSERT INTO sales (user_id, payment_id, amount_ton, credits_purchased, completed_at) VALUES (?, ?, ?, ?, ?)',
         [userId, paymentId, amountTon, creditsPurchased, Date.now()]
       );
@@ -703,10 +736,8 @@ class DatabaseService {
   }
 
   // Additional methods
-  async getAllUserSolves(userId: number): Promise<DailyGameSolve[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    try {
-      const solves = await all(
+  async getAllUserSolves(userId: number): Promise<DailyGameSolve[]> {    try {
+      const solves = await this.dbAll(
         'SELECT * FROM daily_game_solves WHERE user_id = ? ORDER BY solved_at DESC',
         [userId]
       ) as DailyGameSolve[];
@@ -718,11 +749,9 @@ class DatabaseService {
   }
 
   // Referral system methods
-  async addReferral(referrerId: number, invitedId: number, invitedName: string, invitedPhoto: string): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    
+  async addReferral(referrerId: number, invitedId: number, invitedName: string, invitedPhoto: string): Promise<boolean> {    
     try {
-      await run(
+      await this.dbRun(
         'INSERT OR IGNORE INTO referrals (referrer_id, invited_id, invited_name, invited_photo, created_at) VALUES (?, ?, ?, ?, ?)',
         [referrerId, invitedId, invitedName, invitedPhoto, Date.now()]
       );
@@ -734,11 +763,9 @@ class DatabaseService {
     }
   }
 
-  async getInvitedUsers(referrerId: number): Promise<{invited_id: number, invited_name: string, invited_photo: string, created_at: number}[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    
+  async getInvitedUsers(referrerId: number): Promise<{invited_id: number, invited_name: string, invited_photo: string, created_at: number}[]> {    
     try {
-      const rows = await all(
+      const rows = await this.dbAll(
         'SELECT invited_id, invited_name, invited_photo, created_at FROM referrals WHERE referrer_id = ? ORDER BY created_at DESC',
         [referrerId]
       );
@@ -751,16 +778,14 @@ class DatabaseService {
     }
   }
 
-  async getReferralStats(referrerId: number): Promise<{totalReferrals: number, recentReferrals: number}> {
-    const all = promisify(this.db.all.bind(this.db));
-    
+  async getReferralStats(referrerId: number): Promise<{totalReferrals: number, recentReferrals: number}> {    
     try {
-      const totalRows = await all(
+      const totalRows = await this.dbAll(
         'SELECT COUNT(*) as count FROM referrals WHERE referrer_id = ?',
         [referrerId]
       );
       
-      const recentRows = await all(
+      const recentRows = await this.dbAll(
         'SELECT COUNT(*) as count FROM referrals WHERE referrer_id = ? AND created_at > ?',
         [referrerId, Date.now() - (7 * 24 * 60 * 60 * 1000)] // Last 7 days
       );
@@ -776,9 +801,7 @@ class DatabaseService {
   }
 
   // Task methods
-  async initializeTasks(): Promise<void> {
-    const run = promisify(this.db.run.bind(this.db));
-    
+  async initializeTasks(): Promise<void> {    
     try {
       // Insert default tasks if they don't exist
       const tasks = [
@@ -851,7 +874,7 @@ class DatabaseService {
       ];
 
       for (const task of tasks) {
-        await run(`
+        await this.dbRun(`
           INSERT OR IGNORE INTO tasks (task_id, title, description, category, credits_reward, is_daily, is_active, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [task.task_id, task.title, task.description, task.category, task.credits_reward, task.is_daily, 1, Date.now()]);
@@ -863,9 +886,7 @@ class DatabaseService {
     }
   }
 
-  async getTasks(category?: string): Promise<Task[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    
+  async getTasks(category?: string): Promise<Task[]> {    
     try {
       let query = 'SELECT * FROM tasks WHERE is_active = 1';
       const params: any[] = [];
@@ -877,7 +898,7 @@ class DatabaseService {
       
       query += ' ORDER BY category, credits_reward DESC';
       
-      const rows = await all(query, params);
+      const rows = await this.dbAll(query, params);
       console.log(`📋 Found ${rows.length} tasks`);
       return rows as Task[];
     } catch (error) {
@@ -886,15 +907,13 @@ class DatabaseService {
     }
   }
 
-  async getTaskCompletionStatus(userId: number, taskId: string): Promise<{completed: boolean, completedAt?: number, creditsEarned?: number}> {
-    const get = promisify(this.db.get.bind(this.db));
-    
+  async getTaskCompletionStatus(userId: number, taskId: string): Promise<{completed: boolean, completedAt?: number, creditsEarned?: number}> {    
     try {
       // For daily tasks, check if completed today
       const today = new Date().toISOString().split('T')[0];
       const todayStart = new Date(today).getTime();
       
-      const row = await get(`
+      const row = await this.dbGet(`
         SELECT completed_at, credits_earned 
         FROM task_completions 
         WHERE user_id = ? AND task_id = ? AND completed_at >= ?
@@ -913,13 +932,10 @@ class DatabaseService {
     }
   }
 
-  async completeTask(userId: number, taskId: string): Promise<boolean> {
-    const run = promisify(this.db.run.bind(this.db));
-    const get = promisify(this.db.get.bind(this.db));
-    
+  async completeTask(userId: number, taskId: string): Promise<boolean> {    
     try {
       // Get task details
-      const task = await get('SELECT * FROM tasks WHERE task_id = ? AND is_active = 1', [taskId]);
+      const task = await this.dbGet('SELECT * FROM tasks WHERE task_id = ? AND is_active = 1', [taskId]);
       if (!task) {
         console.error('Task not found:', taskId);
         return false;
@@ -929,7 +945,7 @@ class DatabaseService {
       const today = new Date().toISOString().split('T')[0];
       const todayStart = new Date(today).getTime();
       
-      const existingCompletion = await get(`
+      const existingCompletion = await this.dbGet(`
         SELECT id FROM task_completions 
         WHERE user_id = ? AND task_id = ? AND completed_at >= ?
       `, [userId, taskId, todayStart]);
@@ -940,13 +956,13 @@ class DatabaseService {
       }
 
       // Add completion record
-      await run(`
+      await this.dbRun(`
         INSERT INTO task_completions (user_id, task_id, completed_at, credits_earned)
         VALUES (?, ?, ?, ?)
       `, [userId, taskId, Date.now(), task.credits_reward]);
 
       // Update user credits
-      await run(`
+      await this.dbRun(`
         UPDATE users SET credits = credits + ? WHERE user_id = ?
       `, [task.credits_reward, userId]);
 
@@ -958,11 +974,9 @@ class DatabaseService {
     }
   }
 
-  async getUserTaskProgress(userId: number): Promise<{taskId: string, progress: any}[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    
+  async getUserTaskProgress(userId: number): Promise<{taskId: string, progress: any}[]> {    
     try {
-      const rows = await all(`
+      const rows = await this.dbAll(`
         SELECT task_id, progress_data 
         FROM user_task_progress 
         WHERE user_id = ?
@@ -978,11 +992,9 @@ class DatabaseService {
     }
   }
 
-  async updateUserTaskProgress(userId: number, taskId: string, progress: any): Promise<void> {
-    const run = promisify(this.db.run.bind(this.db));
-    
+  async updateUserTaskProgress(userId: number, taskId: string, progress: any): Promise<void> {    
     try {
-      await run(`
+      await this.dbRun(`
         INSERT OR REPLACE INTO user_task_progress (user_id, task_id, progress_data, last_updated)
         VALUES (?, ?, ?, ?)
       `, [userId, taskId, JSON.stringify(progress), Date.now()]);
@@ -991,12 +1003,10 @@ class DatabaseService {
     }
   }
 
-  async hasUserCompletedBothDailyGamesToday(userId: number): Promise<boolean> {
-    const all = promisify(this.db.all.bind(this.db));
-    
+  async hasUserCompletedBothDailyGamesToday(userId: number): Promise<boolean> {    
     try {
       const today = new Date().toISOString().split('T')[0];
-      const rows = await all(`
+      const rows = await this.dbAll(`
         SELECT time_slot FROM daily_game_solves 
         WHERE user_id = ? AND date = ?
       `, [userId, today]);
@@ -1009,11 +1019,9 @@ class DatabaseService {
     }
   }
 
-  async getUserRequests(userId: number, startTime: number, endTime: number): Promise<any[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    
+  async getUserRequests(userId: number, startTime: number, endTime: number): Promise<any[]> {    
     try {
-      const rows = await all(`
+      const rows = await this.dbAll(`
         SELECT * FROM requests 
         WHERE user_id = ? AND created_at >= ? AND created_at <= ?
         ORDER BY created_at DESC
@@ -1026,24 +1034,46 @@ class DatabaseService {
     }
   }
 
-  async getUserCollections(userId: number): Promise<any[]> {
-    const all = promisify(this.db.all.bind(this.db));
-    
+  // Utility methods
+  // Game stats methods
+  async getGameStat(statKey: string): Promise<number> {
     try {
-      const rows = await all(`
-        SELECT * FROM saved_collections 
-        WHERE user_id = ?
-        ORDER BY created_at DESC
-      `, [userId]);
+      const row = await this.dbGet(`
+        SELECT stat_value FROM game_stats WHERE stat_key = ?
+      `, [statKey]) as GameStats | undefined;
       
-      return rows;
+      return row?.stat_value || 0;
     } catch (error) {
-      console.error('Error getting user collections:', error);
-      return [];
+      console.error('Error getting game stat:', error);
+      return 0;
     }
   }
 
-  // Utility methods
+  async incrementGameStat(statKey: string): Promise<number> {
+    try {
+      await this.dbRun(`
+        UPDATE game_stats 
+        SET stat_value = stat_value + 1, updated_at = ${Date.now()}
+        WHERE stat_key = ?
+      `, [statKey]);
+      
+      const newValue = await this.getGameStat(statKey);
+      console.log(`📊 Incremented ${statKey} to ${newValue}`);
+      return newValue;
+    } catch (error) {
+      console.error('Error incrementing game stat:', error);
+      return 0;
+    }
+  }
+
+  async getTotalGameSolves(): Promise<number> {
+    return await this.getGameStat('total_solves');
+  }
+
+  async incrementTotalGameSolves(): Promise<number> {
+    return await this.incrementGameStat('total_solves');
+  }
+
   async close(): Promise<void> {
     return new Promise((resolve) => {
       this.db.close((err) => {

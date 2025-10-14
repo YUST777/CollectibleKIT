@@ -152,6 +152,10 @@ export interface ProcessingResult {
   error?: string;
 }
 
+export interface Gift {
+  name: string;
+}
+
 export interface GiftModel {
   number: number;
   name: string;
@@ -347,6 +351,3 @@ export interface AppActions {
   loadCollections: () => Promise<void>;
   deleteCollection: (collectionId: string) => void;
 }
-
-// Re-export User from database
-export { User } from '@/lib/database';

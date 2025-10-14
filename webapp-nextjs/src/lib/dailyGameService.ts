@@ -22,9 +22,32 @@ export interface RandomGift {
   correct_answer: string;
 }
 
+// Use global module-level storage instead of class static to persist across hot reloads
+const globalForSession = global as typeof globalThis & {
+  gameSessionMap?: Map<number, RandomGift>;
+  currentRandomGift?: RandomGift | null;
+};
+
+// Initialize if not already exists
+if (!globalForSession.gameSessionMap) {
+  globalForSession.gameSessionMap = new Map();
+}
+if (!globalForSession.currentRandomGift) {
+  globalForSession.currentRandomGift = null;
+}
+
 export class DailyGameService {
-  private static currentRandomGift: RandomGift | null = null;
-  private static currentGiftForUser: Map<number, RandomGift> = new Map();
+  private static get currentRandomGift(): RandomGift | null {
+    return globalForSession.currentRandomGift || null;
+  }
+
+  private static set currentRandomGift(value: RandomGift | null) {
+    globalForSession.currentRandomGift = value;
+  }
+
+  private static get currentGiftForUser(): Map<number, RandomGift> {
+    return globalForSession.gameSessionMap!;
+  }
 
   /**
    * Get a random gift for the zoom game
@@ -74,7 +97,7 @@ export class DailyGameService {
         name: randomGiftName,
         model: randomModel,
         backdrop_index: randomBackdrop,
-        correct_answer: randomGiftName
+        correct_answer: randomModel // Changed to model name instead of gift name
       };
       
       this.currentRandomGift = gift;
@@ -104,13 +127,19 @@ export class DailyGameService {
         return null;
       }
 
-      // Store the gift for this user if userId is provided
-      if (userId) {
-        this.currentGiftForUser.set(userId, randomGift);
-      }
+      // Store the gift for this user (use userId or default key)
+      const userKey = userId || 0; // Use 0 as default for anonymous users
+      this.currentGiftForUser.set(userKey, randomGift);
+      
+      console.log(`📝 Stored game session for user ${userKey}: ${randomGift.name} - ${randomGift.model}`);
+      console.log(`📝 Current session map size: ${this.currentGiftForUser.size}`);
+      console.log(`📝 Session map keys:`, Array.from(this.currentGiftForUser.keys()));
 
       // Create a unique ID for this question session
       const questionId = Date.now();
+
+      // Get total solves count
+      const totalSolves = await db.getTotalGameSolves();
 
       const question: DailyGameQuestion = {
         id: questionId,
@@ -122,10 +151,11 @@ export class DailyGameService {
         model_name: randomGift.model,
         backdrop_index: randomGift.backdrop_index,
         reward: 0.1,
-        solvers_count: 0
+        solvers_count: totalSolves
       };
 
       console.log(`✅ Random question created: ${randomGift.name}`);
+      console.log(`📊 Total solves count: ${totalSolves}`);
       
       return question;
 
@@ -154,10 +184,31 @@ export class DailyGameService {
       
       console.log(`🎮 Submitting answer for ${userId}: ${answer} (Random zoom game)`);
 
-      // Get the current gift for this user
-      const currentGift = this.currentGiftForUser.get(userId);
+      // Use same userKey logic as getTodaysQuestion
+      const userKey = userId || 0;
+      
+      console.log(`🔍 Looking for session with userKey: ${userKey}`);
+      console.log(`🔍 Session map size: ${this.currentGiftForUser.size}`);
+      console.log(`🔍 Available session keys:`, Array.from(this.currentGiftForUser.keys()));
+      
+      // Get the current gift for this user, fallback to global current gift
+      let currentGift = this.currentGiftForUser.get(userKey);
+      
+      console.log(`🔍 Found session for userKey ${userKey}:`, currentGift ? `${currentGift.name} - ${currentGift.model}` : 'null');
+      
+      // If not found for this user, try the global current gift as fallback
+      if (!currentGift && this.currentRandomGift) {
+        console.log('⚠️ Using global current gift as fallback');
+        currentGift = this.currentRandomGift;
+        // Store it for this user for future reference
+        this.currentGiftForUser.set(userKey, currentGift);
+      }
       
       if (!currentGift) {
+        console.error('❌ No active game session found for user', userKey);
+        console.error('❌ Session map size:', this.currentGiftForUser.size);
+        console.error('❌ Available sessions:', Array.from(this.currentGiftForUser.keys()));
+        console.error('❌ Global current gift:', this.currentRandomGift);
         return {
           success: false,
           correct: false,
@@ -166,6 +217,8 @@ export class DailyGameService {
         };
       }
 
+      console.log(`🎯 Checking answer against: ${currentGift.correct_answer}`);
+
       // Check if answer is correct
       const correctAnswer = currentGift.correct_answer.toLowerCase();
       const userAnswer = answer.toLowerCase().trim();
@@ -173,12 +226,14 @@ export class DailyGameService {
                        correctAnswer.includes(userAnswer) || 
                        userAnswer.includes(correctAnswer);
 
+      console.log(`Answer check: "${userAnswer}" vs "${correctAnswer}" = ${isCorrect}`);
+
       if (!isCorrect) {
         return {
           success: true,
           correct: false,
           is_first_solver: false,
-          correct_answer: this.currentRandomGift?.correct_answer || ''
+          correct_answer: currentGift.correct_answer
         };
       }
 
@@ -193,6 +248,9 @@ export class DailyGameService {
           credits: user.credits + reward
         });
       }
+
+      // Increment global solve counter
+      await db.incrementTotalGameSolves();
 
       console.log(`✅ Answer submitted successfully. Correct: ${isCorrect}, Reward: ${reward}`);
 

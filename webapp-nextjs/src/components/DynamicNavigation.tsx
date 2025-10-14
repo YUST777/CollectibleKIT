@@ -88,7 +88,7 @@ export const DynamicNavigation: React.FC = () => {
           <button
             onClick={() => handleMainTabClick('tools')}
             className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-all duration-200 ease-in-out hover:scale-105 ${
-              navigationLevel === 'tools' ? 'border-t-2 border-white' : ''
+              currentSubTab === 'tools' ? 'border-t-2 border-white' : ''
             }`}
           >
             <WrenchScrewdriverIcon className="w-6 h-6 text-gray-300 transition-colors duration-200" />
@@ -97,7 +97,7 @@ export const DynamicNavigation: React.FC = () => {
           <button
             onClick={() => handleMainTabClick('games')}
             className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-all duration-200 ease-in-out hover:scale-105 ${
-              navigationLevel === 'games' ? 'border-t-2 border-white' : ''
+              currentSubTab === 'games' ? 'border-t-2 border-white' : ''
             }`}
           >
             <PuzzlePieceIcon className="w-6 h-6 text-gray-300 transition-colors duration-200" />

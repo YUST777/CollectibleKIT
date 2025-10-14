@@ -60,6 +60,7 @@ export class TonWalletService {
   private static runPythonScript(args: string[]): Promise<{ 
     success: boolean; 
     transaction_hash?: string; 
+    stdout?: string;
     error?: string 
   }> {
     return new Promise((resolve) => {
@@ -90,6 +91,7 @@ export class TonWalletService {
           
           resolve({ 
             success: true, 
+            stdout: stdout,
             transaction_hash: transactionHash 
           });
         } else {

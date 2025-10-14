@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
 import { ModelThumbnail } from '@/components/ModelThumbnail';
 import { PatternThumbnail } from '@/components/PatternThumbnail';
 import { AdsBanner } from '@/components/AdsBanner';
@@ -19,7 +20,6 @@ export const CollectionTab: React.FC = () => {
   const { setGifts, setBackdrops, setGiftModels, setPatterns, setGridSize, setGiftDesign, setUserDesigns, saveCollection, loadCollection, loadCollections, deleteCollection, setCurrentTab } = useAppActions();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isDesignerOpen, setIsDesignerOpen] = useState(false);
   const [currentSlot, setCurrentSlot] = useState<number | null>(null);
   const [currentDesign, setCurrentDesign] = useState<GiftDesign | null>(null);
   const [selectedGiftName, setSelectedGiftName] = useState<string | null>(null);
@@ -45,6 +45,7 @@ export const CollectionTab: React.FC = () => {
   const [currentFilterType, setCurrentFilterType] = useState<'gift' | 'model' | 'backdrop' | 'pattern' | null>(null);
   const [currentFilterData, setCurrentFilterData] = useState<FilterOption[]>([]);
   const [filterSearchTerm, setFilterSearchTerm] = useState('');
+  const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Load initial data with caching
@@ -84,11 +85,11 @@ export const CollectionTab: React.FC = () => {
         ]);
         
         setBackdrops([
-          { name: 'Blue', hex: { centerColor: '#3b82f6', edgeColor: '#1e40af' } },
-          { name: 'Purple', hex: { centerColor: '#8b5cf6', edgeColor: '#5b21b6' } },
-          { name: 'Pink', hex: { centerColor: '#ec4899', edgeColor: '#be185d' } },
-          { name: 'Green', hex: { centerColor: '#10b981', edgeColor: '#047857' } },
-          { name: 'Orange', hex: { centerColor: '#f59e0b', edgeColor: '#d97706' } }
+          { name: 'Blue', centerColor: 0, edgeColor: 0, patternColor: 0, textColor: 0, rarityPermille: 0, hex: { centerColor: '#3b82f6', edgeColor: '#1e40af', patternColor: '#3b82f6', textColor: '#ffffff' } },
+          { name: 'Purple', centerColor: 0, edgeColor: 0, patternColor: 0, textColor: 0, rarityPermille: 0, hex: { centerColor: '#8b5cf6', edgeColor: '#5b21b6', patternColor: '#8b5cf6', textColor: '#ffffff' } },
+          { name: 'Pink', centerColor: 0, edgeColor: 0, patternColor: 0, textColor: 0, rarityPermille: 0, hex: { centerColor: '#ec4899', edgeColor: '#be185d', patternColor: '#ec4899', textColor: '#ffffff' } },
+          { name: 'Green', centerColor: 0, edgeColor: 0, patternColor: 0, textColor: 0, rarityPermille: 0, hex: { centerColor: '#10b981', edgeColor: '#047857', patternColor: '#10b981', textColor: '#ffffff' } },
+          { name: 'Orange', centerColor: 0, edgeColor: 0, patternColor: 0, textColor: 0, rarityPermille: 0, hex: { centerColor: '#f59e0b', edgeColor: '#d97706', patternColor: '#f59e0b', textColor: '#ffffff' } }
         ]);
         
         toast.error('Using offline mode - limited features available');
@@ -252,7 +253,12 @@ export const CollectionTab: React.FC = () => {
       setSelectedBackdropIndex(null);
       setSelectedPatternIndex(null);
     }
-    setIsDesignerOpen(true);
+    
+    // Open the filter drawer directly with "gift" tab selected
+    setCurrentFilterType('gift');
+    setCurrentFilterData(gifts.map(gift => ({ name: gift.name, type: 'gift' as const })));
+    setIsFilterModalOpen(true);
+    hapticFeedback('selection');
   };
 
   const openFilterModal = (filterType: 'gift' | 'model' | 'backdrop' | 'pattern') => {
@@ -284,15 +290,27 @@ export const CollectionTab: React.FC = () => {
     }
     
     setIsFilterModalOpen(true);
+    hapticFeedback('selection');
   };
 
   const closeFilterModal = () => {
     setIsFilterModalOpen(false);
     setCurrentFilterType(null);
     setCurrentFilterData([]);
+    setDrawerSearchTerm('');
+    setCurrentSlot(null);
+    setCurrentDesign(null);
+    setSelectedGiftName(null);
+    setSelectedModelNumber(null);
+    setSelectedBackdropIndex(null);
+    setSelectedPatternIndex(null);
+    setModels([]);
+    setLocalPatterns([]);
   };
 
   const selectFilterOption = (item: FilterOption) => {
+    hapticFeedback('impact');
+    
     if (currentFilterType === 'gift') {
       setSelectedGiftName(item.name);
       setCurrentDesign(prev => ({ 
@@ -333,11 +351,11 @@ export const CollectionTab: React.FC = () => {
       }));
     }
     
-    closeFilterModal();
+    // Don't close the drawer - keep it open for more selections
   };
 
   const saveGiftDesign = () => {
-    if (currentSlot && selectedGiftName && selectedModelNumber && selectedBackdropIndex !== null) {
+    if (currentSlot && selectedGiftName && selectedModelNumber !== null && selectedBackdropIndex !== null) {
       const newDesign: GiftDesign = {
         giftName: selectedGiftName,
         modelNumber: selectedModelNumber,
@@ -354,21 +372,14 @@ export const CollectionTab: React.FC = () => {
       });
       
       setGiftDesign(currentSlot, newDesign);
-      setIsDesignerOpen(false);
+      closeFilterModal();
+      hapticFeedback('notification');
+      toast.success('Gift saved!');
+    } else {
+      toast.error('Please select all required fields');
     }
   };
 
-  const closeGiftDesigner = () => {
-    setIsDesignerOpen(false);
-    setCurrentSlot(null);
-    setCurrentDesign(null);
-    setSelectedGiftName(null);
-    setSelectedModelNumber(null);
-    setSelectedBackdropIndex(null);
-    setSelectedPatternIndex(null);
-    setModels([]);
-    setLocalPatterns([]);
-  };
 
   const handleSaveCollection = async () => {
     if (!collectionName.trim()) {
@@ -1102,16 +1113,18 @@ export const CollectionTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Gift Designer Modal */}
-      <Modal
-        isOpen={isDesignerOpen}
-        onClose={closeGiftDesigner}
-        title={`Gift #${currentSlot}`}
-      >
-        <div className="space-y-4">
-          {/* Compact Preview */}
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-lg border border-gray-600 overflow-hidden relative flex-shrink-0">
+      {/* Filter Selection Drawer */}
+      <Sheet open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
+        <SheetContent className="bg-[#1c1c1d]">
+          <SheetHeader>
+            <SheetTitle className="text-white text-center">
+              Select your gift
+            </SheetTitle>
+          </SheetHeader>
+          
+          {/* Gift Preview */}
+          <div className="mt-4 mb-4">
+            <div className="w-32 h-32 mx-auto rounded-2xl overflow-hidden relative border-2 border-gray-600">
               {selectedBackdropIndex !== null ? (
                 <div 
                   className="absolute inset-0"
@@ -1123,102 +1136,225 @@ export const CollectionTab: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-800" />
               )}
               
-              {selectedGiftName && selectedModelNumber && (
-                <div className="absolute inset-2 flex items-center justify-center">
+              {/* Pattern overlay */}
+              {selectedPatternIndex !== null && selectedGiftName && localPatterns[selectedPatternIndex] && (
+                <div className="absolute inset-0 z-10 pointer-events-none">
+                  {[...Array(8)].map((_, i) => {
+                    const positions = [
+                      'top-2 left-1/2 -translate-x-1/2',
+                      'top-4 left-2',
+                      'top-4 right-2',
+                      'top-1/2 left-2 -translate-y-1/2',
+                      'top-1/2 right-2 -translate-y-1/2',
+                      'bottom-4 left-2',
+                      'bottom-4 right-2',
+                      'bottom-2 left-1/2 -translate-x-1/2'
+                    ];
+                    return (
+                      <div
+                        key={i}
+                        className={`absolute ${positions[i]}`}
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundImage: `url(https://cdn.changes.tg/gifts/patterns/${encodeURIComponent(selectedGiftName)}/png/${encodeURIComponent(localPatterns[selectedPatternIndex].name)}.png)`,
+                          backgroundSize: '8px 8px',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          filter: 'brightness(0) opacity(0.15)',
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              
+              {selectedGiftName && selectedModelNumber !== null && models.find(m => m.number === selectedModelNumber) ? (
+                <div className="absolute inset-3 flex items-center justify-center z-20">
                   <ModelThumbnail
                     collectionName={selectedGiftName}
                     modelName={models.find(m => m.number === selectedModelNumber)?.name || ''}
-                    size="small"
+                    size="large"
                     className="w-full h-full"
                     showFallback={true}
                   />
                 </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <span className="text-gray-400 text-xs">No selection</span>
+                </div>
               )}
             </div>
             
-            <div className="flex-1 space-y-2">
-
-              <div className="grid grid-cols-2 gap-2">
-                {/* Gift Type */}
-                <Button
-                  variant="secondary"
-                  onClick={() => openFilterModal('gift')}
-                  className="w-full justify-start text-sm"
-                >
-                  <span>{selectedGiftName || 'Gift...'}</span>
-                </Button>
-
-                {/* Model */}
-                <Button
-                  variant="secondary"
-                  onClick={() => openFilterModal('model')}
-                  disabled={!selectedGiftName}
-                  className="w-full justify-start text-sm"
-                >
-                  <span>{selectedModelNumber ? `#${selectedModelNumber}` : 'Model...'}</span>
-                </Button>
-
-                {/* Background */}
-                <Button
-                  variant="secondary"
-                  onClick={() => openFilterModal('backdrop')}
-                  className="w-full justify-start text-sm"
-                >
-                  <span>{selectedBackdropIndex !== null ? `BG ${selectedBackdropIndex + 1}` : 'Background...'}</span>
-                </Button>
-
-                {/* Pattern */}
-                <Button
-                  variant="secondary"
-                  onClick={() => openFilterModal('pattern')}
-                  disabled={!selectedGiftName}
-                  className="w-full justify-start text-sm"
-                >
-                  <span>{selectedPatternIndex !== null ? `Pattern` : 'Pattern...'}</span>
-                </Button>
-              </div>
+            {/* Slot Number */}
+            <div className="text-center mt-2">
+              <span className="text-gray-400 text-sm">Gift #{currentSlot}</span>
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" onClick={closeGiftDesigner} className="flex-1">
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={saveGiftDesign}
-              disabled={!selectedGiftName || !selectedModelNumber || selectedBackdropIndex === null}
-              className="flex-1"
-            >
-              Save
-            </Button>
+          
+          <div className="space-y-3">
+            {/* Filter Type Tabs */}
+            <div className="bg-[#282627] rounded-xl p-1 grid grid-cols-4 gap-1">
+              <button
+                onClick={() => {
+                  setCurrentFilterType('gift');
+                  setCurrentFilterData(gifts.map(gift => ({ name: gift.name, type: 'gift' as const })));
+                  setDrawerSearchTerm('');
+                }}
+                className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
+                  currentFilterType === 'gift'
+                    ? 'bg-[#424242] text-white shadow-sm'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Gift
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedGiftName) {
+                    setCurrentFilterType('model');
+                    setCurrentFilterData(models.map(model => ({ 
+                      name: model.name, 
+                      type: 'model' as const, 
+                      number: model.number || 0
+                    })));
+                    setDrawerSearchTerm('');
+                  } else {
+                    toast.error('Please select a gift first');
+                  }
+                }}
+                  disabled={!selectedGiftName}
+                className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
+                  currentFilterType === 'model'
+                    ? 'bg-[#424242] text-white shadow-sm'
+                    : selectedGiftName 
+                      ? 'text-gray-400 hover:text-white'
+                      : 'text-gray-600 cursor-not-allowed'
+                }`}
+              >
+                Collection
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentFilterType('backdrop');
+                  setCurrentFilterData(backdrops.map((backdrop, index) => ({ 
+                    name: backdrop.name, 
+                    type: 'backdrop' as const, 
+                    index, 
+                    hex: backdrop.hex 
+                  })));
+                  setDrawerSearchTerm('');
+                }}
+                className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
+                  currentFilterType === 'backdrop'
+                    ? 'bg-[#424242] text-white shadow-sm'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Background
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedGiftName) {
+                    setCurrentFilterType('pattern');
+                    setCurrentFilterData(localPatterns.map((pattern, index) => ({ 
+                      name: pattern.name, 
+                      type: 'pattern' as const, 
+                      index, 
+                      rarityPermille: pattern.rarityPermille 
+                    })));
+                    setDrawerSearchTerm('');
+                  } else {
+                    toast.error('Please select a gift first');
+                  }
+                }}
+                  disabled={!selectedGiftName}
+                className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
+                  currentFilterType === 'pattern'
+                    ? 'bg-[#424242] text-white shadow-sm'
+                    : selectedGiftName 
+                      ? 'text-gray-400 hover:text-white'
+                      : 'text-gray-600 cursor-not-allowed'
+                }`}
+              >
+                Pattern
+              </button>
           </div>
-        </div>
-      </Modal>
 
-      {/* Filter Selection Modal */}
-      <Modal
-        isOpen={isFilterModalOpen}
-        onClose={closeFilterModal}
-        title={currentFilterType === 'gift' ? 'NFT' : currentFilterType === 'model' ? 'Model' : 'Color'}
-      >
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {currentFilterData.map((item, index) => (
+            {/* Search Bar */}
+            <div className="relative">
+              <input
+                type="text"
+                value={drawerSearchTerm}
+                onChange={(e) => setDrawerSearchTerm(e.target.value)}
+                placeholder={`Search ${currentFilterType || 'items'}...`}
+                className="w-full px-4 py-2.5 pl-10 bg-[#424242] text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <svg 
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {drawerSearchTerm && (
+                <button
+                  onClick={() => setDrawerSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              )}
+          </div>
+
+            {/* Filter Options List */}
+            <div className="space-y-2 max-h-[35vh] overflow-y-auto">
+              {currentFilterData
+                .filter(item => {
+                  if (!drawerSearchTerm) return true;
+                  const searchLower = drawerSearchTerm.toLowerCase();
+                  return item.name.toLowerCase().includes(searchLower);
+                })
+                .length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                    <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <p className="text-sm">No results found</p>
+                    <p className="text-xs mt-1">Try a different search term</p>
+                  </div>
+                ) : (
+                  currentFilterData
+                    .filter(item => {
+                      if (!drawerSearchTerm) return true;
+                      const searchLower = drawerSearchTerm.toLowerCase();
+                      return item.name.toLowerCase().includes(searchLower);
+                    })
+                    .map((item, index) => (
             <div
               key={index}
-              className="flex items-center p-3 rounded-lg border border-icon-idle/30 hover:bg-box-bg/50 cursor-pointer transition-colors"
+                  className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
+                    (currentFilterType === 'gift' && item.name === selectedGiftName) ||
+                    (currentFilterType === 'model' && item.number === selectedModelNumber) ||
+                    (currentFilterType === 'backdrop' && item.index === selectedBackdropIndex) ||
+                    (currentFilterType === 'pattern' && item.index === selectedPatternIndex)
+                      ? 'ring-2 ring-blue-500'
+                      : ''
+                  }`}
               onClick={() => selectFilterOption(item)}
             >
               {item.type === 'gift' && (
                 <>
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg border border-icon-idle/30 mr-3 flex items-center justify-center overflow-hidden">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
                     <div className="w-full h-full flex items-center justify-center text-lg">
                       🎁
                     </div>
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-text-idle">{item.name}</div>
+                        <div className="font-medium text-white">{item.name}</div>
                   </div>
                 </>
               )}
@@ -1230,14 +1366,13 @@ export const CollectionTab: React.FC = () => {
                        collectionName={selectedGiftName || ''}
                        modelName={item.name}
                        size="medium"
-                       className="rounded-lg border border-icon-idle/30"
+                          className="rounded-lg"
                        showFallback={true}
                      />
                    </div>
                    <div className="flex-1">
-                     <div className="font-medium text-text-idle">Model {item.number}</div>
-                     <div className="text-sm text-text-active">{item.name}</div>
-                     <div className="text-xs text-text-active opacity-70">Rarity: {item.rarity}‰</div>
+                        <div className="font-medium text-white">Model {item.number}</div>
+                        <div className="text-sm text-gray-400">{item.name}</div>
                    </div>
                  </>
                )}
@@ -1245,13 +1380,13 @@ export const CollectionTab: React.FC = () => {
               {item.type === 'backdrop' && (
                 <>
                   <div 
-                    className="w-12 h-12 rounded-lg mr-3 border border-icon-idle/30"
+                        className="w-12 h-12 rounded-lg mr-3"
                     style={{
                       background: `radial-gradient(circle, ${item.hex?.centerColor || '#667eea'}, ${item.hex?.edgeColor || '#764ba2'})`
                     }}
                   />
                   <div className="flex-1">
-                    <div className="font-medium text-text-idle">Color {(item.index || 0) + 1}</div>
+                        <div className="font-medium text-white">{item.name}</div>
                   </div>
                 </>
               )}
@@ -1263,14 +1398,13 @@ export const CollectionTab: React.FC = () => {
                       collectionName={selectedGiftName || ''}
                       patternName={item.name}
                       size="medium"
-                      className="rounded-lg border border-icon-idle/30"
+                          className="rounded-lg"
                       showFallback={true}
                     />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-text-idle">Pattern {(item.index || 0) + 1}</div>
-                    <div className="text-sm text-text-active">{item.name}</div>
-                    <div className="text-xs text-text-active opacity-70">Rarity: {item.rarityPermille}‰</div>
+                        <div className="font-medium text-white">{item.name}</div>
+                        <div className="text-sm text-gray-400">Rarity: {item.rarityPermille}‰</div>
                   </div>
                 </>
               )}
@@ -1279,14 +1413,33 @@ export const CollectionTab: React.FC = () => {
                (currentFilterType === 'model' && item.number === selectedModelNumber) ||
                (currentFilterType === 'backdrop' && item.index === selectedBackdropIndex) ||
                (currentFilterType === 'pattern' && item.index === selectedPatternIndex) ? (
-                <svg className="w-5 h-5 text-icon-active" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               ) : null}
             </div>
-          ))}
+          ))
+                )
+              }
         </div>
-      </Modal>
+            
+            {/* OK Button */}
+            <div className="mt-6 pt-4 border-t border-gray-700">
+              <button
+                onClick={saveGiftDesign}
+                disabled={!selectedGiftName || selectedModelNumber === null || selectedBackdropIndex === null}
+                className={`w-full py-3 px-4 rounded-xl font-semibold text-white transition-all ${
+                  selectedGiftName && selectedModelNumber !== null && selectedBackdropIndex !== null
+                    ? 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                    : 'bg-gray-600 cursor-not-allowed opacity-50'
+                }`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
         </>
       )}
 

@@ -126,3 +126,8 @@ venv.bak/
 *.sqlite
 *.sqlite3
 bot_data.db
+
+# Study/Test Projects (keep local only)
+study me /
+study me/
+

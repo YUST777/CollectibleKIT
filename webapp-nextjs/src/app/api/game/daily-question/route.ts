@@ -7,7 +7,14 @@ export async function GET(request: NextRequest) {
 
     // Get userId from query params (optional for testing)
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId') ? parseInt(url.searchParams.get('userId')!) : undefined;
+    const userIdParam = url.searchParams.get('userId');
+    const userId = userIdParam ? parseInt(userIdParam) : undefined;
+
+    console.log('📥 Request params:', {
+      userId,
+      userIdParam,
+      fullUrl: request.url
+    });
 
     const question = await DailyGameService.getTodaysQuestion(userId);
 

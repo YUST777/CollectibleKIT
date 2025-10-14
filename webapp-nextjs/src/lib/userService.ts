@@ -179,7 +179,7 @@ export class UserService {
         }
       } else {
         // Normal users: consume 1 free use
-        const success = await db.decrementFreeUses(userId, 1);
+        const success = await db.decrementFreeUses(userId);
         if (success) {
           updatedUser = await db.getUser(userId);
         }
@@ -190,7 +190,7 @@ export class UserService {
 
       return {
         success: true,
-        requestId: requestId,
+        requestId: requestId || undefined,
         user_type: updatedPermissions.user_type,
         watermark: updatedPermissions.watermark,
         credits_remaining: updatedPermissions.credits_remaining === 'unlimited' ? 999999 : updatedPermissions.credits_remaining as number,
