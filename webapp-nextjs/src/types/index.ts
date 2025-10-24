@@ -315,6 +315,7 @@ export interface AppState {
   dailyGame: DailyGameQuestion | null;
   isModalOpen: boolean;
   modalContent: React.ReactNode | null;
+  isDrawerOpen: boolean;
   
   // Collection state
   gifts: Gift[];
@@ -337,6 +338,8 @@ export interface AppActions {
   setDailyGame: (game: DailyGameQuestion | null) => void;
   openModal: (content: React.ReactNode) => void;
   closeModal: () => void;
+  openDrawer: () => void;
+  closeDrawer: () => void;
   
   // Collection actions
   setGifts: (gifts: Gift[]) => void;

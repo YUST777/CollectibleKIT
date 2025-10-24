@@ -9,8 +9,6 @@ import { AdsBanner } from '@/components/AdsBanner';
 import { TertiaryNavigation } from '@/components/DynamicNavigation';
 import { hapticFeedback, showTelegramAlert } from '@/lib/telegram';
 import { CameraIcon, PhotoIcon } from '@heroicons/react/24/outline';
-import { HamburgerIcon } from '../ui/HamburgerIcon';
-import { Drawer } from '../ui/Drawer';
 import toast from 'react-hot-toast';
 
 export const StoryTab: React.FC = () => {
@@ -20,9 +18,6 @@ export const StoryTab: React.FC = () => {
   const { setStoryPieces, setIsProcessing, markStoryPieceAsSent, setUser, setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
   const { webApp, user: telegramUser } = useTelegram();
   const currentTertiaryTab = useCurrentTertiaryTab();
-  
-  // Drawer state
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -357,13 +352,18 @@ export const StoryTab: React.FC = () => {
         </button>
 
         {/* Hamburger Menu */}
-        <HamburgerIcon 
-          isOpen={isDrawerOpen}
+        <button 
           onClick={() => {
-            setIsDrawerOpen(true);
+            const { openDrawer } = useAppStore.getState();
+            openDrawer();
             hapticFeedback('selection', 'light', webApp);
           }}
-        />
+          className="w-6 h-6 flex flex-col justify-center space-y-1 hover:bg-gray-800/50 rounded p-1 transition-colors"
+        >
+          <div className="w-full h-0.5 bg-gray-400"></div>
+          <div className="w-full h-0.5 bg-gray-400"></div>
+          <div className="w-full h-0.5 bg-gray-400"></div>
+        </button>
       </div>
 
       {/* Ads Banner */}
@@ -598,12 +598,6 @@ export const StoryTab: React.FC = () => {
           </div>
         </div>
       )}
-      
-      {/* Drawer */}
-      <Drawer 
-        isOpen={isDrawerOpen} 
-        onClose={() => setIsDrawerOpen(false)} 
-      />
     </div>
   );
 };

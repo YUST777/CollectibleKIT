@@ -18,6 +18,7 @@ import { CollectionTab } from './tabs/CollectionTab';
 import { ProfileTab } from './tabs/ProfileTab';
 import { HomeTab } from './tabs/HomeTab';
 import { Modal } from './ui/Modal';
+import { Drawer } from './ui/Drawer';
 import { getTelegramWebApp } from '@/lib/telegram';
 
 export const MainApp: React.FC = () => {
@@ -27,6 +28,11 @@ export const MainApp: React.FC = () => {
   const currentTertiaryTab = useCurrentTertiaryTab();
   const { setCurrentTab, setUser, setTonBalance } = useAppActions();
   const { isOpen: isModalOpen, content: modalContent } = useModal();
+  const { isOpen: isDrawerOpen, openDrawer, closeDrawer } = useAppStore(state => ({
+    isOpen: state.isDrawerOpen,
+    openDrawer: state.openDrawer,
+    closeDrawer: state.closeDrawer
+  }));
 
   useEffect(() => {
     const initializeUser = async () => {
@@ -240,6 +246,12 @@ export const MainApp: React.FC = () => {
       >
         {modalContent}
       </Modal>
+      
+      {/* Drawer */}
+      <Drawer
+        isOpen={isDrawerOpen}
+        onClose={closeDrawer}
+      />
     </div>
   );
 };

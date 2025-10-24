@@ -87,6 +87,7 @@ const initialState: AppState = {
   dailyGame: null,
   isModalOpen: false,
   modalContent: null,
+  isDrawerOpen: false,
   
   // Collection initial state
   gifts: [],
@@ -128,6 +129,8 @@ export const useAppStore = create<AppStore>()(
         setDailyGame: (dailyGame) => set({ dailyGame }),
         openModal: (modalContent) => set({ isModalOpen: true, modalContent }),
         closeModal: () => set({ isModalOpen: false, modalContent: null }),
+        openDrawer: () => set({ isDrawerOpen: true }),
+        closeDrawer: () => set({ isDrawerOpen: false }),
 
         // Additional actions
         setLoading: (isLoading) => set({ isLoading }),
@@ -316,6 +319,8 @@ export const useAppActions = () => useAppStore((state) => ({
   setDailyGame: state.setDailyGame,
   openModal: state.openModal,
   closeModal: state.closeModal,
+  openDrawer: state.openDrawer,
+  closeDrawer: state.closeDrawer,
   setLoading: state.setLoading,
   setError: state.setError,
   reset: state.reset,
