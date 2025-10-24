@@ -9,8 +9,14 @@ import { ReferralSection } from '@/components/sections/ReferralSection';
 import { AdsBanner } from '@/components/AdsBanner';
 import { TasksContent } from '@/components/tabs/TasksTab';
 import {
+  UserIcon,
   CreditCardIcon,
+  GiftIcon,
+  CogIcon,
   QuestionMarkCircleIcon,
+  ClipboardDocumentListIcon,
+  ShareIcon,
+  CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -115,7 +121,7 @@ export const ProfileTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 py-4 animate-fade-in">
+    <div className="space-y-4 py-4 animate-fade-in">
       {/* Header with Profile Picture */}
       <div className="flex items-center justify-between px-4 mb-4">
         {/* Profile Picture with Notification Badge */}
@@ -171,8 +177,12 @@ export const ProfileTab: React.FC = () => {
               : 'text-gray-400 hover:text-white'
           }`}
         >
-          Tasks
+          <div className="flex flex-col items-center gap-1">
+            <ClipboardDocumentListIcon className="w-4 h-4" />
+            <span className="text-xs">Tasks</span>
+          </div>
         </button>
+        
         <button
           onClick={() => {
             setCurrentInnerTab('referral');
@@ -184,8 +194,12 @@ export const ProfileTab: React.FC = () => {
               : 'text-gray-400 hover:text-white'
           }`}
         >
-          Referral
+          <div className="flex flex-col items-center gap-1">
+            <ShareIcon className="w-4 h-4" />
+            <span className="text-xs">Referral</span>
+          </div>
         </button>
+        
         <button
           onClick={() => {
             setCurrentInnerTab('earn');
@@ -197,8 +211,12 @@ export const ProfileTab: React.FC = () => {
               : 'text-gray-400 hover:text-white'
           }`}
         >
-          Earn
+          <div className="flex flex-col items-center gap-1">
+            <CurrencyDollarIcon className="w-4 h-4" />
+            <span className="text-xs">Earn</span>
+          </div>
         </button>
+        
         <button
           onClick={() => {
             setCurrentInnerTab('ton');
@@ -210,11 +228,14 @@ export const ProfileTab: React.FC = () => {
               : 'text-gray-400 hover:text-white'
           }`}
         >
-          TON
+          <div className="flex flex-col items-center gap-1">
+            <CreditCardIcon className="w-4 h-4" />
+            <span className="text-xs">TON</span>
+          </div>
         </button>
       </div>
 
-      {/* Content based on selected inner tab */}
+      {/* Tab Content */}
       {currentInnerTab === 'tasks' && (
         <div className="px-4">
           <TasksContent />
@@ -228,8 +249,8 @@ export const ProfileTab: React.FC = () => {
       )}
 
       {currentInnerTab === 'earn' && (
-        <div className="px-4">
-          {/* Support section moved to Earn tab */}
+        <div className="space-y-6 px-4">
+          {/* Support Section */}
           <div className="tg-card">
             <h3 className="text-lg font-semibold text-text-idle mb-4 flex items-center gap-2">
               <QuestionMarkCircleIcon className="w-5 h-5" />
@@ -262,7 +283,7 @@ export const ProfileTab: React.FC = () => {
       )}
 
       {currentInnerTab === 'ton' && (
-        <div className="px-4 space-y-6">
+        <div className="space-y-6 px-4">
           {/* User Info */}
           <div className="tg-card">
             <div className="flex items-center gap-4">
@@ -379,11 +400,11 @@ export const ProfileTab: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* TON Connect Button Container */}
+          <div id="ton-connect-button" className="hidden" />
         </div>
       )}
-
-      {/* TON Connect Button Container */}
-      <div id="ton-connect-button" className="hidden" />
     </div>
   );
 };
