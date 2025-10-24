@@ -5,6 +5,7 @@ import {
   UserIcon,
   PhotoIcon,
   GiftIcon,
+  ClipboardDocumentListIcon,
   ArrowLeftIcon,
   MagnifyingGlassPlusIcon,
   FaceSmileIcon,

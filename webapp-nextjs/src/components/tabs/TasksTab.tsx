@@ -26,7 +26,7 @@ interface Task {
   canComplete: boolean;
 }
 
-// TasksContent component for reuse in ProfileTab
+// Extracted TasksContent component for reuse in Profile inner tabs
 export const TasksContent: React.FC = () => {
   const user = useUser();
   const { webApp } = useTelegram();
@@ -223,7 +223,7 @@ export const TasksContent: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Daily Tasks */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-4">
@@ -338,6 +338,7 @@ export const TasksContent: React.FC = () => {
   );
 };
 
+// Full TasksTab component with header and ads banner
 export const TasksTab: React.FC = () => {
   const user = useUser();
   const { webApp, user: telegramUser } = useTelegram();
