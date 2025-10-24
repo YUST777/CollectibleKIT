@@ -9,10 +9,7 @@ import { ReferralSection } from '@/components/sections/ReferralSection';
 import { AdsBanner } from '@/components/AdsBanner';
 import { TasksContent } from '@/components/tabs/TasksTab';
 import {
-  UserIcon,
   CreditCardIcon,
-  GiftIcon,
-  CogIcon,
   QuestionMarkCircleIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
