@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { cacheUtils } from '@/lib/cache';
 import { cn } from '@/lib/utils';
+import { Gift } from 'lucide-react';
 
 interface ModelThumbnailProps {
   collectionName: string;
@@ -79,9 +80,7 @@ export const ModelThumbnail: React.FC<ModelThumbnailProps> = ({
         'bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center',
         className
       )}>
-        <div className="text-white text-sm font-medium">
-          🎁
-        </div>
+        <Gift className="w-1/2 h-1/2 text-white" />
       </div>
     );
   }

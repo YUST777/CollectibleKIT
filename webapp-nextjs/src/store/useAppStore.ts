@@ -78,7 +78,7 @@ const initialState: AppState = {
     },
     {
       id: 'promote-app',
-      title: 'Promote Story Canvas',
+      title: 'Promote CollectibleKIT',
       reward: 3,
       rewardType: 'credit',
       completed: false,

@@ -29,7 +29,7 @@ interface Task {
 export const TasksTab: React.FC = () => {
   const user = useUser();
   const { webApp, user: telegramUser } = useTelegram();
-  const { setCurrentTab } = useAppActions();
+  const { setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [taskStates, setTaskStates] = useState<Map<string, 'idle' | 'navigated' | 'checking' | 'completing'>>(new Map());
@@ -227,7 +227,11 @@ export const TasksTab: React.FC = () => {
       <div className="flex items-center justify-between px-4 mb-4">
         {/* Profile Picture with Notification Badge */}
         <button
-          onClick={() => setCurrentTab('profile')}
+          onClick={() => {
+            setNavigationLevel('main');
+            setCurrentSubTab('profile');
+            setCurrentTertiaryTab(null);
+          }}
           className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
         >
           {telegramUser?.photo_url ? (

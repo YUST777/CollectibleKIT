@@ -5,18 +5,26 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🎮 Getting daily game question');
 
-    // Get userId from query params (optional for testing)
+    // Get userId and gameType from query params
     const url = new URL(request.url);
     const userIdParam = url.searchParams.get('userId');
+    const gameType = url.searchParams.get('gameType') || 'zoom'; // Default to zoom
     const userId = userIdParam ? parseInt(userIdParam) : undefined;
 
     console.log('📥 Request params:', {
       userId,
+      gameType,
       userIdParam,
       fullUrl: request.url
     });
 
-    const question = await DailyGameService.getTodaysQuestion(userId);
+    // Get question based on game type
+    let question;
+    if (gameType === 'emoji') {
+      question = await DailyGameService.getRandomEmojiQuestion(userId);
+    } else {
+      question = await DailyGameService.getTodaysQuestion(userId);
+    }
 
     if (!question) {
       return NextResponse.json({

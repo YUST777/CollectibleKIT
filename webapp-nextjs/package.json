@@ -1,5 +1,5 @@
 {
-  "name": "telegram-mini-app",
+  "name": "collectiblekit",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,6 +14,7 @@
     "@telegram-apps/analytics": "^1.4.4",
     "autoprefixer": "^10.0.1",
     "clsx": "^2.1.1",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.545.0",
     "next": "14.0.4",
     "postcss": "^8",

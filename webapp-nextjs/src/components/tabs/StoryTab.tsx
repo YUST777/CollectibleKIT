@@ -15,7 +15,7 @@ export const StoryTab: React.FC = () => {
   const user = useUser();
   const storyPieces = useStoryPieces();
   const isProcessing = useIsProcessing();
-  const { setStoryPieces, setIsProcessing, markStoryPieceAsSent, setUser } = useAppActions();
+  const { setStoryPieces, setIsProcessing, markStoryPieceAsSent, setUser, setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
   const { webApp, user: telegramUser } = useTelegram();
   const currentTertiaryTab = useCurrentTertiaryTab();
   
@@ -169,11 +169,11 @@ export const StoryTab: React.FC = () => {
         // Show success message
         let statusMessage = '';
         if (result.user_type === 'vip' || result.user_type === 'test') {
-          statusMessage = '👑 VIP processing complete!';
+          statusMessage = 'VIP processing complete!';
         } else if (result.user_type === 'premium') {
-          statusMessage = `💎 Premium processing complete! ${result.credits_remaining} credits remaining.`;
+          statusMessage = `Premium processing complete! ${result.credits_remaining} credits remaining.`;
         } else {
-          statusMessage = `🆓 Free processing complete! ${result.free_remaining} free uses remaining.`;
+          statusMessage = `Free processing complete! ${result.free_remaining} free uses remaining.`;
         }
 
         if (result.watermark) {
@@ -328,7 +328,15 @@ export const StoryTab: React.FC = () => {
       {/* Header with Profile Picture */}
       <div className="flex items-center justify-between px-4 mb-4">
         {/* Profile Picture with Notification Badge */}
-        <button className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors">
+        <button 
+          onClick={() => {
+            setNavigationLevel('main');
+            setCurrentSubTab('profile');
+            setCurrentTertiaryTab(null);
+            hapticFeedback('selection', 'light', webApp);
+          }}
+          className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
+        >
           {telegramUser?.photo_url ? (
             <img
               src={telegramUser.photo_url}

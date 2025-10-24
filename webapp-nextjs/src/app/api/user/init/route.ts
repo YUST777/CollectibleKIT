@@ -61,12 +61,12 @@ export async function POST(request: NextRequest) {
             photo_url || ''
           );
           
-          // Complete "Promote Story Canvas" task for the referrer
+          // Complete "Promote CollectibleKIT" task for the referrer
           try {
             const taskCompletion = await db.getTaskCompletionStatus(referrerId, 'daily_promote_canvas');
             if (!taskCompletion.completed) {
               await db.completeTask(referrerId, 'daily_promote_canvas');
-              console.log(`✅ Promote Story Canvas task completed for referrer ${referrerId}`);
+              console.log(`✅ Promote CollectibleKIT task completed for referrer ${referrerId}`);
             }
           } catch (error) {
             console.log('Task completion failed (non-critical):', error);

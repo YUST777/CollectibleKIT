@@ -1,4 +1,5 @@
 import { db } from './database';
+import { emojiGameService } from './emojiGameService';
 
 export interface DailyGameQuestion {
   id: number;
@@ -111,6 +112,54 @@ export class DailyGameService {
   }
 
   /**
+   * Get random emoji game question from database
+   */
+  static async getRandomEmojiQuestion(userId?: number): Promise<DailyGameQuestion | null> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      console.log(`🎮 Getting random emoji game question for ${today}`);
+
+      // Get a random emoji question from the database
+      const emojiQuestion = await emojiGameService.getRandomQuestion(userId);
+      
+      if (!emojiQuestion) {
+        console.log('❌ No emoji question available');
+        return null;
+      }
+
+      // Create a unique ID for this question session
+      const questionId = Date.now();
+
+      // Get total solves count
+      const totalSolves = await db.getTotalGameSolves();
+
+      const question: DailyGameQuestion = {
+        id: questionId,
+        date: today,
+        time_slot: 'random',
+        game_type: 'emoji',
+        question: 'What gift model do these emojis describe?',
+        emojis: emojiQuestion.emojis,
+        gift_name: emojiQuestion.gift_name,
+        model_name: emojiQuestion.model_name,
+        reward: 0.1,
+        solvers_count: totalSolves
+      };
+
+      console.log(`✅ Random emoji question created: ${emojiQuestion.gift_name} - ${emojiQuestion.model_name}`);
+      console.log(`📊 Emojis: ${emojiQuestion.emojis.join(' ')}`);
+      console.log(`📊 Total solves count: ${totalSolves}`);
+      
+      return question;
+
+    } catch (error) {
+      console.error('Error getting emoji question:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get today's daily game question - Returns random zoom game
    */
   static async getTodaysQuestion(userId?: number): Promise<DailyGameQuestion | null> {
@@ -166,11 +215,12 @@ export class DailyGameService {
   }
 
   /**
-   * Submit answer for random zoom game
+   * Submit answer for emoji or zoom game
    */
   static async submitAnswer(
     userId: number,
-    answer: string
+    answer: string,
+    gameType?: 'emoji' | 'zoom'
   ): Promise<{
     success: boolean;
     correct: boolean;
@@ -182,58 +232,69 @@ export class DailyGameService {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      console.log(`🎮 Submitting answer for ${userId}: ${answer} (Random zoom game)`);
+      console.log(`🎮 Submitting answer for ${userId}: ${answer} (${gameType || 'unknown'} game)`);
 
       // Use same userKey logic as getTodaysQuestion
       const userKey = userId || 0;
       
-      console.log(`🔍 Looking for session with userKey: ${userKey}`);
-      console.log(`🔍 Session map size: ${this.currentGiftForUser.size}`);
-      console.log(`🔍 Available session keys:`, Array.from(this.currentGiftForUser.keys()));
-      
-      // Get the current gift for this user, fallback to global current gift
-      let currentGift = this.currentGiftForUser.get(userKey);
-      
-      console.log(`🔍 Found session for userKey ${userKey}:`, currentGift ? `${currentGift.name} - ${currentGift.model}` : 'null');
-      
-      // If not found for this user, try the global current gift as fallback
-      if (!currentGift && this.currentRandomGift) {
-        console.log('⚠️ Using global current gift as fallback');
-        currentGift = this.currentRandomGift;
-        // Store it for this user for future reference
-        this.currentGiftForUser.set(userKey, currentGift);
+      // Check answer based on game type
+      let isCorrect = false;
+      let correctAnswer = '';
+
+      if (gameType === 'emoji') {
+        // Check emoji game answer
+        const result = await emojiGameService.checkAnswer(userId, answer);
+        isCorrect = result.correct;
+        correctAnswer = result.correctAnswer;
+        console.log(`🎯 Emoji game answer check: "${answer}" vs "${correctAnswer}" = ${isCorrect}`);
+      } else {
+        // Check zoom game answer
+        console.log(`🔍 Looking for session with userKey: ${userKey}`);
+        console.log(`🔍 Session map size: ${this.currentGiftForUser.size}`);
+        console.log(`🔍 Available session keys:`, Array.from(this.currentGiftForUser.keys()));
+        
+        // Get the current gift for this user, fallback to global current gift
+        let currentGift = this.currentGiftForUser.get(userKey);
+        
+        console.log(`🔍 Found session for userKey ${userKey}:`, currentGift ? `${currentGift.name} - ${currentGift.model}` : 'null');
+        
+        // If not found for this user, try the global current gift as fallback
+        if (!currentGift && this.currentRandomGift) {
+          console.log('⚠️ Using global current gift as fallback');
+          currentGift = this.currentRandomGift;
+          // Store it for this user for future reference
+          this.currentGiftForUser.set(userKey, currentGift);
+        }
+        
+        if (!currentGift) {
+          console.error('❌ No active game session found for user', userKey);
+          return {
+            success: false,
+            correct: false,
+            is_first_solver: false,
+            error: 'No active game session. Please refresh and try again.'
+          };
+        }
+
+        console.log(`🎯 Checking answer against: ${currentGift.correct_answer}`);
+
+        // Check if answer is correct
+        correctAnswer = currentGift.correct_answer;
+        const correctAnswerLower = correctAnswer.toLowerCase();
+        const userAnswer = answer.toLowerCase().trim();
+        isCorrect = correctAnswerLower === userAnswer || 
+                   correctAnswerLower.includes(userAnswer) || 
+                   userAnswer.includes(correctAnswerLower);
+
+        console.log(`Answer check: "${userAnswer}" vs "${correctAnswerLower}" = ${isCorrect}`);
       }
-      
-      if (!currentGift) {
-        console.error('❌ No active game session found for user', userKey);
-        console.error('❌ Session map size:', this.currentGiftForUser.size);
-        console.error('❌ Available sessions:', Array.from(this.currentGiftForUser.keys()));
-        console.error('❌ Global current gift:', this.currentRandomGift);
-        return {
-          success: false,
-          correct: false,
-          is_first_solver: false,
-          error: 'No active game session. Please refresh and try again.'
-        };
-      }
-
-      console.log(`🎯 Checking answer against: ${currentGift.correct_answer}`);
-
-      // Check if answer is correct
-      const correctAnswer = currentGift.correct_answer.toLowerCase();
-      const userAnswer = answer.toLowerCase().trim();
-      const isCorrect = correctAnswer === userAnswer || 
-                       correctAnswer.includes(userAnswer) || 
-                       userAnswer.includes(correctAnswer);
-
-      console.log(`Answer check: "${userAnswer}" vs "${correctAnswer}" = ${isCorrect}`);
 
       if (!isCorrect) {
         return {
           success: true,
           correct: false,
           is_first_solver: false,
-          correct_answer: currentGift.correct_answer
+          correct_answer: correctAnswer
         };
       }
 

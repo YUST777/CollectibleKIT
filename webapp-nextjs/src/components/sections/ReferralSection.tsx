@@ -89,11 +89,11 @@ export const ReferralSection: React.FC = () => {
     
     if (webApp && typeof (window as any).Telegram?.WebApp?.shareLink === 'function') {
       (window as any).Telegram.WebApp.shareLink(referralLink, { 
-        title: 'Join Story Canvas Cutter!' 
+        title: 'Join CollectibleKIT!' 
       });
     } else if (navigator.share) {
       navigator.share({ 
-        title: 'Join Story Canvas Cutter!', 
+        title: 'Join CollectibleKIT!', 
         url: referralLink 
       });
     } else {

@@ -1,72 +1,72 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { Code2 } from 'lucide-react';
+
+const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
 export const LoadingScreen: React.FC = () => {
-  const animationRef = useRef<HTMLDivElement>(null);
+  const [lottieData, setLottieData] = useState<any>(null);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Initialize Lottie animation if available
-    if (typeof window !== 'undefined' && window.lottie && animationRef.current) {
-      try {
-        // Load the coding duck animation from the original app
-        fetch('/coding_duck.json')
-          .then(response => response.json())
-          .then(animationData => {
-            if (window.lottie && animationRef.current) {
-              window.lottie.loadAnimation({
-                container: animationRef.current,
-                renderer: 'svg',
-                loop: true,
-                autoplay: true,
-                animationData: animationData,
-              });
-            }
-          })
-          .catch(error => {
-            console.warn('Failed to load Lottie animation:', error);
-            // Fallback to CSS animation
-            if (animationRef.current) {
-              animationRef.current.innerHTML = '🦆';
-              animationRef.current.className = 'text-6xl animate-bounce-gentle';
-            }
-          });
-      } catch (error) {
-        console.warn('Lottie not available, using fallback:', error);
-        // Fallback to CSS animation
-        if (animationRef.current) {
-          animationRef.current.innerHTML = '🦆';
-          animationRef.current.className = 'text-6xl animate-bounce-gentle';
+    // Load Lottie animation
+    fetch('/coding-duck.json')
+      .then(res => res.json())
+      .then(data => setLottieData(data))
+      .catch(err => console.error('Failed to load coding duck animation:', err));
+
+    // Animate loading bar from 0 to 100%
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
         }
-      }
-    }
+        return prev + 1;
+      });
+    }, 30); // Will take 3 seconds to reach 100%
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-bg-main to-box-bg">
       <div className="text-center">
         {/* Animation Container */}
-        <div 
-          ref={animationRef}
-          className="w-32 h-32 mx-auto mb-6 flex items-center justify-center text-6xl animate-bounce-gentle"
-        >
-          🦆
+        <div className="w-48 h-48 mx-auto mb-6 flex items-center justify-center">
+          {lottieData ? (
+            <Lottie
+              animationData={lottieData}
+              loop={true}
+              autoplay={true}
+              style={{ width: 192, height: 192 }}
+            />
+          ) : (
+            <div className="animate-bounce">
+              <Code2 className="w-24 h-24 text-text-idle" />
+            </div>
+          )}
         </div>
         
         {/* Loading Text */}
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold text-text-idle">
-            Story Canvas
+            CollectibleKIT
           </h2>
           <p className="text-text-active">
-            Loading... Please wait
+            Loading... {progress}%
           </p>
         </div>
         
         {/* Loading Progress Bar */}
-        <div className="mt-8 w-48 mx-auto">
-          <div className="h-1 bg-icon-idle/30 rounded-full overflow-hidden">
-            <div className="h-full bg-icon-active rounded-full animate-pulse" />
+        <div className="mt-8 w-64 mx-auto">
+          <div className="h-2 bg-icon-idle/30 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
       </div>

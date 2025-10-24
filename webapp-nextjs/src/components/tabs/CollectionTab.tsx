@@ -10,6 +10,7 @@ import { useAppActions, useAppStore, useCurrentTab } from '@/store/useAppStore';
 import { Backdrop, GiftModel, GiftDesign, FilterOption, Pattern } from '@/types';
 import { XMarkIcon, ChevronLeftIcon, MagnifyingGlassIcon, HeartIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
+import { Lightbulb, Gift, Coins, FolderOpen, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { hapticFeedback } from '@/lib/telegram';
 import { useTelegram } from '@/components/providers/TelegramProvider';
@@ -17,7 +18,7 @@ import { useTelegram } from '@/components/providers/TelegramProvider';
 export const CollectionTab: React.FC = () => {
   const { webApp, user: telegramUser } = useTelegram();
   const { gifts, backdrops, giftModels, patterns, gridSize, userDesigns, savedCollections, user } = useAppStore();
-  const { setGifts, setBackdrops, setGiftModels, setPatterns, setGridSize, setGiftDesign, setUserDesigns, saveCollection, loadCollection, loadCollections, deleteCollection, setCurrentTab } = useAppActions();
+  const { setGifts, setBackdrops, setGiftModels, setPatterns, setGridSize, setGiftDesign, setUserDesigns, saveCollection, loadCollection, loadCollections, deleteCollection, setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
 
   const [isLoading, setIsLoading] = useState(true);
   const [currentSlot, setCurrentSlot] = useState<number | null>(null);
@@ -571,7 +572,7 @@ export const CollectionTab: React.FC = () => {
         : '#667eea';
     
     return (
-      <div key={index} className="relative w-full h-full aspect-square rounded-lg overflow-hidden border border-gray-300">
+      <div key={index} className="relative w-full h-full aspect-square rounded-lg overflow-hidden border border-black">
         {/* Background with gradient */}
         <div 
           className="absolute inset-0 rounded-lg"
@@ -906,7 +907,12 @@ export const CollectionTab: React.FC = () => {
       <div className="flex items-center justify-between px-4 mb-4">
         {/* Profile Picture */}
         <button
-          onClick={() => setCurrentTab('profile')}
+          onClick={() => {
+            setNavigationLevel('main');
+            setCurrentSubTab('profile');
+            setCurrentTertiaryTab(null);
+            hapticFeedback('selection', 'light', webApp);
+          }}
           className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
         >
           {telegramUser?.photo_url ? (
@@ -988,7 +994,7 @@ export const CollectionTab: React.FC = () => {
             </div>
           ) : publicCollections.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="text-4xl mb-4">💡</div>
+              <Lightbulb className="w-12 h-12 mb-4 text-gray-500" />
               <div className="text-gray-500 mb-2">No public collections yet</div>
               <div className="text-sm text-gray-400">
                 Be the first to share your collection publicly!
@@ -999,15 +1005,15 @@ export const CollectionTab: React.FC = () => {
               {publicCollections.map((collection) => (
                 <div
                   key={collection.id}
-                  className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+                  className="bg-[#282727] rounded-lg border border-gray-700 p-4 hover:shadow-md transition-shadow"
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">
+                      <h3 className="font-semibold text-white mb-1">
                         {collection.name}
                       </h3>
-                      <div className="flex items-center space-x-2 text-sm text-gray-500">
+                      <div className="flex items-center space-x-2 text-sm text-gray-400">
                         <span>by {collection.authorName}</span>
                         <span>•</span>
                         <span>{formatDate(collection.createdAt)}</span>
@@ -1018,14 +1024,14 @@ export const CollectionTab: React.FC = () => {
                     <button
                       onClick={() => handleLike(collection.id)}
                       disabled={likingCollections.has(collection.id)}
-                      className="flex items-center space-x-1 text-sm hover:bg-gray-100 rounded-full px-2 py-1 transition-colors"
+                      className="flex items-center space-x-1 text-sm hover:bg-gray-700 rounded-full px-2 py-1 transition-colors"
                     >
                       {collection.isLikedByUser ? (
                         <HeartSolidIcon className="w-4 h-4 text-red-500" />
                       ) : (
                         <HeartIcon className="w-4 h-4 text-gray-400" />
                       )}
-                      <span className={collection.isLikedByUser ? 'text-red-500' : 'text-gray-500'}>
+                      <span className={collection.isLikedByUser ? 'text-red-500' : 'text-gray-400'}>
                         {collection.likesCount}
                       </span>
                     </button>
@@ -1054,8 +1060,9 @@ export const CollectionTab: React.FC = () => {
           {/* Credit Info (only for normal users) */}
       {user?.user_type === 'normal' && (
         <div className="text-center">
-          <p className="text-xs text-text-active">
-            💰 Save costs 1 credit
+          <p className="text-xs text-text-active flex items-center justify-center gap-1">
+            <Coins className="w-4 h-4" />
+            <span>Save costs 1 credit</span>
           </p>
         </div>
       )}
@@ -1097,7 +1104,7 @@ export const CollectionTab: React.FC = () => {
             disabled={savedCollections.length === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>📂</span>
+            <FolderOpen className="w-4 h-4" />
             <span>Load</span>
           </button>
 
@@ -1107,7 +1114,7 @@ export const CollectionTab: React.FC = () => {
             disabled={Object.keys(userDesigns).length === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>💾</span>
+            <Save className="w-4 h-4" />
             <span>Save</span>
           </button>
         </div>
@@ -1311,7 +1318,15 @@ export const CollectionTab: React.FC = () => {
           </div>
 
             {/* Filter Options List */}
-            <div className="space-y-2 max-h-[35vh] overflow-y-auto">
+            {currentFilterType === 'model' && (
+              <div className="text-xs text-gray-400 mb-2 px-1">
+                Showing {currentFilterData.filter(item => {
+                  if (!drawerSearchTerm) return true;
+                  return item.name.toLowerCase().includes(drawerSearchTerm.toLowerCase());
+                }).length} of {currentFilterData.length} models
+              </div>
+            )}
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
               {currentFilterData
                 .filter(item => {
                   if (!drawerSearchTerm) return true;
@@ -1349,9 +1364,7 @@ export const CollectionTab: React.FC = () => {
               {item.type === 'gift' && (
                 <>
                       <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
-                    <div className="w-full h-full flex items-center justify-center text-lg">
-                      🎁
-                    </div>
+                    <Gift className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1">
                         <div className="font-medium text-white">{item.name}</div>

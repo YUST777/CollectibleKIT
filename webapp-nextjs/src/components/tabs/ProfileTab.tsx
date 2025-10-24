@@ -19,7 +19,7 @@ export const ProfileTab: React.FC = () => {
   const user = useUser();
   const tonBalance = useTonBalance();
   const { setTonBalance, setCurrentTab } = useAppActions();
-  const { webApp } = useTelegram();
+  const { webApp, user: telegramUser } = useTelegram();
   
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -119,13 +119,26 @@ export const ProfileTab: React.FC = () => {
       {/* User Info */}
       <div className="tg-card">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-icon-active rounded-full flex items-center justify-center">
-            <UserIcon className="w-8 h-8 text-icon-white" />
+          {/* Profile Picture */}
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-icon-active flex-shrink-0">
+            {telegramUser?.photo_url ? (
+              <img
+                src={telegramUser.photo_url}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                <span className="text-white text-2xl font-bold">
+                  {telegramUser?.first_name?.charAt(0) || user?.first_name?.charAt(0) || 'U'}
+                </span>
+              </div>
+            )}
           </div>
           
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-text-idle">
-              {user?.first_name || 'Anonymous'}
+              {user?.first_name || telegramUser?.first_name || 'Anonymous'}
             </h3>
             <p className="text-text-active text-sm">
               {user?.user_type === 'premium' ? 'Premium User' : 

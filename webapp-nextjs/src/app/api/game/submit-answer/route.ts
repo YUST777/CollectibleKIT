@@ -6,11 +6,12 @@ export async function POST(request: NextRequest) {
     console.log('🎮 Submitting daily game answer');
 
     const body = await request.json();
-    const { userId, answer } = body;
+    const { userId, answer, gameType } = body;
 
     console.log('📥 Received submission:', {
       userId,
       answer,
+      gameType,
       bodyKeys: Object.keys(body)
     });
 
@@ -36,11 +37,12 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Answer submission validated:', {
       userId: userIdNum,
-      answer: answer
+      answer: answer,
+      gameType: gameType
     });
 
-    // Submit answer
-    const result = await DailyGameService.submitAnswer(userIdNum, answer);
+    // Submit answer with game type
+    const result = await DailyGameService.submitAnswer(userIdNum, answer, gameType);
 
     if (!result.success) {
       return NextResponse.json({
