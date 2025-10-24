@@ -14,6 +14,14 @@ export default function Home() {
     if (user) {
       setIsLoading(false);
     }
+    
+    // Fallback: if no user after 3 seconds, show app anyway
+    const fallbackTimer = setTimeout(() => {
+      console.log('⚠️ Fallback: Showing app without user initialization');
+      setIsLoading(false);
+    }, 3000);
+    
+    return () => clearTimeout(fallbackTimer);
   }, [user]);
 
   if (isLoading) {
