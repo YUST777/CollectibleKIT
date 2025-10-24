@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { useAppActions, useUser } from '@/store/useAppStore';
 import { Button } from '@/components/ui/Button';
+import { AdSpace } from '@/components/AdSpace';
 import { 
   CameraIcon, 
   PhotoIcon, 
@@ -148,6 +149,11 @@ export const HomeTab: React.FC = () => {
           {user?.first_name ? `Hey, ${user.first_name}` : 'Welcome back'}
         </h2>
         <p className="text-xs text-text-active mt-1">Jump into anything below.</p>
+      </div>
+
+      {/* Ad Space */}
+      <div className="px-4">
+        <AdSpace variant="banner" />
       </div>
 
       <div className="px-4 space-y-3">
