@@ -4,7 +4,6 @@ import React from 'react';
 import { NavButton } from '@/components/ui/NavButton';
 import {
   HomeIcon,
-  ClipboardDocumentListIcon,
   LightBulbIcon,
   GiftIcon,
   UserIcon,
@@ -24,11 +23,6 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
       id: 'story',
       label: 'Story',
       icon: <HomeIcon className="w-6 h-6" />,
-    },
-    {
-      id: 'tasks',
-      label: 'Tasks',
-      icon: <ClipboardDocumentListIcon className="w-6 h-6" />,
     },
     {
       id: 'game',
