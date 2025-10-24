@@ -221,7 +221,7 @@ export const MainApp: React.FC = () => {
       <Header />
       
       {/* Main Content */}
-      <main className="pb-20">
+      <main className="pt-16 pb-20">
         <div className="max-w-md mx-auto px-4">
           <div className="transition-all duration-300 ease-in-out">
             {renderTabContent()}
