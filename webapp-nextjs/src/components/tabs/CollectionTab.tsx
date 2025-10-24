@@ -11,6 +11,8 @@ import { Backdrop, GiftModel, GiftDesign, FilterOption, Pattern } from '@/types'
 import { XMarkIcon, ChevronLeftIcon, MagnifyingGlassIcon, HeartIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { Lightbulb, Gift, Coins, FolderOpen, Save } from 'lucide-react';
+import { HamburgerIcon } from '../ui/HamburgerIcon';
+import { Drawer } from '../ui/Drawer';
 import toast from 'react-hot-toast';
 import { hapticFeedback } from '@/lib/telegram';
 import { useTelegram } from '@/components/providers/TelegramProvider';
@@ -19,6 +21,9 @@ export const CollectionTab: React.FC = () => {
   const { webApp, user: telegramUser } = useTelegram();
   const { gifts, backdrops, giftModels, patterns, gridSize, userDesigns, savedCollections, user } = useAppStore();
   const { setGifts, setBackdrops, setGiftModels, setPatterns, setGridSize, setGiftDesign, setUserDesigns, saveCollection, loadCollection, loadCollections, deleteCollection, setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
+  
+  // Drawer state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [currentSlot, setCurrentSlot] = useState<number | null>(null);
@@ -929,11 +934,13 @@ export const CollectionTab: React.FC = () => {
         </button>
 
         {/* Hamburger Menu */}
-        <button className="w-6 h-6 flex flex-col justify-center space-y-1">
-          <div className="w-full h-0.5 bg-gray-400"></div>
-          <div className="w-full h-0.5 bg-gray-400"></div>
-          <div className="w-full h-0.5 bg-gray-400"></div>
-        </button>
+        <HamburgerIcon 
+          isOpen={isDrawerOpen}
+          onClick={() => {
+            setIsDrawerOpen(true);
+            hapticFeedback('selection', 'light', webApp);
+          }}
+        />
       </div>
 
       {/* Ads Banner */}
@@ -1559,6 +1566,12 @@ export const CollectionTab: React.FC = () => {
           )}
         </div>
       </Modal>
+      
+      {/* Drawer */}
+      <Drawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+      />
     </div>
   );
 };
