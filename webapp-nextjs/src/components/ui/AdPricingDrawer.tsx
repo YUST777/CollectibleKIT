@@ -21,26 +21,44 @@ interface PricingTier {
 }
 
 export const AdPricingDrawer: React.FC<AdPricingDrawerProps> = ({ isOpen, onClose }) => {
-  const [userCount, setUserCount] = useState(0);
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    newUsersToday: 0
+  });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate real-time user counter (in a real app, this would come from your analytics)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Simulate user count fluctuation (realistic range for a growing mini app)
-      const baseCount = 1250;
-      const variation = Math.floor(Math.random() * 50) - 25; // ±25 users
-      setUserCount(Math.max(1000, baseCount + variation));
-    }, 2000);
-
-    // Initial load
-    setTimeout(() => {
-      setUserCount(1250);
+  // Fetch real user stats from API
+  const fetchUserStats = async () => {
+    try {
+      const response = await fetch('/api/stats/users');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUserStats(data.stats);
+          setIsLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      // Fallback to default values if API fails
+      setUserStats({
+        totalUsers: 1250,
+        activeUsers: 450,
+        newUsersToday: 25
+      });
       setIsLoading(false);
-    }, 1000);
+    }
+  };
 
-    return () => clearInterval(interval);
-  }, []);
+  useEffect(() => {
+    if (isOpen) {
+      fetchUserStats();
+      // Update stats every 30 seconds
+      const interval = setInterval(fetchUserStats, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen]);
 
   const pricingTiers: PricingTier[] = [
     {
@@ -112,14 +130,14 @@ export const AdPricingDrawer: React.FC<AdPricingDrawerProps> = ({ isOpen, onClos
 
         <div className="space-y-6 overflow-y-auto">
           {/* Real-time User Counter */}
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-4 text-white">
+          <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-600 rounded-xl p-4 text-white">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Users className="w-5 h-5" />
                   Live Users
                 </h3>
-                <p className="text-blue-100 text-sm">Real-time mini app users</p>
+                <p className="text-yellow-100 text-sm">Real-time mini app users</p>
               </div>
               <div className="text-right">
                 {isLoading ? (
@@ -128,12 +146,17 @@ export const AdPricingDrawer: React.FC<AdPricingDrawerProps> = ({ isOpen, onClos
                   </div>
                 ) : (
                   <div className="text-3xl font-bold">
-                    {userCount.toLocaleString()}
+                    {userStats.totalUsers.toLocaleString()}
                   </div>
                 )}
-                <div className="flex items-center gap-1 text-blue-100 text-sm">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Growing daily</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1 text-yellow-100 text-sm">
+                    <TrendingUp className="w-4 h-4" />
+                    <span>{userStats.activeUsers} active today</span>
+                  </div>
+                  <div className="text-yellow-100 text-xs">
+                    +{userStats.newUsersToday} new users today
+                  </div>
                 </div>
               </div>
             </div>
@@ -232,12 +255,6 @@ export const AdPricingDrawer: React.FC<AdPricingDrawerProps> = ({ isOpen, onClos
             </Button>
           </div>
 
-          {/* Additional Info */}
-          <div className="text-center text-xs text-text-active space-y-1">
-            <p>All payments processed securely via TON</p>
-            <p>Ads are manually reviewed for quality</p>
-            <p>24/7 support available</p>
-          </div>
         </div>
       </SheetContent>
     </Sheet>

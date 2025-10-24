@@ -1090,6 +1090,60 @@ class DatabaseService {
       });
     });
   }
+
+  // Get total unique users
+  async getTotalUsers(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT COUNT(DISTINCT user_id) as count FROM users', (err, row: any) => {
+        if (err) {
+          console.error('Error getting total users:', err);
+          reject(err);
+        } else {
+          resolve(row?.count || 0);
+        }
+      });
+    });
+  }
+
+  // Get active users (users active in last 24 hours)
+  async getActiveUsers(): Promise<number> {
+    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT COUNT(DISTINCT user_id) as count FROM users WHERE last_activity > ?',
+        [oneDayAgo],
+        (err, row: any) => {
+          if (err) {
+            console.error('Error getting active users:', err);
+            reject(err);
+          } else {
+            resolve(row?.count || 0);
+          }
+        }
+      );
+    });
+  }
+
+  // Get new users today
+  async getNewUsersToday(): Promise<number> {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT COUNT(*) as count FROM users WHERE created_at >= ?',
+        [startOfDay],
+        (err, row: any) => {
+          if (err) {
+            console.error('Error getting new users today:', err);
+            reject(err);
+          } else {
+            resolve(row?.count || 0);
+          }
+        }
+      );
+    });
+  }
 }
 
 // Export singleton instance
