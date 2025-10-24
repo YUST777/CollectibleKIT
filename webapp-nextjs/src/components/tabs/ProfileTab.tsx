@@ -14,8 +14,6 @@ import {
   GiftIcon,
   CogIcon,
   QuestionMarkCircleIcon,
-  ClipboardDocumentListIcon,
-  ShareIcon,
   CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -165,71 +163,61 @@ export const ProfileTab: React.FC = () => {
       <AdsBanner />
 
       {/* Inner Tabs Navigation */}
-      <div className="bg-[#282627] rounded-xl p-1 grid grid-cols-4 gap-1 mx-4">
-        <button
-          onClick={() => {
-            setCurrentInnerTab('tasks');
-            hapticFeedback('selection', 'light', webApp);
-          }}
-          className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
-            currentInnerTab === 'tasks'
-              ? 'bg-[#424242] text-white shadow-sm'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          <div className="flex flex-col items-center gap-1">
-            <ClipboardDocumentListIcon className="w-4 h-4" />
-            <span className="text-xs">Tasks</span>
-          </div>
-        </button>
-        <button
-          onClick={() => {
-            setCurrentInnerTab('referral');
-            hapticFeedback('selection', 'light', webApp);
-          }}
-          className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
-            currentInnerTab === 'referral'
-              ? 'bg-[#424242] text-white shadow-sm'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          <div className="flex flex-col items-center gap-1">
-            <ShareIcon className="w-4 h-4" />
-            <span className="text-xs">Referral</span>
-          </div>
-        </button>
-        <button
-          onClick={() => {
-            setCurrentInnerTab('earn');
-            hapticFeedback('selection', 'light', webApp);
-          }}
-          className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
-            currentInnerTab === 'earn'
-              ? 'bg-[#424242] text-white shadow-sm'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          <div className="flex flex-col items-center gap-1">
-            <CurrencyDollarIcon className="w-4 h-4" />
-            <span className="text-xs">Earn</span>
-          </div>
-        </button>
-        <button
-          onClick={() => {
-            setCurrentInnerTab('ton');
-            hapticFeedback('selection', 'light', webApp);
-          }}
-          className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
-            currentInnerTab === 'ton'
-              ? 'bg-[#424242] text-white shadow-sm'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          <div className="flex flex-col items-center gap-1">
-            <CreditCardIcon className="w-4 h-4" />
-            <span className="text-xs">TON</span>
-          </div>
-        </button>
+      <div className="flex justify-start px-4">
+        <div className="flex space-x-8">
+          <button
+            onClick={() => {
+              setCurrentInnerTab('tasks');
+              hapticFeedback('selection', 'light', webApp);
+            }}
+            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+              currentInnerTab === 'tasks'
+                ? 'text-white border-b-2 border-white pb-1 scale-105'
+                : 'text-gray-400 hover:text-gray-300 hover:scale-105'
+            }`}
+          >
+            Tasks
+          </button>
+          <button
+            onClick={() => {
+              setCurrentInnerTab('referral');
+              hapticFeedback('selection', 'light', webApp);
+            }}
+            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+              currentInnerTab === 'referral'
+                ? 'text-white border-b-2 border-white pb-1 scale-105'
+                : 'text-gray-400 hover:text-gray-300 hover:scale-105'
+            }`}
+          >
+            Referral
+          </button>
+          <button
+            onClick={() => {
+              setCurrentInnerTab('earn');
+              hapticFeedback('selection', 'light', webApp);
+            }}
+            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+              currentInnerTab === 'earn'
+                ? 'text-white border-b-2 border-white pb-1 scale-105'
+                : 'text-gray-400 hover:text-gray-300 hover:scale-105'
+            }`}
+          >
+            Earn
+          </button>
+          <button
+            onClick={() => {
+              setCurrentInnerTab('ton');
+              hapticFeedback('selection', 'light', webApp);
+            }}
+            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+              currentInnerTab === 'ton'
+                ? 'text-white border-b-2 border-white pb-1 scale-105'
+                : 'text-gray-400 hover:text-gray-300 hover:scale-105'
+            }`}
+          >
+            TON
+          </button>
+        </div>
       </div>
 
       {/* Content based on selected inner tab */}
