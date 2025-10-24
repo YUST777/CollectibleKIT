@@ -7,7 +7,8 @@ import {
   useModal, 
   useNavigationLevel, 
   useCurrentSubTab, 
-  useCurrentTertiaryTab 
+  useCurrentTertiaryTab,
+  useAppStore
 } from '@/store/useAppStore';
 import { Header } from './layout/Header';
 import { DynamicNavigation } from './DynamicNavigation';

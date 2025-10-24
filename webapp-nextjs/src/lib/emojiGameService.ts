@@ -245,6 +245,23 @@ class EmojiGameService {
   }
 
   /**
+   * Get all unique gift names
+   */
+  async getAllGifts(): Promise<string[]> {
+    try {
+      const results = await this.dbAll(
+        'SELECT DISTINCT gift_name FROM gift_models ORDER BY gift_name'
+      );
+
+      return results.map((row: any) => row.gift_name);
+
+    } catch (error) {
+      console.error('❌ Error getting all gifts:', error);
+      return [];
+    }
+  }
+
+  /**
    * Close database connection
    */
   async close(): Promise<void> {

@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/Button';
-import { useUser, useStoryPieces, useIsProcessing, useAppActions, useCurrentTertiaryTab } from '@/store/useAppStore';
+import { useUser, useStoryPieces, useIsProcessing, useAppActions, useCurrentTertiaryTab, useAppStore } from '@/store/useAppStore';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { AdsBanner } from '@/components/AdsBanner';
 import { TertiaryNavigation } from '@/components/DynamicNavigation';

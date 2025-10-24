@@ -29,7 +29,7 @@ interface Task {
 export const TasksTab: React.FC = () => {
   const user = useUser();
   const { webApp, user: telegramUser } = useTelegram();
-  const { setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
+  const { setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab, setCurrentTab } = useAppActions();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [taskStates, setTaskStates] = useState<Map<string, 'idle' | 'navigated' | 'checking' | 'completing'>>(new Map());

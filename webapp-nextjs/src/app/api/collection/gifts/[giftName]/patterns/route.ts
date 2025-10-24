@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { giftName: string } }
+  { params }: { params: Promise<{ giftName: string }> }
 ) {
   try {
-    const { giftName } = params;
+    const { giftName } = await params;
     const decodedGiftName = decodeURIComponent(giftName);
     
     console.log(`🎨 Loading patterns for gift: ${decodedGiftName}`);
