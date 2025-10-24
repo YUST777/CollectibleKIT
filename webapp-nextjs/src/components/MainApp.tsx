@@ -13,7 +13,6 @@ import {
 import { Header } from './layout/Header';
 import { DynamicNavigation } from './DynamicNavigation';
 import { StoryTab } from './tabs/StoryTab';
-import { TasksTab } from './tabs/TasksTab';
 import { GameTab } from './tabs/GameTab';
 import { CollectionTab } from './tabs/CollectionTab';
 import { ProfileTab } from './tabs/ProfileTab';
