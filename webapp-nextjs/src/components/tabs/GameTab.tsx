@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useDailyGame, useAppActions, useUser, useCurrentSubTab } from '@/store/useAppStore';
+import { useDailyGame, useAppActions, useUser, useCurrentSubTab, useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/Button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
 import { ModelThumbnail } from '@/components/ModelThumbnail';
@@ -510,7 +510,14 @@ export const GameTab: React.FC = () => {
         </button>
 
         {/* Hamburger Menu */}
-        <button className="w-6 h-6 flex flex-col justify-center space-y-1">
+        <button 
+          onClick={() => {
+            const { openDrawer } = useAppStore.getState();
+            openDrawer();
+            hapticFeedback('selection', 'light', webApp);
+          }}
+          className="w-6 h-6 flex flex-col justify-center space-y-1 hover:bg-gray-800/50 rounded p-1 transition-colors"
+        >
           <div className="w-full h-0.5 bg-gray-400"></div>
           <div className="w-full h-0.5 bg-gray-400"></div>
           <div className="w-full h-0.5 bg-gray-400"></div>

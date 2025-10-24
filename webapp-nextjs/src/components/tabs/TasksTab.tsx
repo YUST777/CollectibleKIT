@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { useUser } from '@/store/useAppStore';
+import { useUser, useAppActions, useAppStore } from '@/store/useAppStore';
 import { useTelegram } from '@/components/providers/TelegramProvider';
+import { hapticFeedback } from '@/lib/telegram';
 import { AdsBanner } from '@/components/AdsBanner';
-import { useAppActions } from '@/store/useAppStore';
 import toast from 'react-hot-toast';
 import { CheckCircle, ArrowRight, Users, Gift, Share2, Gamepad2, Sparkles, Trophy } from 'lucide-react';
 
@@ -249,7 +249,14 @@ export const TasksTab: React.FC = () => {
         </button>
 
         {/* Hamburger Menu */}
-        <button className="w-6 h-6 flex flex-col justify-center space-y-1">
+        <button 
+          onClick={() => {
+            const { openDrawer } = useAppStore.getState();
+            openDrawer();
+            hapticFeedback('selection', 'light', webApp);
+          }}
+          className="w-6 h-6 flex flex-col justify-center space-y-1 hover:bg-gray-800/50 rounded p-1 transition-colors"
+        >
           <div className="w-full h-0.5 bg-gray-400"></div>
           <div className="w-full h-0.5 bg-gray-400"></div>
           <div className="w-full h-0.5 bg-gray-400"></div>

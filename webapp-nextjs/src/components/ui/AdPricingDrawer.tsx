@@ -238,17 +238,17 @@ export const AdPricingDrawer: React.FC<AdPricingDrawerProps> = ({ isOpen, onClos
           </div>
 
           {/* Contact Section */}
-          <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-xl p-4 text-white">
+          <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-600 rounded-xl p-4 text-white">
             <h4 className="font-semibold mb-2 flex items-center gap-2">
               <MessageCircle className="w-5 h-5" />
               Ready to advertise?
             </h4>
-            <p className="text-sm text-green-100 mb-4">
+            <p className="text-sm text-yellow-100 mb-4">
               Contact us to discuss your ad placement and get started!
             </p>
             <Button
               onClick={handleContact}
-              className="w-full bg-white text-green-600 hover:bg-green-50 font-semibold"
+              className="w-full bg-white/90 text-amber-700 hover:bg-white hover:scale-105 transition-all duration-200 font-semibold shadow-lg"
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Chat @yousefmsm1
