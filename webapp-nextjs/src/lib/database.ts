@@ -1078,56 +1078,6 @@ class DatabaseService {
     return await this.incrementGameStat('total_solves');
   }
 
-  /**
-   * Get total users count
-   */
-  async getTotalUsersCount(): Promise<number> {
-    try {
-      const result = await this.dbGet('SELECT COUNT(*) as count FROM users');
-      return result.count || 0;
-    } catch (error) {
-      console.error('Error getting total users count:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Get active users count (users active in last 24 hours)
-   */
-  async getActiveUsersCount(): Promise<number> {
-    try {
-      const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-      const result = await this.dbGet(
-        'SELECT COUNT(*) as count FROM users WHERE last_activity > ?',
-        [oneDayAgo]
-      );
-      return result.count || 0;
-    } catch (error) {
-      console.error('Error getting active users count:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Get new users count for today
-   */
-  async getNewUsersTodayCount(): Promise<number> {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayTimestamp = today.getTime();
-      
-      const result = await this.dbGet(
-        'SELECT COUNT(*) as count FROM users WHERE created_at >= ?',
-        [todayTimestamp]
-      );
-      return result.count || 0;
-    } catch (error) {
-      console.error('Error getting new users today count:', error);
-      return 0;
-    }
-  }
-
   async close(): Promise<void> {
     return new Promise((resolve) => {
       this.db.close((err) => {

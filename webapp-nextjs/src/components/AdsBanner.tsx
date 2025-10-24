@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { CheckCircle, Zap, Star, Gift, Sparkles, Crown, Gem, PartyPopper } from 'lucide-react';
+import { AdPricingDrawer } from '@/components/ui/AdPricingDrawer';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
@@ -28,6 +29,7 @@ export const AdsBanner: React.FC = () => {
   const [scrollLeft, setScrollLeft] = useState(0);
   const [lottieData, setLottieData] = useState<Record<string, any>>({});
   const [isPremiumDrawerOpen, setIsPremiumDrawerOpen] = useState(false);
+  const [isAdPricingDrawerOpen, setIsAdPricingDrawerOpen] = useState(false);
 
   const ads: Ad[] = [
     {
@@ -65,6 +67,12 @@ export const AdsBanner: React.FC = () => {
   ];
 
   const handleAdClick = (adId: number, link?: string) => {
+    // Open ad pricing drawer for ad #1 (Put your ad here)
+    if (adId === 1) {
+      setIsAdPricingDrawerOpen(true);
+      return;
+    }
+    
     // Open premium drawer for ad #3
     if (adId === 3) {
       setIsPremiumDrawerOpen(true);
@@ -415,6 +423,12 @@ export const AdsBanner: React.FC = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Ad Pricing Drawer */}
+      <AdPricingDrawer 
+        isOpen={isAdPricingDrawerOpen} 
+        onClose={() => setIsAdPricingDrawerOpen(false)} 
+      />
     </div>
   );
 };
