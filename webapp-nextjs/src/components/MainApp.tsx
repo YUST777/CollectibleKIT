@@ -169,6 +169,13 @@ export const MainApp: React.FC = () => {
             created_at: Date.now(),
             last_activity: Date.now(),
           });
+          
+          // Also set TON balance for development
+          setTonBalance({
+            balance: 1000,
+            rewards: 0,
+            walletConnected: false,
+          });
         }
       } catch (error) {
         console.error('Error initializing app:', error);

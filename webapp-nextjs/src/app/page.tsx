@@ -3,18 +3,18 @@
 import { useEffect, useState } from 'react';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { MainApp } from '@/components/MainApp';
+import { useAppStore } from '@/store/useAppStore';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
+  const user = useAppStore(state => state.user);
 
   useEffect(() => {
-    // Simulate loading time
-    const timer = setTimeout(() => {
+    // Show loading screen until user is initialized
+    if (user) {
       setIsLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [user]);
 
   if (isLoading) {
     return <LoadingScreen />;
