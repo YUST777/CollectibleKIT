@@ -206,8 +206,6 @@ export const MainApp: React.FC = () => {
           return <StoryTab />;
         case 'collection':
           return <CollectionTab />;
-        case 'tasks':
-          return <TasksTab />;
         default:
           return <StoryTab />;
       }

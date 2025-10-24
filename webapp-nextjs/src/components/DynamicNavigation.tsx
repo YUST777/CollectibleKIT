@@ -117,7 +117,7 @@ export const DynamicNavigation: React.FC = () => {
     );
   }
 
-  // Tools sub-navigation (Story | Collection | Tasks | ← Back)
+  // Tools sub-navigation (Story | Collection | ← Back)
   if (navigationLevel === 'tools') {
     return (
       <div className="fixed bottom-0 left-0 right-0 border-t border-gray-700 px-4 py-3 transition-all duration-300 ease-in-out" style={{ backgroundColor: '#252525' }}>
@@ -139,15 +139,6 @@ export const DynamicNavigation: React.FC = () => {
           >
             <GiftIcon className="w-6 h-6 text-gray-300 transition-colors duration-200" />
             <span className="text-xs text-gray-300 transition-colors duration-200">Collection</span>
-          </button>
-          <button
-            onClick={() => handleSubTabClick('tasks')}
-            className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-all duration-200 ease-in-out ${
-              currentSubTab === 'tasks' ? 'border-t-2 border-white' : 'hover:bg-gray-800/50 hover:scale-105'
-            }`}
-          >
-            <ClipboardDocumentListIcon className="w-6 h-6 text-gray-300 transition-colors duration-200" />
-            <span className="text-xs text-gray-300 transition-colors duration-200">Tasks</span>
           </button>
           <button
             onClick={navigateBack}

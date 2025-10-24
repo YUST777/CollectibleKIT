@@ -26,10 +26,11 @@ interface Task {
   canComplete: boolean;
 }
 
-export const TasksTab: React.FC = () => {
+// TasksContent component for reuse in ProfileTab
+export const TasksContent: React.FC = () => {
   const user = useUser();
-  const { webApp, user: telegramUser } = useTelegram();
-  const { setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab, setCurrentTab } = useAppActions();
+  const { webApp } = useTelegram();
+  const { setCurrentTab } = useAppActions();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [taskStates, setTaskStates] = useState<Map<string, 'idle' | 'navigated' | 'checking' | 'completing'>>(new Map());
@@ -222,50 +223,7 @@ export const TasksTab: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 py-2 animate-fade-in">
-      {/* Header with Profile Picture */}
-      <div className="flex items-center justify-between px-4 mb-4">
-        {/* Profile Picture with Notification Badge */}
-        <button
-          onClick={() => {
-            setNavigationLevel('main');
-            setCurrentSubTab('profile');
-            setCurrentTertiaryTab(null);
-          }}
-          className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
-        >
-          {telegramUser?.photo_url ? (
-            <img
-              src={telegramUser.photo_url}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-              {telegramUser?.first_name?.charAt(0) || user?.first_name?.charAt(0) || 'U'}
-            </div>
-          )}
-          
-        </button>
-
-        {/* Hamburger Menu */}
-        <button 
-          onClick={() => {
-            const { openDrawer } = useAppStore.getState();
-            openDrawer();
-            hapticFeedback('selection', 'light', webApp);
-          }}
-          className="w-6 h-6 flex flex-col justify-center space-y-1 hover:bg-gray-800/50 rounded p-1 transition-colors"
-        >
-          <div className="w-full h-0.5 bg-gray-400"></div>
-          <div className="w-full h-0.5 bg-gray-400"></div>
-          <div className="w-full h-0.5 bg-gray-400"></div>
-        </button>
-      </div>
-
-      {/* Ads Banner */}
-      <AdsBanner />
-
+    <div className="space-y-6">
       {/* Daily Tasks */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 px-4">
@@ -376,6 +334,62 @@ export const TasksTab: React.FC = () => {
           <div className="text-center text-gray-500 py-8 text-sm">No special tasks</div>
         )}
       </div>
+    </div>
+  );
+};
+
+export const TasksTab: React.FC = () => {
+  const user = useUser();
+  const { webApp, user: telegramUser } = useTelegram();
+  const { setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
+
+  return (
+    <div className="space-y-6 py-2 animate-fade-in">
+      {/* Header with Profile Picture */}
+      <div className="flex items-center justify-between px-4 mb-4">
+        {/* Profile Picture with Notification Badge */}
+        <button
+          onClick={() => {
+            setNavigationLevel('main');
+            setCurrentSubTab('profile');
+            setCurrentTertiaryTab(null);
+          }}
+          className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
+        >
+          {telegramUser?.photo_url ? (
+            <img
+              src={telegramUser.photo_url}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+              {telegramUser?.first_name?.charAt(0) || user?.first_name?.charAt(0) || 'U'}
+            </div>
+          )}
+          
+        </button>
+
+        {/* Hamburger Menu */}
+        <button 
+          onClick={() => {
+            const { openDrawer } = useAppStore.getState();
+            openDrawer();
+            hapticFeedback('selection', 'light', webApp);
+          }}
+          className="w-6 h-6 flex flex-col justify-center space-y-1 hover:bg-gray-800/50 rounded p-1 transition-colors"
+        >
+          <div className="w-full h-0.5 bg-gray-400"></div>
+          <div className="w-full h-0.5 bg-gray-400"></div>
+          <div className="w-full h-0.5 bg-gray-400"></div>
+        </button>
+      </div>
+
+      {/* Ads Banner */}
+      <AdsBanner />
+
+      {/* Tasks Content */}
+      <TasksContent />
     </div>
   );
 };
