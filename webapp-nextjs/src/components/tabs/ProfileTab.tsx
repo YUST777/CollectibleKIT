@@ -15,6 +15,7 @@ import {
   CogIcon,
   QuestionMarkCircleIcon,
   CurrencyDollarIcon,
+  ArrowPathIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -466,94 +467,129 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
   const canConvert = userCredits >= requiredCredits;
 
   return (
-    <div className="px-4 space-y-4">
-      {/* Header Section */}
-      <div className="text-center py-6">
-        <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-          <CurrencyDollarIcon className="w-8 h-8 text-white" />
+    <div className="px-4 py-6 space-y-6">
+      {/* Header Section with Gradient Background */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 p-6 text-white">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative z-10">
+          <h2 className="text-2xl font-bold mb-2">Earn & Convert</h2>
+          <p className="text-blue-100 text-sm">Manage your credits and TON balance</p>
         </div>
-        <h2 className="text-2xl font-bold text-text-idle mb-2">Earn & Convert</h2>
-        <p className="text-text-active text-sm">Turn your credits into TON cryptocurrency</p>
+        <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+        <div className="absolute -bottom-2 -left-4 w-16 h-16 bg-white/5 rounded-full"></div>
       </div>
 
-      {/* Balance Cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-4 border border-blue-500/30">
-          <div className="flex items-center justify-between mb-2">
-            <CurrencyDollarIcon className="w-5 h-5 text-blue-400" />
-            <span className="text-xs text-blue-300">Credits</span>
+      {/* Balance Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Credit Balance Card */}
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-5 text-white">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <CurrencyDollarIcon className="w-5 h-5" />
+              <span className="font-semibold">Credits</span>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold">{userCredits}</div>
+              <div className="text-xs text-emerald-100">
+                {isPremium ? 'Premium Rate' : 'Free Rate'}
+              </div>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-white mb-1">{userCredits}</div>
-          <div className="text-xs text-blue-200">
-            {isPremium ? '50 = 0.1 TON' : '100 = 0.1 TON'}
+          <div className="text-sm text-emerald-100">
+            {isPremium ? '50 credits = 0.1 TON' : '100 credits = 0.1 TON'}
           </div>
         </div>
-        
-        <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl p-4 border border-yellow-500/30">
-          <div className="flex items-center justify-between mb-2">
-            <GiftIcon className="w-5 h-5 text-yellow-400" />
-            <span className="text-xs text-yellow-300">TON</span>
+
+        {/* TON Balance Card */}
+        <div className="bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl p-5 text-white">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <GiftIcon className="w-5 h-5" />
+              <span className="font-semibold">TON Balance</span>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold">{userTonBalance.toFixed(3)}</div>
+              <div className="text-xs text-yellow-100">TON</div>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-white mb-1">{userTonBalance.toFixed(3)}</div>
-          <div className="text-xs text-yellow-200">
-            Min: 0.2 TON to withdraw
+          <div className="text-sm text-yellow-100">
+            Min withdrawal: 0.2 TON
           </div>
         </div>
       </div>
 
       {/* Convert Section */}
-      <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-6 border border-purple-500/20">
-        <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-text-idle mb-2">Convert Credits</h3>
-          <p className="text-sm text-text-active">
-            {requiredCredits} credits = 0.1 TON
-          </p>
+      <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+            <ArrowPathIcon className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white">Convert Credits</h3>
+            <p className="text-sm text-gray-300">Exchange your credits for TON</p>
+          </div>
         </div>
         
-        <Button
-          onClick={handleConvertCredits}
-          disabled={!canConvert || isConverting}
-          loading={isConverting}
-          variant={canConvert ? 'primary' : 'secondary'}
-          className="w-full h-12 text-lg font-medium"
-        >
-          {isConverting ? 'Converting...' : `Convert ${requiredCredits} Credits`}
-        </Button>
-        
-        {!canConvert && (
-          <div className="text-center mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-            <p className="text-sm text-red-300">
-              Need {requiredCredits - userCredits} more credits to convert
-            </p>
+        <div className="bg-gray-600/30 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-white font-medium">Convert to TON</div>
+              <div className="text-sm text-gray-300">
+                {requiredCredits} credits → 0.1 TON
+              </div>
+            </div>
+            <Button
+              onClick={handleConvertCredits}
+              disabled={!canConvert || isConverting}
+              loading={isConverting}
+              variant={canConvert ? 'primary' : 'secondary'}
+              size="sm"
+              className="min-w-[100px]"
+            >
+              {isConverting ? 'Converting...' : 'Convert'}
+            </Button>
           </div>
-        )}
+          
+          {!canConvert && (
+            <div className="mt-3 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+              <div className="text-sm text-yellow-200 text-center">
+                Need {requiredCredits - userCredits} more credits to convert
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Recent Conversions */}
+      {/* Conversion History */}
       {conversions.length > 0 && (
-        <div className="bg-box-bg rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <ClockIcon className="w-5 h-5 text-icon-active" />
-            <h3 className="font-semibold text-text-idle">Recent Conversions</h3>
+        <div className="bg-gray-800/50 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+              <ClockIcon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Recent Conversions</h3>
+              <p className="text-sm text-gray-300">Your conversion history</p>
+            </div>
           </div>
           
           <div className="space-y-3">
-            {conversions.slice(0, 3).map((conversion, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
+            {conversions.slice(0, 5).map((conversion, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700/70 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <CurrencyDollarIcon className="w-4 h-4 text-white" />
+                    <span className="text-white text-xs font-bold">✓</span>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-text-idle">
+                    <div className="text-white font-medium">
                       {conversion.credits_spent} credits → {conversion.ton_earned.toFixed(3)} TON
                     </div>
-                    <div className="text-xs text-text-active">
+                    <div className="text-gray-400 text-xs">
                       {new Date(conversion.created_at).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-green-400 font-medium">
+                <div className="text-green-400 text-sm font-medium">
                   +{conversion.ton_earned.toFixed(3)} TON
                 </div>
               </div>
@@ -562,14 +598,31 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
         </div>
       )}
 
-      {/* Support */}
-      <div className="text-center">
+      {/* Support Section */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <QuestionMarkCircleIcon className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white">Need Help?</h3>
+            <p className="text-sm text-indigo-100">Contact our support team</p>
+          </div>
+        </div>
+        
         <button
           onClick={() => webApp?.openLink('https://t.me/TWETestBot')}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-text-active hover:text-icon-active transition-colors bg-box-bg rounded-lg hover:bg-icon-idle/10"
+          className="w-full flex items-center gap-3 p-4 bg-white/10 hover:bg-white/20 rounded-lg transition-colors group"
         >
-          <QuestionMarkCircleIcon className="w-4 h-4" />
-          Need help? Contact Support
+          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+          </svg>
+          <span className="text-white font-medium group-hover:text-indigo-100">Contact Support</span>
+          <div className="ml-auto">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </button>
       </div>
     </div>
