@@ -256,7 +256,7 @@ async def analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send broadcast message to all users (admin only)"""
+    """Start broadcast composition process (admin only)"""
     if not _is_authorized(update):
         return
     
@@ -268,73 +268,27 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("❌ Access denied. Admin only command.")
         return
     
-    # Check if message is provided
-    if not context.args:
-        await update.message.reply_text(
-            "📢 **Broadcast System**\n\n"
-            "Usage: `/broadcast <message>`\n"
-            "Example: `/broadcast Hello everyone! New features are coming soon!`\n\n"
-            "Options:\n"
-            "• `/broadcast all <message>` - Send to all users\n"
-            "• `/broadcast active <message>` - Send to active users (last 30 days)\n"
-            "• `/broadcast <message>` - Send to all users (default)",
-            parse_mode="Markdown"
-        )
-        return
-    
     # Record broadcast command
     db.record_interaction(user_id, "broadcast_command")
     
-    # Determine broadcast type and get users
-    broadcast_type = context.args[0].lower() if context.args else "all"
+    # Start broadcast composition
+    await update.message.reply_text(
+        "📢 **Broadcast Message Composer**\n\n"
+        "Please send your broadcast message. You can send:\n"
+        "• Text only\n"
+        "• Text + Photo\n"
+        "• Text + Video\n\n"
+        "After you send the message, you'll see a preview with options to send or edit.\n\n"
+        "**Send your message now:**",
+        parse_mode="Markdown"
+    )
     
-    if broadcast_type in ["all", "active"]:
-        message_text = " ".join(context.args[1:]) if len(context.args) > 1 else " ".join(context.args)
-        if broadcast_type == "active":
-            users = db.get_active_users(30)
-            target_description = "active users (last 30 days)"
-        else:
-            users = db.get_all_users()
-            target_description = "all users"
-    else:
-        # Default to all users
-        message_text = " ".join(context.args)
-        users = db.get_all_users()
-        target_description = "all users"
-    
-    if not message_text.strip():
-        await update.message.reply_text("❌ Please provide a message to broadcast.")
-        return
-    
-    if not users:
-        await update.message.reply_text("❌ No users found to broadcast to.")
-        return
-    
-    # Send confirmation message
-    confirmation_message = f"""
-📢 **Broadcast Confirmation**
-
-**Target:** {target_description}
-**Users:** {len(users)} users
-**Message:** {message_text[:100]}{'...' if len(message_text) > 100 else ''}
-
-⚠️ **This will send the message to {len(users)} users. Are you sure?**
-
-Reply with `CONFIRM` to proceed or `CANCEL` to abort.
-"""
-    
-    await update.message.reply_text(confirmation_message, parse_mode="Markdown")
-    
-    # Store broadcast data in context for confirmation
-    context.user_data['pending_broadcast'] = {
-        'message': message_text,
-        'users': users,
-        'target_description': target_description
-    }
+    # Set state to waiting for broadcast content
+    context.user_data['broadcast_state'] = 'composing'
 
 
-async def handle_broadcast_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle broadcast confirmation"""
+async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle broadcast content (text, photo, video)"""
     if not _is_authorized(update):
         return
     
@@ -345,32 +299,136 @@ async def handle_broadcast_confirmation(update: Update, context: ContextTypes.DE
     if user_id not in ADMIN_USERS:
         return
     
-    # Check if there's a pending broadcast
-    if 'pending_broadcast' not in context.user_data:
+    # Check if we're in broadcast composition mode
+    if context.user_data.get('broadcast_state') != 'composing':
         return
     
-    user_response = update.message.text.strip().upper()
+    message = update.message
+    broadcast_content = {
+        'text': None,
+        'photo': None,
+        'video': None,
+        'media_type': None
+    }
     
-    if user_response == "CANCEL":
-        await update.message.reply_text("❌ Broadcast cancelled.")
-        context.user_data.pop('pending_broadcast', None)
+    # Extract text content
+    if message.text:
+        broadcast_content['text'] = message.text
+        broadcast_content['media_type'] = 'text_only'
+    elif message.caption:
+        broadcast_content['text'] = message.caption
+    else:
+        broadcast_content['text'] = "📢 **Broadcast from CollectibleKIT**"
+    
+    # Extract media content
+    if message.photo:
+        broadcast_content['photo'] = message.photo[-1]  # Get highest resolution
+        broadcast_content['media_type'] = 'photo'
+    elif message.video:
+        broadcast_content['video'] = message.video
+        broadcast_content['media_type'] = 'video'
+    elif message.document and message.document.mime_type.startswith('video/'):
+        broadcast_content['video'] = message.document
+        broadcast_content['media_type'] = 'video'
+    
+    # Store broadcast content
+    context.user_data['broadcast_content'] = broadcast_content
+    context.user_data['broadcast_state'] = 'preview'
+    
+    # Get user counts for preview
+    all_users = db.get_all_users()
+    active_users = db.get_active_users(30)
+    
+    # Create preview message
+    preview_text = f"""
+📢 **Broadcast Preview**
+
+**Message Type:** {broadcast_content['media_type'].replace('_', ' ').title()}
+**Target Users:** All users ({len(all_users)} total)
+**Active Users:** {len(active_users)} (last 30 days)
+
+**Message Content:**
+{broadcast_content['text'][:200]}{'...' if len(broadcast_content['text']) > 200 else ''}
+"""
+    
+    # Create inline keyboard for actions
+    keyboard = [
+        [InlineKeyboardButton("📤 Send to All Users", callback_data="broadcast_send_all")],
+        [InlineKeyboardButton("👥 Send to Active Users", callback_data="broadcast_send_active")],
+        [InlineKeyboardButton("✏️ Edit Message", callback_data="broadcast_edit")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="broadcast_cancel")]
+    ]
+    
+    # Send preview with media if available
+    if broadcast_content['photo']:
+        await message.reply_photo(
+            photo=broadcast_content['photo'],
+            caption=preview_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+    elif broadcast_content['video']:
+        await message.reply_video(
+            video=broadcast_content['video'],
+            caption=preview_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+    else:
+        await message.reply_text(
+            preview_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+
+
+async def handle_broadcast_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle broadcast callback queries"""
+    if not _is_authorized(update):
         return
     
-    if user_response != "CONFIRM":
-        await update.message.reply_text("❌ Invalid response. Please reply with `CONFIRM` or `CANCEL`.")
+    user_id = update.callback_query.from_user.id
+    
+    # Only allow specific admin users
+    ADMIN_USERS = {800092886}
+    if user_id not in ADMIN_USERS:
+        await update.callback_query.answer("❌ Access denied.")
         return
     
-    # Get broadcast data
-    broadcast_data = context.user_data['pending_broadcast']
-    message_text = broadcast_data['message']
-    users = broadcast_data['users']
-    target_description = broadcast_data['target_description']
+    query = update.callback_query
+    data = query.data
     
-    # Clear pending broadcast
-    context.user_data.pop('pending_broadcast', None)
+    if data == "broadcast_send_all":
+        await _execute_broadcast(query, context, "all")
+    elif data == "broadcast_send_active":
+        await _execute_broadcast(query, context, "active")
+    elif data == "broadcast_edit":
+        await _edit_broadcast(query, context)
+    elif data == "broadcast_cancel":
+        await _cancel_broadcast(query, context)
+
+
+async def _execute_broadcast(query, context, target_type):
+    """Execute the broadcast"""
+    broadcast_content = context.user_data.get('broadcast_content')
+    if not broadcast_content:
+        await query.answer("❌ No broadcast content found.")
+        return
+    
+    # Get users based on target type
+    if target_type == "active":
+        users = db.get_active_users(30)
+        target_description = "active users (last 30 days)"
+    else:
+        users = db.get_all_users()
+        target_description = "all users"
+    
+    if not users:
+        await query.answer("❌ No users found.")
+        return
     
     # Start broadcasting
-    await update.message.reply_text(f"🚀 Starting broadcast to {len(users)} users...")
+    await query.edit_message_text(f"🚀 Starting broadcast to {len(users)} {target_description}...")
     
     sent_count = 0
     failed_count = 0
@@ -383,17 +441,32 @@ async def handle_broadcast_confirmation(update: Update, context: ContextTypes.DE
             if i > 0:
                 await asyncio.sleep(0.1)
             
-            # Send message
-            await context.bot.send_message(
-                chat_id=user['user_id'],
-                text=f"📢 **Broadcast from CollectibleKIT**\n\n{message_text}",
-                parse_mode="Markdown"
-            )
+            # Send message based on media type
+            if broadcast_content['media_type'] == 'photo':
+                await context.bot.send_photo(
+                    chat_id=user['user_id'],
+                    photo=broadcast_content['photo'],
+                    caption=broadcast_content['text'],
+                    parse_mode="Markdown"
+                )
+            elif broadcast_content['media_type'] == 'video':
+                await context.bot.send_video(
+                    chat_id=user['user_id'],
+                    video=broadcast_content['video'],
+                    caption=broadcast_content['text'],
+                    parse_mode="Markdown"
+                )
+            else:
+                await context.bot.send_message(
+                    chat_id=user['user_id'],
+                    text=broadcast_content['text'],
+                    parse_mode="Markdown"
+                )
             sent_count += 1
             
             # Update progress every 50 messages
             if (i + 1) % 50 == 0:
-                await update.message.reply_text(f"📤 Progress: {i + 1}/{len(users)} messages sent...")
+                await query.edit_message_text(f"📤 Progress: {i + 1}/{len(users)} messages sent...")
                 
         except Exception as e:
             failed_count += 1
@@ -405,20 +478,21 @@ async def handle_broadcast_confirmation(update: Update, context: ContextTypes.DE
             logger.error(f"Failed to send broadcast to user {user['user_id']}: {e}")
     
     # Record broadcast in database
-    db.record_broadcast(user_id, message_text, sent_count, failed_count)
+    db.record_broadcast(query.from_user.id, broadcast_content['text'], sent_count, failed_count)
     
     # Send completion report
     completion_message = f"""
 ✅ **Broadcast Completed**
 
 📊 **Statistics:**
+• Target: {target_description}
 • Total users: {len(users)}
 • Successfully sent: {sent_count}
 • Failed: {failed_count}
 • Success rate: {(sent_count / len(users) * 100):.1f}%
 
 📝 **Message sent:**
-{message_text[:200]}{'...' if len(message_text) > 200 else ''}
+{broadcast_content['text'][:200]}{'...' if len(broadcast_content['text']) > 200 else ''}
 """
     
     if failed_users:
@@ -428,10 +502,35 @@ async def handle_broadcast_confirmation(update: Update, context: ContextTypes.DE
         if len(failed_users) > 10:
             completion_message += f"... and {len(failed_users) - 10} more"
     
-    await update.message.reply_text(completion_message, parse_mode="Markdown")
+    await query.edit_message_text(completion_message, parse_mode="Markdown")
+    
+    # Clear broadcast data
+    context.user_data.pop('broadcast_content', None)
+    context.user_data.pop('broadcast_state', None)
     
     # Log broadcast completion
     logger.info(f"Broadcast completed: {sent_count} sent, {failed_count} failed")
+
+
+async def _edit_broadcast(query, context):
+    """Edit broadcast message"""
+    await query.edit_message_text(
+        "✏️ **Edit Broadcast Message**\n\n"
+        "Please send your new broadcast message. You can send:\n"
+        "• Text only\n"
+        "• Text + Photo\n"
+        "• Text + Video\n\n"
+        "**Send your new message now:**",
+        parse_mode="Markdown"
+    )
+    context.user_data['broadcast_state'] = 'composing'
+
+
+async def _cancel_broadcast(query, context):
+    """Cancel broadcast"""
+    await query.edit_message_text("❌ Broadcast cancelled.")
+    context.user_data.pop('broadcast_content', None)
+    context.user_data.pop('broadcast_state', None)
 
 
 async def _handle_free_plan(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1172,7 +1271,7 @@ def main():
             app.add_handler(CommandHandler("analytics", analytics))
             app.add_handler(CommandHandler("broadcast", broadcast))
             app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
-            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast_confirmation))
+            app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.VIDEO, handle_broadcast_content))
             
             # Callback handlers
             app.add_handler(CallbackQueryHandler(_handle_free_plan, pattern="^free_plan$"))
@@ -1188,6 +1287,8 @@ def main():
             app.add_handler(CallbackQueryHandler(_handle_lucky_spin, pattern="^lucky_spin$"))
             app.add_handler(CallbackQueryHandler(_handle_share_story, pattern="^share_story$"))
             app.add_handler(CallbackQueryHandler(_handle_quiz_answer, pattern="^quiz_answer_"))
+            # Broadcast handlers
+            app.add_handler(CallbackQueryHandler(handle_broadcast_callback, pattern="^broadcast_"))
 
             logger.info("Bot handlers registered. Starting polling...")
             app.run_polling()
