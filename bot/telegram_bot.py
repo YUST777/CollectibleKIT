@@ -261,6 +261,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     
     user_id = update.message.from_user.id
+    logger.info(f"Broadcast command received from user {user_id}")
     
     # Only allow specific admin users to broadcast
     ADMIN_USERS = {800092886}  # Add your admin user ID here
@@ -285,6 +286,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     # Set state to waiting for broadcast content
     context.user_data['broadcast_state'] = 'composing'
+    logger.info(f"Broadcast state set to 'composing' for user {user_id}")
 
 
 async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -293,14 +295,18 @@ async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT
         return
     
     user_id = update.message.from_user.id
+    logger.info(f"Broadcast content handler called for user {user_id}")
     
     # Only allow specific admin users
     ADMIN_USERS = {800092886}
     if user_id not in ADMIN_USERS:
+        logger.info(f"User {user_id} not in admin list")
         return
     
     # Check if we're in broadcast composition mode
-    if context.user_data.get('broadcast_state') != 'composing':
+    broadcast_state = context.user_data.get('broadcast_state')
+    logger.info(f"Broadcast state for user {user_id}: {broadcast_state}")
+    if broadcast_state != 'composing':
         return
     
     message = update.message
@@ -1061,6 +1067,10 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     assert message is not None
     user_id = message.from_user.id
     
+    # Check if we're in broadcast composition mode - if so, let broadcast handler take over
+    if context.user_data.get('broadcast_state') == 'composing':
+        return
+    
     # Get user from database
     try:
         user = db.get_user(user_id, message.from_user.username, message.from_user.first_name)
@@ -1270,8 +1280,10 @@ def main():
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("analytics", analytics))
             app.add_handler(CommandHandler("broadcast", broadcast))
-            app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
+            # Broadcast content handler (must come before photo handler)
             app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.VIDEO, handle_broadcast_content))
+            # Photo handler for image processing (only when not in broadcast mode)
+            app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
             
             # Callback handlers
             app.add_handler(CallbackQueryHandler(_handle_free_plan, pattern="^free_plan$"))
