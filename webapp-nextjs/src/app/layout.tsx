@@ -29,8 +29,8 @@ export default function RootLayout({
         {/* Telegram WebApp SDK */}
         <script src="https://telegram.org/js/telegram-web-app.js" />
         
-        {/* Lottie Animation Library */}
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" />
+        {/* Lottie Player Web Component */}
+        <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js" />
         
         {/* TON Connect UI */}
         <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js" />
