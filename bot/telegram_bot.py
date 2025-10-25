@@ -169,6 +169,184 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /broadcast command (admin only)"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow admin user (800092886) to broadcast
+    if user_id != 800092886:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    # Check if user is replying to a message (for media broadcasts)
+    if update.message.reply_to_message:
+        # Get the replied message
+        replied_message = update.message.reply_to_message
+        
+        # Get all users
+        all_users = db.get_all_users()
+        total_users = len(all_users)
+        
+        if total_users == 0:
+            await update.message.reply_text("❌ No users found to broadcast to.")
+            return
+        
+        # Send confirmation with media preview
+        media_type = "Photo" if replied_message.photo else "Video" if replied_message.video else "Document" if replied_message.document else "Audio" if replied_message.audio else "Media"
+        caption_text = replied_message.caption or "No caption"
+        
+        await update.message.reply_text(
+            f"📢 **Broadcast Preview**\n\n"
+            f"Media Type: {media_type}\n"
+            f"Caption: {caption_text}\n\n"
+            f"Recipients: {total_users} users\n\n"
+            f"Type 'CONFIRM' to send the broadcast:",
+            parse_mode="Markdown"
+        )
+        
+        # Store broadcast data in context for confirmation
+        context.user_data['pending_broadcast'] = {
+            'type': 'media',
+            'message': replied_message,
+            'users': all_users,
+            'timestamp': time.time()
+        }
+    else:
+        # Text-only broadcast
+        if not context.args:
+            await update.message.reply_text(
+                "📢 **Broadcast Command**\n\n"
+                "**Text Broadcast:**\n"
+                "`/broadcast Your message here`\n\n"
+                "**Media Broadcast:**\n"
+                "1. Send any photo/video/document\n"
+                "2. Reply to it with `/broadcast`\n\n"
+                "**Formatting supported:**\n"
+                "• **Bold text**\n"
+                "• [Inline links](https://example.com)\n"
+                "• *Italic text*\n"
+                "• `Code text`",
+                parse_mode="Markdown"
+            )
+            return
+        
+        broadcast_message = " ".join(context.args)
+        
+        # Get all users
+        all_users = db.get_all_users()
+        total_users = len(all_users)
+        
+        if total_users == 0:
+            await update.message.reply_text("❌ No users found to broadcast to.")
+            return
+        
+        # Send confirmation
+        await update.message.reply_text(
+            f"📢 **Broadcast Preview**\n\n"
+            f"Message: {broadcast_message}\n\n"
+            f"Recipients: {total_users} users\n\n"
+            f"Type 'CONFIRM' to send the broadcast:",
+            parse_mode="Markdown"
+        )
+        
+        # Store broadcast data in context for confirmation
+        context.user_data['pending_broadcast'] = {
+            'type': 'text',
+            'message': broadcast_message,
+            'users': all_users,
+            'timestamp': time.time()
+        }
+
+
+async def confirm_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle broadcast confirmation"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    if user_id != 800092886:
+        return
+    
+    if update.message.text and update.message.text.upper() == "CONFIRM":
+        if 'pending_broadcast' in context.user_data:
+            broadcast_data = context.user_data['pending_broadcast']
+            users = broadcast_data['users']
+            
+            # Send broadcast to all users
+            sent_count = 0
+            failed_count = 0
+            
+            await update.message.reply_text("📢 Sending broadcast...")
+            
+            for user_id in users:
+                try:
+                    if broadcast_data['type'] == 'media':
+                        # Send media message
+                        replied_message = broadcast_data['message']
+                        
+                        if replied_message.photo:
+                            await context.bot.send_photo(
+                                chat_id=user_id,
+                                photo=replied_message.photo[-1].file_id,
+                                caption=replied_message.caption,
+                                parse_mode="Markdown"
+                            )
+                        elif replied_message.video:
+                            await context.bot.send_video(
+                                chat_id=user_id,
+                                video=replied_message.video.file_id,
+                                caption=replied_message.caption,
+                                parse_mode="Markdown"
+                            )
+                        elif replied_message.document:
+                            await context.bot.send_document(
+                                chat_id=user_id,
+                                document=replied_message.document.file_id,
+                                caption=replied_message.caption,
+                                parse_mode="Markdown"
+                            )
+                        elif replied_message.audio:
+                            await context.bot.send_audio(
+                                chat_id=user_id,
+                                audio=replied_message.audio.file_id,
+                                caption=replied_message.caption,
+                                parse_mode="Markdown"
+                            )
+                    else:
+                        # Send text message
+                        await context.bot.send_message(
+                            chat_id=user_id,
+                            text=broadcast_data['message'],
+                            parse_mode="Markdown"
+                        )
+                    
+                    sent_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to send broadcast to user {user_id}: {e}")
+                    failed_count += 1
+                
+                # Small delay to avoid rate limiting
+                await asyncio.sleep(0.1)
+            
+            # Send completion report
+            await update.message.reply_text(
+                f"✅ **Broadcast Complete**\n\n"
+                f"✅ Sent: {sent_count}\n"
+                f"❌ Failed: {failed_count}\n"
+                f"📊 Total: {len(users)}",
+                parse_mode="Markdown"
+            )
+            
+            # Clear pending broadcast
+            del context.user_data['pending_broadcast']
+        else:
+            await update.message.reply_text("❌ No pending broadcast to confirm.")
+
+
 async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show user their current credits and usage stats"""
     if not _is_authorized(update):
@@ -991,7 +1169,9 @@ def main():
             app.add_handler(CommandHandler("start", start))
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("analytics", analytics))
+            app.add_handler(CommandHandler("broadcast", broadcast))
             app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
+            app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^CONFIRM$"), confirm_broadcast))
             
             # Callback handlers
             app.add_handler(CallbackQueryHandler(_handle_free_plan, pattern="^free_plan$"))
