@@ -406,14 +406,17 @@ async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT
     
     # Extract media content
     if message.photo:
-        broadcast_content['photo'] = message.photo[-1]  # Get highest resolution
+        broadcast_content['photo'] = message.photo[-1].file_id  # Store file ID instead of object
         broadcast_content['media_type'] = 'photo'
+        logger.info(f"Stored photo file_id: {broadcast_content['photo']}")
     elif message.video:
-        broadcast_content['video'] = message.video
+        broadcast_content['video'] = message.video.file_id  # Store file ID instead of object
         broadcast_content['media_type'] = 'video'
+        logger.info(f"Stored video file_id: {broadcast_content['video']}")
     elif message.document and message.document.mime_type.startswith('video/'):
-        broadcast_content['video'] = message.document
+        broadcast_content['video'] = message.document.file_id  # Store file ID instead of object
         broadcast_content['media_type'] = 'video'
+        logger.info(f"Stored document video file_id: {broadcast_content['video']}")
     
     # Store broadcast content
     context.user_data['broadcast_content'] = broadcast_content
@@ -447,14 +450,14 @@ async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT
     # Send preview with media if available
     if broadcast_content['photo']:
         await message.reply_photo(
-            photo=broadcast_content['photo'],
+            photo=broadcast_content['photo'],  # file_id works directly
             caption=preview_text,
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
     elif broadcast_content['video']:
         await message.reply_video(
-            video=broadcast_content['video'],
+            video=broadcast_content['video'],  # file_id works directly
             caption=preview_text,
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
@@ -503,6 +506,7 @@ async def _execute_broadcast(query, context, target_type):
         return
     
     logger.info(f"Executing broadcast for target_type: {target_type}")
+    logger.info(f"Broadcast content: {broadcast_content}")
     
     # Get users based on target type
     if target_type == "active":
@@ -547,20 +551,23 @@ async def _execute_broadcast(query, context, target_type):
             
             # Send message based on media type
             if broadcast_content['media_type'] == 'photo':
+                logger.info(f"Sending photo to user {user['user_id']}")
                 await context.bot.send_photo(
                     chat_id=user['user_id'],
-                    photo=broadcast_content['photo'],
+                    photo=broadcast_content['photo'],  # file_id
                     caption=broadcast_content['text'],
                     parse_mode="Markdown"
                 )
             elif broadcast_content['media_type'] == 'video':
+                logger.info(f"Sending video to user {user['user_id']}")
                 await context.bot.send_video(
                     chat_id=user['user_id'],
-                    video=broadcast_content['video'],
+                    video=broadcast_content['video'],  # file_id
                     caption=broadcast_content['text'],
                     parse_mode="Markdown"
                 )
             else:
+                logger.info(f"Sending text to user {user['user_id']}")
                 await context.bot.send_message(
                     chat_id=user['user_id'],
                     text=broadcast_content['text'],
