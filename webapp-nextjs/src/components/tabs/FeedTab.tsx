@@ -82,28 +82,30 @@ const FeedItem: React.FC<{ event: FeedEvent }> = ({ event }) => {
   const firstLetter = userName.charAt(0).toUpperCase();
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-box-bg rounded-lg hover:bg-box-bg/80 transition-colors">
-      {/* User Avatar */}
-      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+    <div className="flex items-center gap-2 p-2.5 bg-box-bg rounded-lg hover:bg-box-bg/80 transition-colors">
+      {/* User Avatar - Smaller */}
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
         {firstLetter}
       </div>
 
       {/* Event Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-text-idle truncate">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs font-medium text-text-idle">
             {userName}
           </span>
-          <span className="text-sm text-text-active">
+          <span className="text-xs text-text-active">
             {formatEventDescription(event)}
           </span>
         </div>
       </div>
 
       {/* Event Icon & Timestamp */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {getEventIcon(event.event_type)}
-        <span className="text-xs text-text-active">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="w-4 h-4">
+          {getEventIcon(event.event_type)}
+        </div>
+        <span className="text-[10px] text-text-active">
           {formatRelativeTime(event.created_at)}
         </span>
       </div>
@@ -206,7 +208,7 @@ export const FeedTab: React.FC = () => {
               <p className="text-xs text-text-active mt-2">Be the first to earn credits and win rewards!</p>
             </div>
           ) : (
-            <div className="space-y-2 px-4 pb-4">
+            <div className="space-y-2 px-2 pb-4">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-text-idle">Activity Feed</h3>
