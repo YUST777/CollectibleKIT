@@ -408,7 +408,7 @@ async def test_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Admin command to show user statistics, database, and profit information"""
+    """Admin command to show user statistics and export users to SQLite file"""
     if not _is_authorized(update):
         return
     
@@ -427,9 +427,6 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db.record_interaction(user_id, "admin_command")
     
     try:
-        # Get analytics summary
-        stats = db.get_analytics_summary()
-        
         # Get all users for database display
         all_users = db.get_all_users()
         active_users = db.get_active_users(30)
@@ -468,41 +465,109 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         
         user_table += "```\n"
         
-        # Add profit information
+        # Add Mini App profit information
         profit_info = f"""
-💰 **Revenue & Profit Analysis**
+💰 **Mini App Revenue & Profit Analysis**
 
-**Total Revenue:** {stats['total_revenue_ton']:.2f} TON
-**Premium Subscriptions:** {stats['paid_requests']} paid requests
-**Free Requests:** {stats['free_requests']} free requests
-**Conversion Rate:** {(stats['paid_requests'] / max(stats['free_requests'], 1) * 100):.1f}%
+**Note:** Revenue data is from the Telegram Mini App website, not the old canvas story bot.
 
-**Revenue Breakdown:**
-• 0.1 TON packages: {stats.get('revenue_0_1', 0):.2f} TON
-• 0.2 TON packages: {stats.get('revenue_0_2', 0):.2f} TON  
-• 0.5 TON packages: {stats.get('revenue_0_5', 0):.2f} TON
+**Mini App Statistics:**
+• Total Users: {len(all_users)}
+• Active Users (30 days): {len(active_users)}
+• VIP Users: {len([u for u in all_users if u['user_id'] in VIP_USERS])}
+
+**Mini App Features:**
+• Image cutting and processing
+• Credit-based system
+• Referral program
+• Gamification features
 
 **User Activity:**
-• Total Users: {stats['total_users']}
-• Active (7 days): {stats['active_users_7d']}
-• Total Interactions: {stats['total_interactions']}
+• Total Users: {len(all_users)}
+• Active (7 days): {len([u for u in all_users if u.get('last_activity', 0) > (time.time() - 7 * 24 * 3600)])}
+• VIP Users: {len([u for u in all_users if u['user_id'] in VIP_USERS])}
 """
         
-        # Combine all information
-        admin_message = user_table + profit_info
+        # Send user table first
+        await update.message.reply_text(user_table, parse_mode="Markdown")
         
-        # Split message if too long (Telegram limit is 4096 characters)
-        if len(admin_message) > 4000:
-            # Send user table first
-            await update.message.reply_text(user_table, parse_mode="Markdown")
-            # Send profit info separately
-            await update.message.reply_text(profit_info, parse_mode="Markdown")
-        else:
-            await update.message.reply_text(admin_message, parse_mode="Markdown")
+        # Send profit info separately
+        await update.message.reply_text(profit_info, parse_mode="Markdown")
+        
+        # Export users to SQLite file
+        await _export_users_to_sqlite(update, all_users)
         
     except Exception as e:
         logger.exception("Admin command error: %s", e)
         await update.message.reply_text("❌ Error generating admin report.")
+
+
+async def _export_users_to_sqlite(update: Update, users: list) -> None:
+    """Export users to a SQLite file and send it"""
+    try:
+        import sqlite3
+        import tempfile
+        import os
+        
+        # Create temporary SQLite file
+        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as temp_file:
+            temp_db_path = temp_file.name
+        
+        # Create new SQLite database with users
+        with sqlite3.connect(temp_db_path) as conn:
+            # Create users table
+            conn.execute("""
+                CREATE TABLE users (
+                    user_id INTEGER PRIMARY KEY,
+                    username TEXT,
+                    first_name TEXT,
+                    last_name TEXT,
+                    created_at REAL,
+                    last_activity REAL,
+                    free_uses INTEGER DEFAULT 0,
+                    credits INTEGER DEFAULT 0,
+                    status TEXT
+                )
+            """)
+            
+            # Insert users data
+            for user in users:
+                # Determine status
+                if user['user_id'] in VIP_USERS:
+                    status = "VIP"
+                elif user.get('last_activity', 0) > (time.time() - 7 * 24 * 3600):
+                    status = "Active"
+                else:
+                    status = "Inactive"
+                
+                conn.execute("""
+                    INSERT INTO users (user_id, username, first_name, created_at, last_activity, status)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    user['user_id'],
+                    user.get('username'),
+                    user.get('first_name'),
+                    user.get('created_at', 0),
+                    user.get('last_activity', 0),
+                    status
+                ))
+            
+            conn.commit()
+        
+        # Send the SQLite file
+        with open(temp_db_path, 'rb') as db_file:
+            await update.message.reply_document(
+                document=db_file,
+                filename=f"users_export_{int(time.time())}.db",
+                caption="📁 **Users Database Export**\n\nSQLite file containing all user data with status information."
+            )
+        
+        # Clean up temporary file
+        os.unlink(temp_db_path)
+        
+    except Exception as e:
+        logger.error(f"Error exporting users to SQLite: {e}")
+        await update.message.reply_text("❌ Error exporting users database.")
 
 
 async def analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
