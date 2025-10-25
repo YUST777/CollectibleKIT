@@ -1,52 +1,39 @@
 #!/usr/bin/env python3
 """
-Cross-platform startup script for Telegram Bot
-Works on Windows, macOS, and Linux
+Startup script for CollectibleKIT Telegram Bot
 """
 
-import os
-import sys
 import subprocess
-import platform
+import sys
+import os
 
 def main():
-    print("🚀 Starting Telegram Bot...")
-    print(f"Platform: {platform.system()} {platform.release()}")
-    print()
+    """Start the CollectibleKIT bot"""
+    print("🚀 Starting CollectibleKIT Telegram Bot...")
     
-    # Check if virtual environment exists
-    venv_activate = None
-    if platform.system() == "Windows":
-        venv_activate = os.path.join(".venv", "Scripts", "activate.bat")
-        python_exe = os.path.join(".venv", "Scripts", "python.exe")
-    else:
-        venv_activate = os.path.join(".venv", "bin", "activate")
-        python_exe = os.path.join(".venv", "bin", "python")
+    # Check if we're in the right directory
+    if not os.path.exists("collectiblekit_bot.py"):
+        print("❌ Error: collectiblekit_bot.py not found!")
+        print("Please run this script from the CollectibleKIT directory.")
+        sys.exit(1)
     
-    if not os.path.exists(python_exe):
-        print("📦 Virtual environment not found. Creating one...")
-        subprocess.run([sys.executable, "-m", "venv", ".venv"], check=True)
-        print("✅ Virtual environment created.")
+    # Check if assets directory exists
+    if not os.path.exists("assets"):
+        print("❌ Error: assets directory not found!")
+        print("Please make sure the assets directory exists with start.mp4 and start.jpg")
+        sys.exit(1)
     
-    # Install requirements
-    print("📥 Installing requirements...")
-    if platform.system() == "Windows":
-        subprocess.run([python_exe, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
-    else:
-        subprocess.run([python_exe, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
-    
-    # Start the bot
-    print("🤖 Starting bot...")
-    if platform.system() == "Windows":
-        subprocess.run([python_exe, "-m", "bot.telegram_bot"], check=True)
-    else:
-        subprocess.run([python_exe, "-m", "bot.telegram_bot"], check=True)
+    try:
+        # Run the bot
+        subprocess.run([sys.executable, "collectiblekit_bot.py"], check=True)
+    except KeyboardInterrupt:
+        print("\n🛑 Bot stopped by user")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Error running bot: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n👋 Bot stopped by user.")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        input("Press Enter to exit...")
+    main()
