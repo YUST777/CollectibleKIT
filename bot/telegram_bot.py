@@ -21,6 +21,7 @@ from .config import BOT_TOKEN
 from .processing import cut_into_4x3_and_prepare_story_pieces
 from .database import BotDatabase
 from .payment import PaymentManager
+from .backup import DatabaseBackup
 
 # Configure logging
 logging.basicConfig(
@@ -32,6 +33,13 @@ logger = logging.getLogger("collectiblekit-bot")
 # Initialize database and payment manager
 db = BotDatabase()
 payment_manager = PaymentManager(db)
+
+# Initialize backup system
+backup_system = DatabaseBackup(
+    db_path=db.db_path,
+    bot_token=BOT_TOKEN,
+    backup_chat_id=-4944651195
+)
 
 # Constants
 FREE_LIMIT = 3
@@ -431,68 +439,15 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         all_users = db.get_all_users()
         active_users = db.get_active_users(30)
         
-        # Create user database table
-        user_table = "📊 **User Database**\n\n"
-        user_table += f"**Total Users:** {len(all_users)}\n"
-        user_table += f"**Active Users (30 days):** {len(active_users)}\n\n"
-        
-        # Show first 20 users with clean formatting
-        user_table += "**User List (First 20):**\n"
-        user_table += "```\n"
-        user_table += f"{'ID':<12} {'Username':<20} {'Name':<25} {'Status':<10}\n"
-        user_table += "-" * 70 + "\n"
-        
-        for i, user in enumerate(all_users[:20]):
-            user_id_display = str(user['user_id'])
-            username = user.get('username', 'N/A') or 'N/A'
-            first_name = user.get('first_name', 'N/A') or 'N/A'
-            
-            # Truncate long names
-            if len(first_name) > 20:
-                first_name = first_name[:17] + "..."
-            if len(username) > 15:
-                username = username[:12] + "..."
-            
-            # Determine status
-            if user['user_id'] in VIP_USERS:
-                status = "VIP"
-            elif user.get('last_activity', 0) > (time.time() - 7 * 24 * 3600):
-                status = "Active"
-            else:
-                status = "Inactive"
-            
-            user_table += f"{user_id_display:<12} {username:<20} {first_name:<25} {status:<10}\n"
-        
-        user_table += "```\n"
-        
-        # Add Mini App profit information
-        profit_info = f"""
-💰 **Mini App Revenue & Profit Analysis**
+        # Create simple Mini App statistics
+        stats_message = f"""Mini App Statistics:
 
-**Note:** Revenue data is from the Telegram Mini App website, not the old canvas story bot.
-
-**Mini App Statistics:**
 • Total Users: {len(all_users)}
 • Active Users (30 days): {len(active_users)}
-• VIP Users: {len([u for u in all_users if u['user_id'] in VIP_USERS])}
-
-**Mini App Features:**
-• Image cutting and processing
-• Credit-based system
-• Referral program
-• Gamification features
-
-**User Activity:**
-• Total Users: {len(all_users)}
-• Active (7 days): {len([u for u in all_users if u.get('last_activity', 0) > (time.time() - 7 * 24 * 3600)])}
-• VIP Users: {len([u for u in all_users if u['user_id'] in VIP_USERS])}
-"""
+• VIP Users: {len([u for u in all_users if u['user_id'] in VIP_USERS])}"""
         
-        # Send user table first
-        await update.message.reply_text(user_table, parse_mode="Markdown")
-        
-        # Send profit info separately
-        await update.message.reply_text(profit_info, parse_mode="Markdown")
+        # Send statistics summary
+        await update.message.reply_text(stats_message, parse_mode="Markdown")
         
         # Export users to SQLite file
         await _export_users_to_sqlite(update, all_users)
@@ -657,6 +612,38 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Set state to waiting for broadcast content
     context.user_data['broadcast_state'] = 'composing'
     logger.info(f"Broadcast state set to 'composing' for user {user_id}")
+
+
+async def backup_db(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Manual database backup (admin only)"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow specific admin users
+    ADMIN_USERS = {800092886}
+    if user_id not in ADMIN_USERS:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    # Record backup command
+    db.record_interaction(user_id, "manual_backup_command")
+    
+    await update.message.reply_text("🗄️ Creating database backup...")
+    
+    try:
+        # Perform manual backup
+        success = await backup_system.manual_backup()
+        
+        if success:
+            await update.message.reply_text("✅ Database backup completed and sent successfully!")
+        else:
+            await update.message.reply_text("❌ Database backup failed. Check logs for details.")
+            
+    except Exception as e:
+        logger.error(f"Manual backup failed: {e}")
+        await update.message.reply_text(f"❌ Backup error: {str(e)}")
 
 
 async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1878,6 +1865,17 @@ def main():
     while True:
         try:
             app = Application.builder().token(BOT_TOKEN).build()
+            
+            # Start backup scheduler as background task
+            async def start_backup_scheduler():
+                try:
+                    logger.info("Starting backup scheduler...")
+                    await backup_system.start_hourly_backups()
+                except Exception as e:
+                    logger.error(f"Backup scheduler error: {e}")
+            
+            # Schedule backup task to start after bot initialization
+            app.job_queue.run_once(lambda ctx: asyncio.create_task(start_backup_scheduler()), when=10)  # Start after 10 seconds
 
             # Handlers
             app.add_handler(CommandHandler("start", start))
@@ -1890,6 +1888,7 @@ def main():
             app.add_handler(CommandHandler("test_media", test_media))
             app.add_handler(CommandHandler("test_broadcast", test_broadcast))
             app.add_handler(CommandHandler("broadcast", broadcast))
+            app.add_handler(CommandHandler("backup", backup_db))
             # Broadcast content handler (must come before photo handler)
             app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.VIDEO, handle_broadcast_content))
             # Photo handler for image processing (only when not in broadcast mode)
