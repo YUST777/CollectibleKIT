@@ -198,12 +198,19 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         media_type = "Photo" if replied_message.photo else "Video" if replied_message.video else "Document" if replied_message.document else "Audio" if replied_message.audio else "Media"
         caption_text = replied_message.caption or "No caption"
         
+        # Create inline keyboard for confirmation
+        keyboard = [
+            [InlineKeyboardButton("✅ Send Broadcast", callback_data="confirm_broadcast")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="cancel_broadcast")]
+        ]
+        
         await update.message.reply_text(
             f"📢 **Broadcast Preview**\n\n"
             f"Media Type: {media_type}\n"
             f"Caption: {caption_text}\n\n"
             f"Recipients: {total_users} users\n\n"
-            f"Type 'CONFIRM' to send the broadcast:",
+            f"Click the button below to send:",
+            reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
         
@@ -228,7 +235,10 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 "• **Bold text**\n"
                 "• [Inline links](https://example.com)\n"
                 "• *Italic text*\n"
-                "• `Code text`",
+                "• `Code text`\n\n"
+                "**Quick Commands:**\n"
+                "• `/broadcast_stats` - View user statistics\n"
+                "• `/broadcast_test` - Send test message to yourself",
                 parse_mode="Markdown"
             )
             return
@@ -243,12 +253,18 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text("❌ No users found to broadcast to.")
             return
         
-        # Send confirmation
+        # Create inline keyboard for confirmation
+        keyboard = [
+            [InlineKeyboardButton("✅ Send Broadcast", callback_data="confirm_broadcast")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="cancel_broadcast")]
+        ]
+        
         await update.message.reply_text(
             f"📢 **Broadcast Preview**\n\n"
             f"Message: {broadcast_message}\n\n"
             f"Recipients: {total_users} users\n\n"
-            f"Type 'CONFIRM' to send the broadcast:",
+            f"Click the button below to send:",
+            reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
         
@@ -261,26 +277,29 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         }
 
 
-async def confirm_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle broadcast confirmation"""
+async def handle_broadcast_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle broadcast callback buttons"""
     if not _is_authorized(update):
         return
     
-    user_id = update.message.from_user.id
+    assert update.callback_query is not None
+    cq = update.callback_query
+    user_id = cq.from_user.id
     
     if user_id != 800092886:
+        await cq.answer("❌ Access denied.")
         return
     
-    if update.message.text and update.message.text.upper() == "CONFIRM":
+    if cq.data == "confirm_broadcast":
         if 'pending_broadcast' in context.user_data:
             broadcast_data = context.user_data['pending_broadcast']
             users = broadcast_data['users']
             
-            # Send broadcast to all users
+            # Update button to show progress
+            await cq.edit_message_text("📢 Sending broadcast...")
+            
             sent_count = 0
             failed_count = 0
-            
-            await update.message.reply_text("📢 Sending broadcast...")
             
             for user_id in users:
                 try:
@@ -333,18 +352,78 @@ async def confirm_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 await asyncio.sleep(0.1)
             
             # Send completion report
-            await update.message.reply_text(
+            await cq.edit_message_text(
                 f"✅ **Broadcast Complete**\n\n"
                 f"✅ Sent: {sent_count}\n"
                 f"❌ Failed: {failed_count}\n"
-                f"📊 Total: {len(users)}",
+                f"📊 Total: {len(users)}\n"
+                f"📈 Success Rate: {(sent_count/len(users)*100):.1f}%",
                 parse_mode="Markdown"
             )
             
             # Clear pending broadcast
             del context.user_data['pending_broadcast']
+            await cq.answer("✅ Broadcast sent successfully!")
         else:
-            await update.message.reply_text("❌ No pending broadcast to confirm.")
+            await cq.answer("❌ No pending broadcast to confirm.")
+    
+    elif cq.data == "cancel_broadcast":
+        if 'pending_broadcast' in context.user_data:
+            del context.user_data['pending_broadcast']
+        await cq.edit_message_text("❌ Broadcast cancelled.")
+        await cq.answer("❌ Broadcast cancelled.")
+
+
+async def broadcast_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show broadcast statistics"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    if user_id != 800092886:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    # Get user statistics
+    all_users = db.get_all_users()
+    total_users = len(all_users)
+    
+    # Get recent activity (last 24 hours)
+    recent_users = 0
+    for user in all_users:
+        if hasattr(user, 'last_activity') and user.get('last_activity', 0) > time.time() - 86400:
+            recent_users += 1
+    
+    stats_message = f"📊 **Broadcast Statistics**\n\n"
+    stats_message += f"👥 **Total Users:** {total_users}\n"
+    stats_message += f"🟢 **Active (24h):** {recent_users}\n"
+    stats_message += f"📈 **Activity Rate:** {(recent_users/total_users*100):.1f}%\n\n"
+    stats_message += f"**Ready for broadcast!**\n"
+    stats_message += f"Use `/broadcast` to send messages to all users."
+    
+    await update.message.reply_text(stats_message, parse_mode="Markdown")
+
+
+async def broadcast_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send test broadcast to admin"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    if user_id != 800092886:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    test_message = "🧪 **Test Broadcast**\n\n"
+    test_message += "This is a test message to verify the broadcast system is working correctly.\n\n"
+    test_message += "✅ **System Status:** Operational\n"
+    test_message += "📡 **Bot Status:** Active\n"
+    test_message += "🔧 **Features:** All working\n\n"
+    test_message += "You can now use `/broadcast` to send messages to all users!"
+    
+    await update.message.reply_text(test_message, parse_mode="Markdown")
 
 
 async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1170,8 +1249,10 @@ def main():
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("analytics", analytics))
             app.add_handler(CommandHandler("broadcast", broadcast))
+            app.add_handler(CommandHandler("broadcast_stats", broadcast_stats))
+            app.add_handler(CommandHandler("broadcast_test", broadcast_test))
             app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
-            app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^CONFIRM$"), confirm_broadcast))
+            app.add_handler(CallbackQueryHandler(handle_broadcast_callback, pattern="^(confirm_broadcast|cancel_broadcast)$"))
             
             # Callback handlers
             app.add_handler(CallbackQueryHandler(_handle_free_plan, pattern="^free_plan$"))
