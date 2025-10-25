@@ -1389,11 +1389,12 @@ class DatabaseService {
   async recordFeedEvent(userId: number, eventType: string, eventData?: any): Promise<boolean> {
     try {
       const eventDataStr = eventData ? JSON.stringify(eventData) : null;
+      const timestamp = Date.now() / 1000; // Convert to seconds
       await this.dbRun(
         `INSERT INTO feed_events (user_id, event_type, event_data, created_at) VALUES (?, ?, ?, ?)`,
-        [userId, eventType, eventDataStr, Date.now()]
+        [userId, eventType, eventDataStr, timestamp]
       );
-      console.log(`✅ Recorded feed event: ${eventType} for user ${userId}`);
+      console.log(`✅ Recorded feed event: ${eventType} for user ${userId} at ${new Date(timestamp * 1000).toISOString()}`);
       return true;
     } catch (error) {
       console.error('Error recording feed event:', error);
