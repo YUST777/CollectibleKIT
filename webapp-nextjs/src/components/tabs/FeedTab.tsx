@@ -140,14 +140,16 @@ export const FeedTab: React.FC = () => {
     loadFeedEvents();
   }, []);
 
-  // Auto-refresh every 30 seconds
+  // Live updates - refresh every 2 seconds when user is on Events tab
   useEffect(() => {
+    if (activeInnerTab !== 'events') return;
+
     const interval = setInterval(() => {
       loadFeedEvents();
-    }, 30000); // 30 seconds
+    }, 2000); // 2 seconds for near real-time updates
 
     return () => clearInterval(interval);
-  }, []);
+  }, [activeInnerTab]);
 
   return (
     <div className="space-y-4">
@@ -206,7 +208,10 @@ export const FeedTab: React.FC = () => {
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-text-idle">Activity Feed</h3>
-                <span className="text-xs text-text-active">Updates every 30s</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-green-400">Live</span>
+                </div>
               </div>
 
               {/* Feed Items */}
