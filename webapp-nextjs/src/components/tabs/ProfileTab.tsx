@@ -470,76 +470,35 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
     <div className="space-y-6 px-4">
       {/* Combined Balance & Convert Card */}
       <div className="tg-card">
-        <h3 className="text-lg font-semibold text-text-idle mb-6 flex items-center gap-2">
-          <CurrencyDollarIcon className="w-5 h-5" />
-          Earn & Convert
-        </h3>
-        
-        <div className="space-y-6">
-          {/* Credit Balance Section */}
-          <div className="flex items-center justify-between p-4 bg-box-bg rounded-lg">
-            <div className="flex items-center gap-3">
-              <CurrencyDollarIcon className="w-6 h-6 text-icon-active" />
-              <div>
-                <div className="font-medium text-text-idle">Credit Balance</div>
-                <div className="text-sm text-text-active">
-                  {isPremium ? (
-                    <span className="text-green-400">Premium: 50 credits = 0.1 TON</span>
-                  ) : (
-                    <span>Free: 100 credits = 0.1 TON</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <span className="text-2xl font-bold text-icon-active">{userCredits}</span>
+        {/* Two Numbers at Top */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-icon-active">{userCredits}</div>
+            <div className="text-sm text-text-active">Credits</div>
           </div>
-
-          {/* TON Balance Section */}
-          <div className="flex items-center justify-between p-4 bg-box-bg rounded-lg">
-            <div className="flex items-center gap-3">
-              <GiftIcon className="w-6 h-6 text-yellow-600" />
-              <div>
-                <div className="font-medium text-text-idle">TON Balance</div>
-                <div className="text-sm text-text-active">
-                  Available for withdrawal (min: 0.2 TON)
-                </div>
-              </div>
-            </div>
-            <span className="text-2xl font-bold text-yellow-600">{userTonBalance.toFixed(3)} TON</span>
-          </div>
-
-          {/* Convert Credits Section */}
-          <div className="p-4 bg-box-bg rounded-lg">
-            <div className="flex items-center gap-2 mb-4">
-              <ArrowPathIcon className="w-5 h-5 text-icon-active" />
-              <span className="font-medium text-text-idle">Convert Credits</span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-text-idle">Convert to TON</div>
-                <div className="text-sm text-text-active">
-                  {requiredCredits} credits → 0.1 TON
-                </div>
-              </div>
-              <Button
-                onClick={handleConvertCredits}
-                disabled={!canConvert || isConverting}
-                loading={isConverting}
-                variant={canConvert ? 'primary' : 'secondary'}
-                size="sm"
-              >
-                {isConverting ? 'Converting...' : 'Convert'}
-              </Button>
-            </div>
-            
-            {!canConvert && (
-              <div className="text-sm text-text-active text-center mt-3">
-                Need {requiredCredits - userCredits} more credits to convert
-              </div>
-            )}
+          <div className="text-center">
+            <div className="text-3xl font-bold text-yellow-600">{userTonBalance.toFixed(3)}</div>
+            <div className="text-sm text-text-active">TON</div>
           </div>
         </div>
+
+        {/* Big Convert Button */}
+        <Button
+          onClick={handleConvertCredits}
+          disabled={!canConvert || isConverting}
+          loading={isConverting}
+          variant={canConvert ? 'primary' : 'secondary'}
+          size="lg"
+          className="w-full py-4 text-lg font-semibold"
+        >
+          {isConverting ? 'Converting...' : `Convert ${requiredCredits} Credits → 0.1 TON`}
+        </Button>
+        
+        {!canConvert && (
+          <div className="text-sm text-text-active text-center mt-3">
+            Need {requiredCredits - userCredits} more credits to convert
+          </div>
+        )}
       </div>
 
       {/* Conversion History */}
