@@ -75,6 +75,15 @@ export async function POST(request: NextRequest) {
           : `You need to invite ${targetCount} friends. Currently: ${stats.totalReferrals}/${targetCount}`;
         break;
 
+      case 'special_15day_login':
+        // Check if user has completed 15-day streak
+        const user = await db.getUser(userIdToCheck);
+        completed = user?.streak_completed === 1;
+        message = completed 
+          ? 'You have completed the 15-day login streak! Click to claim your reward.' 
+          : `You need to login for 15 consecutive days. Current streak: ${user?.streak_days || 0}/15`;
+        break;
+
       default:
         return NextResponse.json({ error: 'Unknown task' }, { status: 400 });
     }

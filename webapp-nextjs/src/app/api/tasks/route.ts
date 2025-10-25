@@ -30,6 +30,11 @@ export async function GET(request: NextRequest) {
           
           progress = Math.min(stats.totalReferrals, targetCount);
           canComplete = stats.totalReferrals >= targetCount && !status.completed;
+        } else if (task.task_id === 'special_15day_login') {
+          // For 15-day login task, check if streak is completed
+          const userData = await db.getUser(user?.id || 0);
+          progress = Math.min(userData?.streak_days || 0, 15);
+          canComplete = (userData?.streak_completed === 1) && !status.completed;
         } else {
           // For daily tasks, check if they can be completed based on actual actions
           canComplete = !status.completed;

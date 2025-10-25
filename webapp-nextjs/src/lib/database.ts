@@ -913,6 +913,14 @@ class DatabaseService {
           category: 'special',
           credits_reward: 40,
           is_daily: false
+        },
+        {
+          task_id: 'special_15day_login',
+          title: '15-Day Login Streak',
+          description: 'Login for 15 consecutive days',
+          category: 'special',
+          credits_reward: 50,
+          is_daily: false
         }
       ];
 
@@ -1328,13 +1336,13 @@ class DatabaseService {
         [newStreakDays, today, userId]
       );
 
-      // Check if streak completed
+      // Check if streak completed (but don't auto-complete the task)
       if (newStreakDays >= 15) {
         await this.dbRun(
           'UPDATE users SET streak_completed = 1 WHERE user_id = ?',
           [userId]
         );
-        console.log(`🎉 User ${userId} completed 15-day streak!`);
+        console.log(`🎉 User ${userId} completed 15-day streak! Task can now be claimed manually.`);
       }
 
       return { 
