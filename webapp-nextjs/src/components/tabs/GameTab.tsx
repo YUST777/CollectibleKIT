@@ -71,10 +71,8 @@ export const GameTab: React.FC = () => {
     loadGifts();
   }, []);
 
-  useEffect(() => {
-    loadDailyQuestion();
-  }, []);
-
+  // Note: loadDailyQuestion is called in the currentSubTab useEffect below
+  
   // Load ALL models from CDN when a gift is selected (for harder gameplay)
   useEffect(() => {
     const loadModels = async () => {
