@@ -616,36 +616,48 @@ async def _execute_broadcast(query, context, target_type):
                         logger.error(f"No photo file_id found for user {user['user_id']}")
                         raise ValueError("No photo file_id available")
                     
-                    # Try sending with file_id first
+                    # Always download and re-upload for reliability
+                    logger.info(f"Downloading and re-uploading photo for user {user['user_id']}")
                     try:
+                        # Get the file object
+                        file = await context.bot.get_file(broadcast_content['photo'])
+                        # Download the file
+                        file_data = await file.download_as_bytearray()
+                        
+                        # Convert to PNG for better compatibility
+                        from PIL import Image
+                        import io
+                        
+                        # Open the image and convert to PNG
+                        img = Image.open(io.BytesIO(file_data))
+                        png_buffer = io.BytesIO()
+                        img.save(png_buffer, format='PNG')
+                        png_buffer.seek(0)
+                        
+                        # Send as InputFile with PNG format
+                        from telegram import InputFile
                         await context.bot.send_photo(
                             chat_id=user['user_id'],
-                            photo=broadcast_content['photo'],  # file_id
+                            photo=InputFile(png_buffer, filename="broadcast_photo.png"),
                             caption=broadcast_content['text'],
                             parse_mode="Markdown"
                         )
-                        logger.info(f"Photo sent successfully to {user['user_id']} using file_id")
-                    except Exception as file_id_error:
-                        logger.warning(f"File_id method failed for user {user['user_id']}: {file_id_error}")
-                        # If file_id fails, try downloading and re-uploading
-                        logger.info(f"Attempting to download and re-upload photo for user {user['user_id']}")
+                        logger.info(f"Photo sent successfully to {user['user_id']} using download and PNG conversion")
+                        
+                    except Exception as download_error:
+                        logger.error(f"Download and PNG conversion failed for user {user['user_id']}: {download_error}")
+                        # Fallback: try original file_id method
                         try:
-                            # Get the file object
-                            file = await context.bot.get_file(broadcast_content['photo'])
-                            # Download the file
-                            file_data = await file.download_as_bytearray()
-                            # Send as InputFile
-                            from telegram import InputFile
                             await context.bot.send_photo(
                                 chat_id=user['user_id'],
-                                photo=InputFile(BytesIO(file_data), filename="broadcast_photo.jpg"),
+                                photo=broadcast_content['photo'],
                                 caption=broadcast_content['text'],
                                 parse_mode="Markdown"
                             )
-                            logger.info(f"Photo sent successfully to {user['user_id']} using download method")
-                        except Exception as download_error:
-                            logger.error(f"Download method also failed for user {user['user_id']}: {download_error}")
-                            raise file_id_error  # Raise the original error
+                            logger.info(f"Photo sent successfully to {user['user_id']} using fallback file_id method")
+                        except Exception as fallback_error:
+                            logger.error(f"Fallback file_id method also failed for user {user['user_id']}: {fallback_error}")
+                            raise download_error  # Raise the original error
                             
                 except Exception as e:
                     logger.error(f"Failed to send photo to {user['user_id']}: {e}")
@@ -658,36 +670,38 @@ async def _execute_broadcast(query, context, target_type):
                         logger.error(f"No video file_id found for user {user['user_id']}")
                         raise ValueError("No video file_id available")
                     
-                    # Try sending with file_id first
+                    # Always download and re-upload for reliability
+                    logger.info(f"Downloading and re-uploading video for user {user['user_id']}")
                     try:
+                        # Get the file object
+                        file = await context.bot.get_file(broadcast_content['video'])
+                        # Download the file
+                        file_data = await file.download_as_bytearray()
+                        
+                        # Send as InputFile with MP4 format
+                        from telegram import InputFile
                         await context.bot.send_video(
                             chat_id=user['user_id'],
-                            video=broadcast_content['video'],  # file_id
+                            video=InputFile(BytesIO(file_data), filename="broadcast_video.mp4"),
                             caption=broadcast_content['text'],
                             parse_mode="Markdown"
                         )
-                        logger.info(f"Video sent successfully to {user['user_id']} using file_id")
-                    except Exception as file_id_error:
-                        logger.warning(f"File_id method failed for user {user['user_id']}: {file_id_error}")
-                        # If file_id fails, try downloading and re-uploading
-                        logger.info(f"Attempting to download and re-upload video for user {user['user_id']}")
+                        logger.info(f"Video sent successfully to {user['user_id']} using download method")
+                        
+                    except Exception as download_error:
+                        logger.error(f"Download method failed for user {user['user_id']}: {download_error}")
+                        # Fallback: try original file_id method
                         try:
-                            # Get the file object
-                            file = await context.bot.get_file(broadcast_content['video'])
-                            # Download the file
-                            file_data = await file.download_as_bytearray()
-                            # Send as InputFile
-                            from telegram import InputFile
                             await context.bot.send_video(
                                 chat_id=user['user_id'],
-                                video=InputFile(BytesIO(file_data), filename="broadcast_video.mp4"),
+                                video=broadcast_content['video'],
                                 caption=broadcast_content['text'],
                                 parse_mode="Markdown"
                             )
-                            logger.info(f"Video sent successfully to {user['user_id']} using download method")
-                        except Exception as download_error:
-                            logger.error(f"Download method also failed for user {user['user_id']}: {download_error}")
-                            raise file_id_error  # Raise the original error
+                            logger.info(f"Video sent successfully to {user['user_id']} using fallback file_id method")
+                        except Exception as fallback_error:
+                            logger.error(f"Fallback file_id method also failed for user {user['user_id']}: {fallback_error}")
+                            raise download_error  # Raise the original error
                             
                 except Exception as e:
                     logger.error(f"Failed to send video to {user['user_id']}: {e}")
@@ -1555,6 +1569,30 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 def main():
     logger.info("Bot is starting...")
+    
+    # Check for existing bot instances (optional)
+    try:
+        import psutil
+        import os
+        
+        current_pid = os.getpid()
+        bot_processes = []
+        
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if proc.info['cmdline'] and any('telegram_bot.py' in cmd for cmd in proc.info['cmdline']):
+                    if proc.info['pid'] != current_pid:
+                        bot_processes.append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        if bot_processes:
+            logger.warning(f"Found other bot instances running: {bot_processes}")
+            logger.warning("This may cause conflicts. Consider stopping other instances.")
+    except ImportError:
+        logger.info("psutil not available - skipping bot instance check")
+    except Exception as e:
+        logger.warning(f"Could not check for other bot instances: {e}")
     
     while True:
         try:
