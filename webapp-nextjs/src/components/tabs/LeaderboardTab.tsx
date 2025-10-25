@@ -60,25 +60,34 @@ export const LeaderboardTab: React.FC = () => {
     if (rank === 1) {
       return (
         <div className="w-8 h-8 flex items-center justify-center">
-          <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">1</span>
-          </div>
+          <div 
+            className="w-8 h-8"
+            dangerouslySetInnerHTML={{
+              __html: `<lottie-player src="/1st Place Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
+            }}
+          />
         </div>
       );
     } else if (rank === 2) {
       return (
         <div className="w-8 h-8 flex items-center justify-center">
-          <div className="w-6 h-6 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">2</span>
-          </div>
+          <div 
+            className="w-8 h-8"
+            dangerouslySetInnerHTML={{
+              __html: `<lottie-player src="/2nd Place Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
+            }}
+          />
         </div>
       );
     } else if (rank === 3) {
       return (
         <div className="w-8 h-8 flex items-center justify-center">
-          <div className="w-6 h-6 bg-gradient-to-br from-amber-600 to-amber-800 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">3</span>
-          </div>
+          <div 
+            className="w-8 h-8"
+            dangerouslySetInnerHTML={{
+              __html: `<lottie-player src="/3rd Place Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
+            }}
+          />
         </div>
       );
     }
@@ -111,8 +120,7 @@ export const LeaderboardTab: React.FC = () => {
     <div className="space-y-4">
       {/* Leaderboard Header */}
       <div className="text-center py-4">
-        <h2 className="text-lg font-semibold text-text-idle">🏆 Top Players</h2>
-        <p className="text-sm text-text-active">Ranked by credits earned</p>
+        <h2 className="text-lg font-semibold text-text-idle">🏆</h2>
       </div>
 
       {/* Leaderboard List */}
