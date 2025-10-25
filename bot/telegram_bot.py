@@ -582,8 +582,17 @@ async def _execute_broadcast(query, context, target_type):
         if len(users) > 1:
             logger.info(f"Second user: {users[1]}")
     
-    # Start broadcasting
-    await query.edit_message_text(f"🚀 Starting broadcast to {len(users)} {target_description}...")
+    # Start broadcasting - use appropriate edit method based on message type
+    try:
+        await query.edit_message_text(f"🚀 Starting broadcast to {len(users)} {target_description}...")
+    except Exception as e:
+        # If the original message has media, try editing caption instead
+        try:
+            await query.edit_message_caption(caption=f"🚀 Starting broadcast to {len(users)} {target_description}...")
+        except Exception as caption_error:
+            logger.error(f"Failed to edit message: {e}, caption error: {caption_error}")
+            # Send a new message instead
+            await query.message.reply_text(f"🚀 Starting broadcast to {len(users)} {target_description}...")
     
     sent_count = 0
     failed_count = 0
@@ -695,7 +704,15 @@ async def _execute_broadcast(query, context, target_type):
             
             # Update progress every 50 messages
             if (i + 1) % 50 == 0:
-                await query.edit_message_text(f"📤 Progress: {i + 1}/{len(users)} messages sent...")
+                try:
+                    await query.edit_message_text(f"📤 Progress: {i + 1}/{len(users)} messages sent...")
+                except Exception as e:
+                    # If the original message has media, try editing caption instead
+                    try:
+                        await query.edit_message_caption(caption=f"📤 Progress: {i + 1}/{len(users)} messages sent...")
+                    except Exception as caption_error:
+                        logger.warning(f"Failed to update progress: {e}, caption error: {caption_error}")
+                        # Continue without updating progress message
                 
         except Exception as e:
             failed_count += 1
@@ -732,7 +749,17 @@ async def _execute_broadcast(query, context, target_type):
         if len(failed_users) > 10:
             completion_message += f"... and {len(failed_users) - 10} more"
     
-    await query.edit_message_text(completion_message, parse_mode="Markdown")
+    # Send completion message - use appropriate method based on message type
+    try:
+        await query.edit_message_text(completion_message, parse_mode="Markdown")
+    except Exception as e:
+        # If the original message has media, try editing caption instead
+        try:
+            await query.edit_message_caption(caption=completion_message, parse_mode="Markdown")
+        except Exception as caption_error:
+            logger.error(f"Failed to edit completion message: {e}, caption error: {caption_error}")
+            # Send a new message instead
+            await query.message.reply_text(completion_message, parse_mode="Markdown")
     
     # Clear broadcast data
     context.user_data.pop('broadcast_content', None)
@@ -744,21 +771,55 @@ async def _execute_broadcast(query, context, target_type):
 
 async def _edit_broadcast(query, context):
     """Edit broadcast message"""
-    await query.edit_message_text(
-        "✏️ **Edit Broadcast Message**\n\n"
-        "Please send your new broadcast message. You can send:\n"
-        "• Text only\n"
-        "• Text + Photo\n"
-        "• Text + Video\n\n"
-        "**Send your new message now:**",
-        parse_mode="Markdown"
-    )
+    try:
+        await query.edit_message_text(
+            "✏️ **Edit Broadcast Message**\n\n"
+            "Please send your new broadcast message. You can send:\n"
+            "• Text only\n"
+            "• Text + Photo\n"
+            "• Text + Video\n\n"
+            "**Send your new message now:**",
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        # If the original message has media, try editing caption instead
+        try:
+            await query.edit_message_caption(
+                caption="✏️ **Edit Broadcast Message**\n\n"
+                "Please send your new broadcast message. You can send:\n"
+                "• Text only\n"
+                "• Text + Photo\n"
+                "• Text + Video\n\n"
+                "**Send your new message now:**",
+                parse_mode="Markdown"
+            )
+        except Exception as caption_error:
+            logger.error(f"Failed to edit broadcast message: {e}, caption error: {caption_error}")
+            # Send a new message instead
+            await query.message.reply_text(
+                "✏️ **Edit Broadcast Message**\n\n"
+                "Please send your new broadcast message. You can send:\n"
+                "• Text only\n"
+                "• Text + Photo\n"
+                "• Text + Video\n\n"
+                "**Send your new message now:**",
+                parse_mode="Markdown"
+            )
     context.user_data['broadcast_state'] = 'composing'
 
 
 async def _cancel_broadcast(query, context):
     """Cancel broadcast"""
-    await query.edit_message_text("❌ Broadcast cancelled.")
+    try:
+        await query.edit_message_text("❌ Broadcast cancelled.")
+    except Exception as e:
+        # If the original message has media, try editing caption instead
+        try:
+            await query.edit_message_caption(caption="❌ Broadcast cancelled.")
+        except Exception as caption_error:
+            logger.error(f"Failed to edit cancel message: {e}, caption error: {caption_error}")
+            # Send a new message instead
+            await query.message.reply_text("❌ Broadcast cancelled.")
     context.user_data.pop('broadcast_content', None)
     context.user_data.pop('broadcast_state', None)
 
