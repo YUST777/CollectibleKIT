@@ -282,6 +282,48 @@ async def send_to_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text(f"❌ Error sending message: {str(e)}")
 
 
+async def test_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Test media sending (admin only)"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow specific admin users
+    ADMIN_USERS = {800092886}
+    if user_id not in ADMIN_USERS:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    if not context.args:
+        await update.message.reply_text(
+            "🧪 **Test Media**\n\n"
+            "Usage: `/test_media <chat_id>`\n"
+            "Example: `/test_media -1001234567890`\n\n"
+            "This will send a test photo to the specified chat.",
+            parse_mode="Markdown"
+        )
+        return
+    
+    try:
+        chat_id = int(context.args[0])
+        
+        # Send test photo
+        await context.bot.send_photo(
+            chat_id=chat_id,
+            photo="https://via.placeholder.com/300x200/FF0000/FFFFFF?text=Test+Photo",
+            caption="🧪 **Test Photo**\n\nThis is a test photo to verify media sending works.",
+            parse_mode="Markdown"
+        )
+        
+        await update.message.reply_text(f"✅ Test photo sent to chat {chat_id}")
+        
+    except ValueError:
+        await update.message.reply_text("❌ Invalid chat ID. Please provide a valid number.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error sending test photo: {str(e)}")
+
+
 async def analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show comprehensive bot analytics (admin only)"""
     if not _is_authorized(update):
@@ -517,6 +559,7 @@ async def _execute_broadcast(query, context, target_type):
         chat_id = query.message.chat_id
         users = [{"user_id": chat_id, "username": "chat", "first_name": "Chat"}]
         target_description = "current chat"
+        logger.info(f"Chat broadcast to chat_id: {chat_id}")
     else:
         users = db.get_all_users()
         target_description = "all users"
@@ -551,21 +594,31 @@ async def _execute_broadcast(query, context, target_type):
             
             # Send message based on media type
             if broadcast_content['media_type'] == 'photo':
-                logger.info(f"Sending photo to user {user['user_id']}")
-                await context.bot.send_photo(
-                    chat_id=user['user_id'],
-                    photo=broadcast_content['photo'],  # file_id
-                    caption=broadcast_content['text'],
-                    parse_mode="Markdown"
-                )
+                logger.info(f"Sending photo to user {user['user_id']}, file_id: {broadcast_content['photo']}")
+                try:
+                    await context.bot.send_photo(
+                        chat_id=user['user_id'],
+                        photo=broadcast_content['photo'],  # file_id
+                        caption=broadcast_content['text'],
+                        parse_mode="Markdown"
+                    )
+                    logger.info(f"Photo sent successfully to {user['user_id']}")
+                except Exception as e:
+                    logger.error(f"Failed to send photo to {user['user_id']}: {e}")
+                    raise
             elif broadcast_content['media_type'] == 'video':
-                logger.info(f"Sending video to user {user['user_id']}")
-                await context.bot.send_video(
-                    chat_id=user['user_id'],
-                    video=broadcast_content['video'],  # file_id
-                    caption=broadcast_content['text'],
-                    parse_mode="Markdown"
-                )
+                logger.info(f"Sending video to user {user['user_id']}, file_id: {broadcast_content['video']}")
+                try:
+                    await context.bot.send_video(
+                        chat_id=user['user_id'],
+                        video=broadcast_content['video'],  # file_id
+                        caption=broadcast_content['text'],
+                        parse_mode="Markdown"
+                    )
+                    logger.info(f"Video sent successfully to {user['user_id']}")
+                except Exception as e:
+                    logger.error(f"Failed to send video to {user['user_id']}: {e}")
+                    raise
             else:
                 logger.info(f"Sending text to user {user['user_id']}")
                 await context.bot.send_message(
@@ -1388,6 +1441,7 @@ def main():
             app.add_handler(CommandHandler("analytics", analytics))
             app.add_handler(CommandHandler("test_users", test_users))
             app.add_handler(CommandHandler("send_to_chat", send_to_chat))
+            app.add_handler(CommandHandler("test_media", test_media))
             app.add_handler(CommandHandler("broadcast", broadcast))
             # Broadcast content handler (must come before photo handler)
             app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.VIDEO, handle_broadcast_content))
