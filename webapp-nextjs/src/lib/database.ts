@@ -1388,7 +1388,7 @@ class DatabaseService {
   async recordFeedEvent(userId: number, eventType: string, eventData?: any): Promise<boolean> {
     try {
       const eventDataStr = eventData ? JSON.stringify(eventData) : null;
-      await this.run(
+      await this.dbRun(
         `INSERT INTO feed_events (user_id, event_type, event_data, created_at) VALUES (?, ?, ?, ?)`,
         [userId, eventType, eventDataStr, Date.now()]
       );
@@ -1402,7 +1402,7 @@ class DatabaseService {
 
   async getFeedEvents(limit: number = 50): Promise<FeedEvent[]> {
     try {
-      const rows = await this.all(
+      const rows = await this.dbAll(
         `SELECT 
           fe.id,
           fe.user_id,
