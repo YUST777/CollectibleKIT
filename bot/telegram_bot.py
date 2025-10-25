@@ -204,6 +204,38 @@ async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # Web app data handler removed - now using native shareToStory() method
 
 
+async def test_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Test command to check users in database (admin only)"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow specific admin users
+    ADMIN_USERS = {800092886}
+    if user_id not in ADMIN_USERS:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    # Get user counts
+    all_users = db.get_all_users()
+    active_users = db.get_active_users(30)
+    
+    message = f"""
+📊 **Database User Test**
+
+**All Users:** {len(all_users)}
+**Active Users (30 days):** {len(active_users)}
+
+**First 5 users:**
+"""
+    
+    for i, user in enumerate(all_users[:5]):
+        message += f"{i+1}. ID: {user['user_id']}, Username: {user.get('username', 'None')}, Name: {user.get('first_name', 'None')}\n"
+    
+    await update.message.reply_text(message)
+
+
 async def analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show comprehensive bot analytics (admin only)"""
     if not _is_authorized(update):
@@ -421,6 +453,8 @@ async def _execute_broadcast(query, context, target_type):
         await query.answer("❌ No broadcast content found.")
         return
     
+    logger.info(f"Executing broadcast for target_type: {target_type}")
+    
     # Get users based on target type
     if target_type == "active":
         users = db.get_active_users(30)
@@ -429,9 +463,17 @@ async def _execute_broadcast(query, context, target_type):
         users = db.get_all_users()
         target_description = "all users"
     
+    logger.info(f"Found {len(users)} users for broadcast")
+    
     if not users:
-        await query.answer("❌ No users found.")
+        await query.edit_message_text("❌ No users found in database. Make sure users have interacted with the bot first.")
         return
+    
+    # Log first few users for debugging
+    if users:
+        logger.info(f"First user: {users[0]}")
+        if len(users) > 1:
+            logger.info(f"Second user: {users[1]}")
     
     # Start broadcasting
     await query.edit_message_text(f"🚀 Starting broadcast to {len(users)} {target_description}...")
@@ -446,6 +488,8 @@ async def _execute_broadcast(query, context, target_type):
             # Rate limiting: wait 0.1 seconds between messages
             if i > 0:
                 await asyncio.sleep(0.1)
+            
+            logger.info(f"Sending broadcast to user {user['user_id']} ({i+1}/{len(users)})")
             
             # Send message based on media type
             if broadcast_content['media_type'] == 'photo':
@@ -469,6 +513,7 @@ async def _execute_broadcast(query, context, target_type):
                     parse_mode="Markdown"
                 )
             sent_count += 1
+            logger.info(f"Successfully sent to user {user['user_id']}")
             
             # Update progress every 50 messages
             if (i + 1) % 50 == 0:
@@ -482,6 +527,7 @@ async def _execute_broadcast(query, context, target_type):
                 'error': str(e)
             })
             logger.error(f"Failed to send broadcast to user {user['user_id']}: {e}")
+            # Continue with next user instead of stopping
     
     # Record broadcast in database
     db.record_broadcast(query.from_user.id, broadcast_content['text'], sent_count, failed_count)
@@ -1279,6 +1325,7 @@ def main():
             app.add_handler(CommandHandler("start", start))
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("analytics", analytics))
+            app.add_handler(CommandHandler("test_users", test_users))
             app.add_handler(CommandHandler("broadcast", broadcast))
             # Broadcast content handler (must come before photo handler)
             app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.VIDEO, handle_broadcast_content))
