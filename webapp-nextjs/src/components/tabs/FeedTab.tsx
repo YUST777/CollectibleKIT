@@ -16,8 +16,10 @@ import {
 
 // Helper function to format relative time
 const formatRelativeTime = (timestamp: number): string => {
+  // Convert timestamp from seconds to milliseconds
+  const timestampMs = timestamp * 1000;
   const now = Date.now();
-  const diff = now - timestamp;
+  const diff = now - timestampMs;
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
