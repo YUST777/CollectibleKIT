@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DailyGameService } from '@/lib/dailyGameService';
+import { db } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +57,27 @@ export async function POST(request: NextRequest) {
       isFirstSolver: result.is_first_solver,
       reward: result.reward
     });
+
+    // If answer is correct, record the game win for earning system
+    if (result.correct && userIdNum > 0) {
+      try {
+        // Check if this is the user's first win ever
+        const user = await db.getUser(userIdNum);
+        const isFirstWin = user && !user.first_win_claimed;
+        
+        // Record the game win
+        const winRecorded = await db.recordGameWin(userIdNum, isFirstWin);
+        
+        if (winRecorded) {
+          console.log(`🎉 Game win recorded for user ${userIdNum}${isFirstWin ? ' (first win bonus!)' : ''}`);
+        } else {
+          console.log(`⚠️ Failed to record game win for user ${userIdNum} (possibly reached daily limit)`);
+        }
+      } catch (error) {
+        console.error('Error recording game win:', error);
+        // Don't fail the request if win recording fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

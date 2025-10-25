@@ -334,6 +334,9 @@ export const TasksContent: React.FC = () => {
           <div className="text-center text-gray-500 py-8 text-sm">No special tasks</div>
         )}
       </div>
+
+      {/* 15-Day Streak Mission */}
+      <StreakMissionSection />
     </div>
   );
 };
@@ -390,6 +393,142 @@ export const TasksTab: React.FC = () => {
 
       {/* Tasks Content */}
       <TasksContent />
+    </div>
+  );
+};
+
+// 15-Day Streak Mission Component
+const StreakMissionSection: React.FC = () => {
+  const [streakData, setStreakData] = useState<{
+    streakDays: number;
+    canCheckIn: boolean;
+    streakCompleted: boolean;
+    lastStreakClick?: string;
+  }>({
+    streakDays: 0,
+    canCheckIn: true,
+    streakCompleted: false
+  });
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const { webApp } = useTelegram();
+
+  useEffect(() => {
+    loadStreakData();
+  }, []);
+
+  const loadStreakData = async () => {
+    try {
+      const response = await fetch('/api/tasks/streak');
+      if (response.ok) {
+        const data = await response.json();
+        setStreakData({
+          streakDays: data.streakDays || 0,
+          canCheckIn: data.canCheckIn,
+          streakCompleted: data.streakCompleted || false,
+          lastStreakClick: data.lastStreakClick
+        });
+      }
+    } catch (error) {
+      console.error('Error loading streak data:', error);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    if (isCheckingIn || !streakData.canCheckIn) return;
+
+    setIsCheckingIn(true);
+    try {
+      const response = await fetch('/api/tasks/streak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(result.message);
+        hapticFeedback('notification', 'success', webApp);
+        loadStreakData(); // Refresh streak data
+      } else {
+        toast.error(result.message || 'Check-in failed');
+        hapticFeedback('notification', 'error', webApp);
+      }
+    } catch (error) {
+      console.error('Error checking in:', error);
+      toast.error('Check-in failed');
+      hapticFeedback('notification', 'error', webApp);
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 px-4">
+        <div className="w-1 h-4 bg-yellow-500 rounded-full"></div>
+        <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wide">15-Day Streak Mission</h3>
+      </div>
+      
+      <div className="px-2">
+        <div className="bg-gradient-to-r from-yellow-600/20 to-orange-600/20 rounded-xl p-4 border border-yellow-500/30 backdrop-blur-sm">
+          <div className="text-center space-y-4">
+            {/* Progress */}
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-yellow-400">
+                {streakData.streakCompleted ? '🎉 COMPLETED!' : `${streakData.streakDays}/15 Days`}
+              </div>
+              
+              {!streakData.streakCompleted && (
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-yellow-500 to-orange-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(streakData.streakDays / 15) * 100}%` }}
+                  ></div>
+                </div>
+              )}
+            </div>
+
+            {/* Reward */}
+            <div className="text-sm text-gray-300">
+              {streakData.streakCompleted ? (
+                <span className="text-green-400 font-medium">You are eligible for the hidden Telegram gift! 🎁</span>
+              ) : (
+                <span>Reward: Hidden Telegram Gift 🎁</span>
+              )}
+            </div>
+
+            {/* Warning */}
+            {!streakData.streakCompleted && (
+              <div className="text-xs text-red-400 bg-red-900/20 rounded-lg p-2">
+                ⚠️ Miss 1 day and streak resets to 0!
+              </div>
+            )}
+
+            {/* Check-in Button */}
+            {!streakData.streakCompleted && (
+              <Button
+                onClick={handleCheckIn}
+                disabled={!streakData.canCheckIn || isCheckingIn}
+                loading={isCheckingIn}
+                variant="primary"
+                size="lg"
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+              >
+                {isCheckingIn ? 'Checking In...' : 
+                 !streakData.canCheckIn ? 'Already Checked In Today' : 
+                 'Check In Today'}
+              </Button>
+            )}
+
+            {/* Last check-in info */}
+            {streakData.lastStreakClick && (
+              <div className="text-xs text-gray-400">
+                Last check-in: {new Date(streakData.lastStreakClick).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

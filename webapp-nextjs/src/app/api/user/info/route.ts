@@ -1,56 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UserService } from '@/lib/userService';
+import { db } from '@/lib/database';
+import { getUserFromTelegram } from '@/lib/telegram';
 
+// GET: Get user information including credits and TON balance
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userIdStr = searchParams.get('user_id');
-
-    if (!userIdStr) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
+    const user = await getUserFromTelegram(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = parseInt(userIdStr);
-    if (isNaN(userId) || userId <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
+    console.log(`👤 Getting user info for user ${user.id}`);
+    
+    const userData = await db.getUser(user.id);
+    
+    if (!userData) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-
-    console.log('🔍 Getting user info for:', userId);
-
-    const userInfo = await UserService.getUserInfo(userId);
-
-    if (!userInfo) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    console.log('✅ User info retrieved:', userInfo);
 
     return NextResponse.json({
-      success: true,
-      user: userInfo
+      user_id: userData.user_id,
+      username: userData.username,
+      first_name: userData.first_name,
+      user_type: userData.user_type,
+      credits: userData.credits || 0,
+      ton_balance: userData.ton_balance || 0,
+      first_win_claimed: userData.first_win_claimed || false,
+      daily_wins_count: userData.daily_wins_count || 0,
+      last_win_date: userData.last_win_date,
+      streak_days: userData.streak_days || 0,
+      streak_completed: userData.streak_completed || false
     });
-
   } catch (error) {
-    console.error('❌ Get user info error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    console.error('Error getting user info:', error);
+    return NextResponse.json({ 
+      error: 'Failed to get user info', 
+      details: (error as Error).message 
+    }, { status: 500 });
   }
 }
-
-
-
-

@@ -17,6 +17,14 @@ export interface User {
   can_process?: boolean;
   credits_remaining?: number;
   free_remaining?: string;
+  ton_balance?: number;
+  first_win_claimed?: boolean;
+  daily_wins_count?: number;
+  last_win_date?: string;
+  streak_days?: number;
+  last_streak_click?: string;
+  streak_completed?: boolean;
+  wallet_address?: string;
 }
 
 export interface Payment {
@@ -105,6 +113,26 @@ export interface Sale {
   amount_ton: number;
   credits_purchased: number;
   completed_at: number;
+}
+
+export interface CreditConversion {
+  id: number;
+  user_id: number;
+  credits_spent: number;
+  ton_earned: number;
+  conversion_rate: string;
+  created_at: number;
+}
+
+export interface TonWithdrawal {
+  id: number;
+  user_id: number;
+  amount: number;
+  wallet_address: string;
+  status: 'pending' | 'completed' | 'failed';
+  tx_hash?: string;
+  created_at: number;
+  completed_at?: number;
 }
 
 class DatabaseService {
@@ -1143,6 +1171,208 @@ class DatabaseService {
         }
       );
     });
+  }
+
+  // New earning system methods
+  async recordGameWin(userId: number, isFirstWin: boolean = false): Promise<boolean> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const user = await this.getUser(userId);
+      
+      if (!user) {
+        console.error('User not found:', userId);
+        return false;
+      }
+
+      // Check if user has reached daily limit
+      const isPremium = user.user_type === 'premium' || user.user_type === 'vip';
+      const maxWins = isPremium ? 10 : 5;
+      
+      if (user.last_win_date === today && (user.daily_wins_count || 0) >= maxWins) {
+        console.log(`User ${userId} has reached daily win limit (${maxWins})`);
+        return false;
+      }
+
+      // Reset daily wins if it's a new day
+      if (user.last_win_date !== today) {
+        await this.dbRun(
+          'UPDATE users SET daily_wins_count = 1, last_win_date = ? WHERE user_id = ?',
+          [today, userId]
+        );
+      } else {
+        // Increment daily wins
+        await this.dbRun(
+          'UPDATE users SET daily_wins_count = daily_wins_count + 1 WHERE user_id = ?',
+          [userId]
+        );
+      }
+
+      // Add credit for the win
+      await this.dbRun(
+        'UPDATE users SET credits = credits + 1 WHERE user_id = ?',
+        [userId]
+      );
+
+      // Handle first win bonus
+      if (isFirstWin && !user.first_win_claimed) {
+        await this.dbRun(
+          'UPDATE users SET ton_balance = ton_balance + 0.1, first_win_claimed = 1 WHERE user_id = ?',
+          [userId]
+        );
+        console.log(`🎉 First win bonus (0.1 TON) awarded to user ${userId}`);
+      }
+
+      console.log(`✅ Game win recorded for user ${userId}`);
+      return true;
+    } catch (error) {
+      console.error('Error recording game win:', error);
+      return false;
+    }
+  }
+
+  async getDailyWins(userId: number, date: string): Promise<number> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user || user.last_win_date !== date) {
+        return 0;
+      }
+      return user.daily_wins_count || 0;
+    } catch (error) {
+      console.error('Error getting daily wins:', error);
+      return 0;
+    }
+  }
+
+  async convertCreditsToTon(userId: number, creditsToSpend: number): Promise<{ success: boolean; tonEarned: number; message: string }> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) {
+        return { success: false, tonEarned: 0, message: 'User not found' };
+      }
+
+      // Check if user has enough credits
+      if (user.credits < creditsToSpend) {
+        return { success: false, tonEarned: 0, message: 'Insufficient credits' };
+      }
+
+      // Determine conversion rate based on user type
+      const isPremium = user.user_type === 'premium' || user.user_type === 'vip';
+      const tonEarned = isPremium ? creditsToSpend / 50 : creditsToSpend / 100;
+      const conversionRate = isPremium ? '50:1' : '100:1';
+
+      // Deduct credits and add TON
+      await this.dbRun(
+        'UPDATE users SET credits = credits - ?, ton_balance = ton_balance + ? WHERE user_id = ?',
+        [creditsToSpend, tonEarned, userId]
+      );
+
+      // Record conversion
+      await this.dbRun(
+        'INSERT INTO credit_conversions (user_id, credits_spent, ton_earned, conversion_rate, created_at) VALUES (?, ?, ?, ?, ?)',
+        [userId, creditsToSpend, tonEarned, conversionRate, Date.now()]
+      );
+
+      console.log(`✅ Converted ${creditsToSpend} credits to ${tonEarned} TON for user ${userId}`);
+      return { success: true, tonEarned, message: 'Conversion successful' };
+    } catch (error) {
+      console.error('Error converting credits to TON:', error);
+      return { success: false, tonEarned: 0, message: 'Conversion failed' };
+    }
+  }
+
+  async updateStreak(userId: number): Promise<{ success: boolean; streakDays: number; message: string }> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const user = await this.getUser(userId);
+      
+      if (!user) {
+        return { success: false, streakDays: 0, message: 'User not found' };
+      }
+
+      // Check if already clicked today
+      if (user.last_streak_click === today) {
+        return { success: false, streakDays: user.streak_days || 0, message: 'Already checked in today' };
+      }
+
+      let newStreakDays = 1;
+      
+      // If last click was yesterday, increment streak
+      if (user.last_streak_click) {
+        const lastClickDate = new Date(user.last_streak_click);
+        const todayDate = new Date(today);
+        const daysDiff = Math.floor((todayDate.getTime() - lastClickDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff === 1) {
+          // Consecutive day
+          newStreakDays = (user.streak_days || 0) + 1;
+        } else if (daysDiff > 1) {
+          // Gap in streak, reset to 1
+          newStreakDays = 1;
+        }
+      }
+
+      // Update streak
+      await this.dbRun(
+        'UPDATE users SET streak_days = ?, last_streak_click = ? WHERE user_id = ?',
+        [newStreakDays, today, userId]
+      );
+
+      // Check if streak completed
+      if (newStreakDays >= 15) {
+        await this.dbRun(
+          'UPDATE users SET streak_completed = 1 WHERE user_id = ?',
+          [userId]
+        );
+        console.log(`🎉 User ${userId} completed 15-day streak!`);
+      }
+
+      return { 
+        success: true, 
+        streakDays: newStreakDays, 
+        message: newStreakDays >= 15 ? 'Streak completed! You are now eligible for the hidden gift!' : `Streak: ${newStreakDays}/15 days` 
+      };
+    } catch (error) {
+      console.error('Error updating streak:', error);
+      return { success: false, streakDays: 0, message: 'Streak update failed' };
+    }
+  }
+
+  async getStreakWinners(): Promise<User[]> {
+    try {
+      const rows = await this.dbAll(
+        'SELECT * FROM users WHERE streak_completed = 1 ORDER BY last_streak_click DESC'
+      );
+      return rows as User[];
+    } catch (error) {
+      console.error('Error getting streak winners:', error);
+      return [];
+    }
+  }
+
+  async getCreditConversions(userId: number, limit: number = 5): Promise<CreditConversion[]> {
+    try {
+      const rows = await this.dbAll(
+        'SELECT * FROM credit_conversions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?',
+        [userId, limit]
+      );
+      return rows as CreditConversion[];
+    } catch (error) {
+      console.error('Error getting credit conversions:', error);
+      return [];
+    }
+  }
+
+  async getTonWithdrawals(userId: number, limit: number = 5): Promise<TonWithdrawal[]> {
+    try {
+      const rows = await this.dbAll(
+        'SELECT * FROM ton_withdrawals WHERE user_id = ? ORDER BY created_at DESC LIMIT ?',
+        [userId, limit]
+      );
+      return rows as TonWithdrawal[];
+    } catch (error) {
+      console.error('Error getting TON withdrawals:', error);
+      return [];
+    }
   }
 }
 
