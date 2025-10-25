@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sh
 import { ModelThumbnail } from '@/components/ModelThumbnail';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { AdsBanner } from '@/components/AdsBanner';
+import { FeedTab } from '@/components/tabs/FeedTab';
 import { hapticFeedback } from '@/lib/telegram';
 import { cacheUtils } from '@/lib/cache';
 import { Gift } from 'lucide-react';
@@ -549,6 +550,10 @@ export const GameTab: React.FC = () => {
           </div>
           {renderZoomGame()}
         </div>
+      )}
+
+      {currentSubTab === 'feed' && (
+        <FeedTab />
       )}
 
       {/* Game Controls - Show for both games */}

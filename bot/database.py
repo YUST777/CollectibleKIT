@@ -150,6 +150,24 @@ class BotDatabase:
                 )
             """)
             
+            # Feed events table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS feed_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    event_type TEXT NOT NULL,
+                    event_data TEXT,
+                    created_at REAL NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id)
+                )
+            """)
+            
+            # Index for performance
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_feed_events_created_at 
+                ON feed_events(created_at DESC)
+            """)
+            
             conn.commit()
             logger.info("Database initialized successfully")
     
@@ -576,3 +594,42 @@ class BotDatabase:
         except Exception as e:
             logger.error(f"Error getting referral stats: {e}")
             return {'total_referrals': 0, 'recent_referrals': 0}
+    
+    def record_feed_event(self, user_id: int, event_type: str, event_data: str = None) -> bool:
+        """Record a feed event"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    INSERT INTO feed_events (user_id, event_type, event_data, created_at)
+                    VALUES (?, ?, ?, ?)
+                """, (user_id, event_type, event_data, time.time()))
+                conn.commit()
+                logger.info(f"✅ Recorded feed event: {event_type} for user {user_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error recording feed event: {e}")
+            return False
+    
+    def get_feed_events(self, limit: int = 50) -> list:
+        """Get last N feed events with user info"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute("""
+                    SELECT 
+                        fe.id,
+                        fe.user_id,
+                        fe.event_type,
+                        fe.event_data,
+                        fe.created_at,
+                        u.username,
+                        u.first_name
+                    FROM feed_events fe
+                    JOIN users u ON fe.user_id = u.user_id
+                    ORDER BY fe.created_at DESC
+                    LIMIT ?
+                """, (limit,))
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            logger.error(f"Error getting feed events: {e}")
+            return []

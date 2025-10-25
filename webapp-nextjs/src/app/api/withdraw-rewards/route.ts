@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserService } from '@/lib/userService';
 import { TonWalletService } from '@/lib/tonWalletService';
+import { db } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -102,6 +103,9 @@ export async function POST(request: NextRequest) {
       transactionHash: withdrawalResult.transaction_hash,
       amount: amountNum
     });
+
+    // Record feed event for TON withdrawal
+    await db.recordFeedEvent(userIdNum, 'ton_withdrawal', { amount: amountNum });
 
     return NextResponse.json({
       success: true,

@@ -42,6 +42,13 @@ export async function POST(request: NextRequest) {
     
     if (success) {
       console.log(`✅ Task completed: ${taskId}, earned ${task.credits_reward} credits`);
+      
+      // Record feed event for task completion
+      await db.recordFeedEvent(user?.id || 0, 'task_complete', { 
+        taskTitle: task.title,
+        credits: task.credits_reward 
+      });
+      
       return NextResponse.json({ 
         success: true, 
         creditsEarned: task.credits_reward,

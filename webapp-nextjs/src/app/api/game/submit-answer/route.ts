@@ -70,6 +70,14 @@ export async function POST(request: NextRequest) {
         
         if (winRecorded) {
           console.log(`🎉 Game win recorded for user ${userIdNum}${isFirstWin ? ' (first win bonus!)' : ''}`);
+          
+          // Record feed event for game win
+          await db.recordFeedEvent(userIdNum, 'game_win', { credits: 1 });
+          
+          // Record feed event for first win bonus if applicable
+          if (isFirstWin) {
+            await db.recordFeedEvent(userIdNum, 'first_win_bonus', { ton: 0.1 });
+          }
         } else {
           console.log(`⚠️ Failed to record game win for user ${userIdNum} (possibly reached daily limit)`);
         }

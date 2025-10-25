@@ -24,6 +24,12 @@ export async function POST(request: NextRequest) {
       // Get updated user data
       const updatedUser = await db.getUser(user.id);
       
+      // Record feed event for credit to TON conversion
+      await db.recordFeedEvent(user.id, 'credit_to_ton', { 
+        credits: creditsToSpend,
+        ton: result.tonEarned 
+      });
+      
       return NextResponse.json({
         success: true,
         tonEarned: result.tonEarned,

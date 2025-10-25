@@ -9,6 +9,7 @@ import {
   ArrowLeftIcon,
   MagnifyingGlassPlusIcon,
   FaceSmileIcon,
+  RssIcon,
 } from '@heroicons/react/24/outline';
 import { 
   useNavigationLevel, 
@@ -152,7 +153,7 @@ export const DynamicNavigation: React.FC = () => {
     );
   }
 
-  // Games sub-navigation (Zoom | Emoji | ← Back)
+  // Games sub-navigation (Zoom | Emoji | Feed | ← Back)
   if (navigationLevel === 'games') {
     return (
       <div className="fixed bottom-0 left-0 right-0 border-t border-gray-700 px-4 py-3 transition-all duration-300 ease-in-out" style={{ backgroundColor: '#252525' }}>
@@ -174,6 +175,15 @@ export const DynamicNavigation: React.FC = () => {
           >
             <FaceSmileIcon className="w-6 h-6 text-gray-300 transition-colors duration-200" />
             <span className="text-xs text-gray-300 transition-colors duration-200">Emoji</span>
+          </button>
+          <button
+            onClick={() => handleSubTabClick('feed')}
+            className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-all duration-200 ease-in-out ${
+              currentSubTab === 'feed' ? 'border-t-2 border-white' : 'hover:bg-gray-800/50 hover:scale-105'
+            }`}
+          >
+            <RssIcon className="w-6 h-6 text-gray-300 transition-colors duration-200" />
+            <span className="text-xs text-gray-300 transition-colors duration-200">Feed</span>
           </button>
           <button
             onClick={navigateBack}

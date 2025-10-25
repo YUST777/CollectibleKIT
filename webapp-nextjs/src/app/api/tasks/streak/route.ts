@@ -14,6 +14,11 @@ export async function POST(request: NextRequest) {
     
     const result = await db.updateStreak(user.id);
     
+    // Record feed event if streak is completed (15 days)
+    if (result.success && result.streakDays === 15) {
+      await db.recordFeedEvent(user.id, 'streak_complete', { days: 15 });
+    }
+    
     return NextResponse.json({
       success: result.success,
       streakDays: result.streakDays,

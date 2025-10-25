@@ -135,6 +135,16 @@ export interface TonWithdrawal {
   completed_at?: number;
 }
 
+export interface FeedEvent {
+  id: number;
+  user_id: number;
+  username?: string;
+  first_name?: string;
+  event_type: string;
+  event_data?: string;
+  created_at: number;
+}
+
 class DatabaseService {
   private db!: sqlite3.Database;
   private dbPath: string;
@@ -1371,6 +1381,45 @@ class DatabaseService {
       return rows as TonWithdrawal[];
     } catch (error) {
       console.error('Error getting TON withdrawals:', error);
+      return [];
+    }
+  }
+
+  async recordFeedEvent(userId: number, eventType: string, eventData?: any): Promise<boolean> {
+    try {
+      const eventDataStr = eventData ? JSON.stringify(eventData) : null;
+      await this.run(
+        `INSERT INTO feed_events (user_id, event_type, event_data, created_at) VALUES (?, ?, ?, ?)`,
+        [userId, eventType, eventDataStr, Date.now()]
+      );
+      console.log(`✅ Recorded feed event: ${eventType} for user ${userId}`);
+      return true;
+    } catch (error) {
+      console.error('Error recording feed event:', error);
+      return false;
+    }
+  }
+
+  async getFeedEvents(limit: number = 50): Promise<FeedEvent[]> {
+    try {
+      const rows = await this.all(
+        `SELECT 
+          fe.id,
+          fe.user_id,
+          fe.event_type,
+          fe.event_data,
+          fe.created_at,
+          u.username,
+          u.first_name
+        FROM feed_events fe
+        JOIN users u ON fe.user_id = u.user_id
+        ORDER BY fe.created_at DESC
+        LIMIT ?`,
+        [limit]
+      );
+      return rows as FeedEvent[];
+    } catch (error) {
+      console.error('Error getting feed events:', error);
       return [];
     }
   }
