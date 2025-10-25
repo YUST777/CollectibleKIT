@@ -4,10 +4,6 @@
 
 /* Base styles */
 @layer base {
-  * {
-    @apply border-gray-600;
-  }
-  
   body {
     @apply bg-bg-main text-text-idle font-sans;
     line-height: 1.5;
@@ -164,7 +160,24 @@
 
   /* Collection Tab Styles */
   .gift-slot {
-    @apply aspect-square min-h-[110px] max-h-[120px];
+    @apply aspect-square;
+    min-height: 80px;
+    max-height: 120px;
+    display: block;
+  }
+
+  /* Ensure grid layout works properly */
+  .gift-grid {
+    display: grid !important;
+    gap: 12px;
+  }
+
+  /* Responsive gift slot sizing for larger grids */
+  @media (max-width: 768px) {
+    .gift-slot {
+      min-height: 70px;
+      max-height: 90px;
+    }
   }
 
   .gift-preview-card {
@@ -203,6 +216,63 @@
 
   .gift-preview-card:active {
     transform: translateY(0) scale(0.98);
+  }
+
+  /* Drag and drop styles */
+  .gift-slot[draggable="true"] {
+    cursor: grab;
+  }
+
+  .gift-slot[draggable="true"]:active {
+    cursor: grabbing;
+  }
+
+  .gift-slot.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+
+  .gift-slot.drag-over {
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+  }
+
+  /* Delete button styles */
+  .gift-preview-card:hover .delete-button {
+    opacity: 1;
+  }
+
+  .delete-button {
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  /* Mobile-specific styles */
+  @media (max-width: 768px) {
+    .delete-button {
+      opacity: 1 !important;
+      width: 24px !important;
+      height: 24px !important;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      backdrop-filter: blur(4px);
+    }
+    
+    .gift-slot {
+      touch-action: manipulation;
+    }
+    
+    .gift-preview-card {
+      touch-action: manipulation;
+    }
+    
+    /* Better touch targets for mobile */
+    .delete-button {
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
   /* Filter Modal Styles */

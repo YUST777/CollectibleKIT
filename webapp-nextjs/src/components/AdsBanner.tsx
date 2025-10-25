@@ -370,7 +370,7 @@ export const AdsBanner: React.FC = () => {
                   />
                 </div>
               )}
-              Premium Features
+              Choose Your Plan
             </SheetTitle>
           </SheetHeader>
 
@@ -390,62 +390,88 @@ export const AdsBanner: React.FC = () => {
               </div>
             </div>
 
-            {/* Features List */}
+            {/* Plan Comparison Table */}
             <div className="space-y-4">
-              <h3 className="text-white font-semibold text-lg mb-4">What you get:</h3>
+              <h3 className="text-white font-semibold text-lg text-center mb-4">
+                What you get:
+              </h3>
               
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-white font-medium">300 Credits</div>
-                  <div className="text-gray-400 text-sm">Process 300 images without watermark</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Zap className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-white font-medium">No Watermarks</div>
-                  <div className="text-gray-400 text-sm">All your images will be clean and professional</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Gift className="w-5 h-5 text-pink-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-white font-medium">Exclusive Features</div>
-                  <div className="text-gray-400 text-sm">Access to premium tools and effects</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Sparkles className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-white font-medium">Custom Watermarks</div>
-                  <div className="text-gray-400 text-sm">Add your own branding to images</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Value Highlight */}
-            <div className="bg-green-900/30 border border-green-600/30 rounded-lg p-4">
-              <div className="text-green-300 font-semibold mb-1 flex items-center gap-2">
-                {lottieData['/tonlogo.json'] ? (
-                  <div className="w-7 h-7">
-                    <Lottie
-                      animationData={lottieData['/tonlogo.json']}
-                      loop={true}
-                      autoplay={true}
-                      style={{ width: 28, height: 28 }}
-                    />
+              {/* Comparison Table */}
+              <div className="bg-[#2a2a2b] rounded-xl overflow-hidden">
+                {/* Header Row */}
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center text-gray-400 text-sm font-medium">
+                    Free Plan
                   </div>
-                ) : (
-                  <Gem className="w-7 h-7" />
-                )}
-                <span>Amazing Value</span>
+                  <div className="text-center text-purple-400 text-sm font-bold">
+                    Premium Plan
+                  </div>
+                </div>
+
+                {/* Credits Row */}
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-300 font-medium">3 Credits</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white font-bold text-xl">300 Credits</div>
+                  </div>
+                </div>
+
+                {/* Tools Usage Row */}
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-300 font-medium">Limited</div>
+                  </div>
+                  <div className="text-center flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-yellow-400 mr-1" />
+                    <div className="text-white font-bold text-lg">∞ Tools Usage</div>
+                  </div>
+                </div>
+
+                {/* Watermark Row */}
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-400 text-sm">With Watermark</div>
+                  </div>
+                  <div className="text-center flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-400 mr-1" />
+                    <div className="text-green-400 font-medium">No Watermark</div>
+                  </div>
+                </div>
+
+                {/* Priority Processing Row */}
+                <div className="grid grid-cols-2 gap-2 p-3">
+                  <div className="text-center">
+                    <div className="text-gray-400 text-sm">Standard</div>
+                  </div>
+                  <div className="text-center flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-blue-400 mr-1" />
+                    <div className="text-blue-400 font-medium">Priority Processing</div>
+                  </div>
+                </div>
               </div>
-              <div className="text-green-200/80 text-sm">
-                That's less than 0.0034 TON per image!
+
+              {/* Value Highlight */}
+              <div className="bg-green-900/30 border border-green-600/30 rounded-lg p-4">
+                <div className="text-green-300 font-semibold mb-1 flex items-center gap-2 justify-center">
+                  {lottieData['/tonlogo.json'] ? (
+                    <div className="w-7 h-7">
+                      <Lottie
+                        animationData={lottieData['/tonlogo.json']}
+                        loop={true}
+                        autoplay={true}
+                        style={{ width: 28, height: 28 }}
+                      />
+                    </div>
+                  ) : (
+                    <Gem className="w-7 h-7" />
+                  )}
+                  <span>Amazing Value</span>
+                </div>
+                <div className="text-green-200/80 text-sm text-center">
+                  That's less than 0.0034 TON per image!
+                </div>
               </div>
             </div>
           </div>

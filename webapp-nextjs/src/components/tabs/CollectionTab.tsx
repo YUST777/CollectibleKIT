@@ -49,6 +49,31 @@ export const CollectionTab: React.FC = () => {
   const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Drag and drop states
+  const [draggedSlot, setDraggedSlot] = useState<number | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
+  const [boxPositions, setBoxPositions] = useState<{ [key: number]: { x: number; y: number } }>({});
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Load saved positions from localStorage
+  useEffect(() => {
+    const savedPositions = localStorage.getItem('giftBoxPositions');
+    if (savedPositions) {
+      try {
+        setBoxPositions(JSON.parse(savedPositions));
+      } catch (error) {
+        console.error('Failed to load box positions:', error);
+      }
+    }
+  }, []);
+
+  // Save positions to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(boxPositions).length > 0) {
+      localStorage.setItem('giftBoxPositions', JSON.stringify(boxPositions));
+    }
+  }, [boxPositions]);
+
   // Load initial data with caching
   useEffect(() => {
     const loadInitialData = async () => {
@@ -553,6 +578,173 @@ export const CollectionTab: React.FC = () => {
     return date.toLocaleDateString();
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, slotNumber: number) => {
+    setDraggedSlot(slotNumber);
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', slotNumber.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, slotNumber: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverSlot(slotNumber);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSlot(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetSlot: number) => {
+    e.preventDefault();
+    const sourceSlot = parseInt(e.dataTransfer.getData('text/plain'));
+    
+    if (sourceSlot !== targetSlot) {
+      // Swap designs
+      const sourceDesign = userDesigns[sourceSlot];
+      const targetDesign = userDesigns[targetSlot];
+      
+      const newDesigns = { ...userDesigns };
+      newDesigns[sourceSlot] = targetDesign;
+      newDesigns[targetSlot] = sourceDesign;
+      
+      setUserDesigns(newDesigns);
+    }
+    
+    setDraggedSlot(null);
+    setDragOverSlot(null);
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent, slotNumber: number) => {
+    // Store the initial touch position and time
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+    const startTime = Date.now();
+    
+    let hasMoved = false;
+    let longPressTimer: NodeJS.Timeout;
+    
+    // Set up long press detection
+    longPressTimer = setTimeout(() => {
+      if (!hasMoved) {
+        setDraggedSlot(slotNumber);
+        setIsDragging(true);
+        
+        // Add haptic feedback if available
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+        
+        // Add visual feedback
+        const element = e.currentTarget as HTMLElement;
+        element.style.transform = 'scale(1.05)';
+        element.style.opacity = '0.8';
+        element.style.zIndex = '1000';
+      }
+    }, 300); // 300ms for long press
+    
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      const currentTouch = moveEvent.touches[0];
+      const deltaX = Math.abs(currentTouch.clientX - startX);
+      const deltaY = Math.abs(currentTouch.clientY - startY);
+      
+      // If moved more than 10px, consider it a drag
+      if (deltaX > 10 || deltaY > 10) {
+        hasMoved = true;
+        clearTimeout(longPressTimer);
+        
+        if (!isDragging) {
+          setDraggedSlot(slotNumber);
+          setIsDragging(true);
+          
+          // Add visual feedback
+          const element = e.currentTarget as HTMLElement;
+          element.style.transform = 'scale(1.05)';
+          element.style.opacity = '0.8';
+          element.style.zIndex = '1000';
+        }
+      }
+    };
+    
+    const handleTouchEnd = (endEvent: TouchEvent) => {
+      clearTimeout(longPressTimer);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+    
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || draggedSlot === null) return;
+    
+    e.preventDefault();
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    if (element) {
+      const slotElement = element.closest('[data-slot]');
+      if (slotElement) {
+        const targetSlot = parseInt(slotElement.getAttribute('data-slot') || '0');
+        if (targetSlot !== draggedSlot) {
+          setDragOverSlot(targetSlot);
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isDragging || draggedSlot === null) return;
+    
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    if (element) {
+      const slotElement = element.closest('[data-slot]');
+      if (slotElement) {
+        const targetSlot = parseInt(slotElement.getAttribute('data-slot') || '0');
+        if (targetSlot !== draggedSlot) {
+          // Swap designs
+          const sourceDesign = userDesigns[draggedSlot];
+          const targetDesign = userDesigns[targetSlot];
+          
+          const newDesigns = { ...userDesigns };
+          newDesigns[draggedSlot] = targetDesign;
+          newDesigns[targetSlot] = sourceDesign;
+          
+          setUserDesigns(newDesigns);
+        }
+      }
+    }
+    
+    // Reset visual feedback
+    const draggedElement = document.querySelector(`[data-slot="${draggedSlot}"] .gift-preview-card`) as HTMLElement;
+    if (draggedElement) {
+      draggedElement.style.transform = '';
+      draggedElement.style.opacity = '';
+    }
+    
+    setDraggedSlot(null);
+    setDragOverSlot(null);
+    setIsDragging(false);
+  };
+
+  const handleDeleteBox = (slotNumber: number) => {
+    const newDesigns = { ...userDesigns };
+    delete newDesigns[slotNumber];
+    setUserDesigns(newDesigns);
+    
+    // Remove position data
+    const newPositions = { ...boxPositions };
+    delete newPositions[slotNumber];
+    setBoxPositions(newPositions);
+  };
+
   const renderGiftPreview = (design: GiftDesign, index: number) => {
     if (!design) return null;
     
@@ -726,9 +918,27 @@ export const CollectionTab: React.FC = () => {
       });
     }
     
+    const isDragged = draggedSlot === slotNumber;
+    const isDragOver = dragOverSlot === slotNumber;
+    
     return (
-      <div key={slotNumber} className="gift-slot">
-        <div className="gift-preview-card" onClick={() => openGiftDesigner(slotNumber)}>
+      <div 
+        key={slotNumber} 
+        className="gift-slot relative"
+        data-slot={slotNumber}
+        draggable={!!design}
+        onDragStart={(e) => handleDragStart(e, slotNumber)}
+        onDragOver={(e) => handleDragOver(e, slotNumber)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, slotNumber)}
+        onTouchStart={(e) => handleTouchStart(e, slotNumber)}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div 
+          className={`gift-preview-card relative ${isDragged ? 'opacity-50 scale-95' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''}`}
+          onClick={() => !isDragging && openGiftDesigner(slotNumber)}
+        >
           {design ? (
             <div className="gift-preview-content">
               {/* Telegram-style gift preview */}
@@ -875,6 +1085,18 @@ export const CollectionTab: React.FC = () => {
                      showFallback={true}
                    />
                  </div>
+                 
+                 {/* Delete button - always visible on mobile */}
+                 <button
+                   className="delete-button absolute top-1 right-1 w-6 h-6 flex items-center justify-center z-30 md:opacity-0 md:hover:opacity-100"
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     handleDeleteBox(slotNumber);
+                   }}
+                   title="Delete gift box"
+                 >
+                   <XMarkIcon className="w-4 h-4 text-black" />
+                 </button>
               </div>
             </div>
           ) : (
@@ -1075,7 +1297,7 @@ export const CollectionTab: React.FC = () => {
       )}
 
       {/* Gift Preview Grid */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="gift-grid grid-cols-3" data-grid-size={gridSize}>
         {Array.from({ length: gridSize }, (_, i) => renderGiftSlot(i + 1))}
       </div>
 
@@ -1096,6 +1318,13 @@ export const CollectionTab: React.FC = () => {
               <option value={12}>12</option>
               <option value={15}>15</option>
               <option value={18}>18</option>
+              <option value={24}>24</option>
+              <option value={30}>30</option>
+              <option value={36}>36</option>
+              <option value={42}>42</option>
+              <option value={48}>48</option>
+              <option value={54}>54</option>
+              <option value={60}>60</option>
             </select>
           </div>
 
