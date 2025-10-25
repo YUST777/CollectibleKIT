@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import time
+import io
 from io import BytesIO
 from typing import List, Optional
 
@@ -324,6 +325,54 @@ async def test_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text(f"❌ Error sending test photo: {str(e)}")
 
 
+async def test_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Test broadcast system (admin only)"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow specific admin users
+    ADMIN_USERS = {800092886}
+    if user_id not in ADMIN_USERS:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    # Test broadcast content
+    test_content = {
+        'text': '🧪 **Test Broadcast**\n\nThis is a test broadcast to verify the system works.',
+        'photo': None,
+        'video': None,
+        'media_type': 'text_only'
+    }
+    
+    # Store test content
+    context.user_data['broadcast_content'] = test_content
+    
+    # Get users
+    users = db.get_all_users()
+    logger.info(f"Test broadcast: Found {len(users)} users")
+    
+    if not users:
+        await update.message.reply_text("❌ No users found in database.")
+        return
+    
+    # Test with first user only
+    test_user = users[0]
+    logger.info(f"Testing broadcast with user: {test_user}")
+    
+    try:
+        await context.bot.send_message(
+            chat_id=test_user['user_id'],
+            text=test_content['text'],
+            parse_mode="Markdown"
+        )
+        await update.message.reply_text(f"✅ Test broadcast sent to user {test_user['user_id']}")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Test broadcast failed: {str(e)}")
+        logger.error(f"Test broadcast failed: {e}")
+
+
 async def analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show comprehensive bot analytics (admin only)"""
     if not _is_authorized(update):
@@ -621,13 +670,12 @@ async def _execute_broadcast(query, context, target_type):
                     try:
                         # Get the file object
                         file = await context.bot.get_file(broadcast_content['photo'])
+                        logger.info(f"Got file object: {file.file_id}")
                         # Download the file
                         file_data = await file.download_as_bytearray()
+                        logger.info(f"Downloaded {len(file_data)} bytes")
                         
                         # Convert to PNG for better compatibility
-                        from PIL import Image
-                        import io
-                        
                         # Open the image and convert to PNG
                         img = Image.open(io.BytesIO(file_data))
                         png_buffer = io.BytesIO()
@@ -635,7 +683,6 @@ async def _execute_broadcast(query, context, target_type):
                         png_buffer.seek(0)
                         
                         # Send as InputFile with PNG format
-                        from telegram import InputFile
                         await context.bot.send_photo(
                             chat_id=user['user_id'],
                             photo=InputFile(png_buffer, filename="broadcast_photo.png"),
@@ -675,11 +722,12 @@ async def _execute_broadcast(query, context, target_type):
                     try:
                         # Get the file object
                         file = await context.bot.get_file(broadcast_content['video'])
+                        logger.info(f"Got video file object: {file.file_id}")
                         # Download the file
                         file_data = await file.download_as_bytearray()
+                        logger.info(f"Downloaded {len(file_data)} bytes for video")
                         
                         # Send as InputFile with MP4 format
-                        from telegram import InputFile
                         await context.bot.send_video(
                             chat_id=user['user_id'],
                             video=InputFile(BytesIO(file_data), filename="broadcast_video.mp4"),
@@ -1605,6 +1653,7 @@ def main():
             app.add_handler(CommandHandler("test_users", test_users))
             app.add_handler(CommandHandler("send_to_chat", send_to_chat))
             app.add_handler(CommandHandler("test_media", test_media))
+            app.add_handler(CommandHandler("test_broadcast", test_broadcast))
             app.add_handler(CommandHandler("broadcast", broadcast))
             # Broadcast content handler (must come before photo handler)
             app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.VIDEO, handle_broadcast_content))
