@@ -229,16 +229,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "referral_bonus": referral_bonus_granted
     }))
     
-    # No persistent keyboard - only inline buttons
-    
-    inline_keyboard = [
-        [InlineKeyboardButton("🚀 Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
-        [InlineKeyboardButton("👥 Join our community", url="https://t.me/The01Studio")],
-        [InlineKeyboardButton("🆓 Free Plan", callback_data="free_plan")],
-        [InlineKeyboardButton("💎 Paid Plan", callback_data="paid_plan")],
-        [InlineKeyboardButton("🎮 Play Games", callback_data="play_games")],
-        [InlineKeyboardButton("💰 My Credits", callback_data="my_credits")],
-    ]
+    # Clean interface - no persistent keyboard or inline buttons
     
     # Send the start video with welcome message
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
@@ -278,11 +269,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             parse_mode="Markdown"
         )
         
-    # Send inline buttons separately for other options
-    await update.message.reply_text(
-        "Choose your option:",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard),
-    )
+    # No additional inline buttons - clean interface
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /broadcast command (admin only)"""
