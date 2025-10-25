@@ -186,6 +186,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
+async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show user their ID for admin purposes"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username
+    first_name = update.message.from_user.first_name
+    
+    await update.message.reply_text(
+        f"🆔 **Your User Information**\n\n"
+        f"**User ID:** `{user_id}`\n"
+        f"**Username:** @{username or 'None'}\n"
+        f"**Name:** {first_name or 'None'}\n\n"
+        f"Copy your User ID: `{user_id}`"
+    )
+
+
 async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show user their current credits and usage stats"""
     if not _is_authorized(update):
@@ -396,10 +414,13 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     user_id = update.message.from_user.id
     
+    # Debug: Log the user ID
+    logger.info(f"Admin command called by user ID: {user_id}")
+    
     # Only allow specific admin users
     ADMIN_USERS = {800092886}  # Add your admin user ID here
     if user_id not in ADMIN_USERS:
-        await update.message.reply_text("❌ Access denied. Admin only command.")
+        await update.message.reply_text(f"❌ Access denied. Admin only command. Your ID: {user_id}")
         return
     
     # Record admin command
@@ -1795,6 +1816,7 @@ def main():
 
             # Handlers
             app.add_handler(CommandHandler("start", start))
+            app.add_handler(CommandHandler("myid", myid))
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("admin", admin))
             app.add_handler(CommandHandler("analytics", analytics))
