@@ -8,6 +8,7 @@ import { ModelThumbnail } from '@/components/ModelThumbnail';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { AdsBanner } from '@/components/AdsBanner';
 import { FeedTab } from '@/components/tabs/FeedTab';
+import { CelebrationModal } from '@/components/ui/CelebrationModal';
 import { hapticFeedback } from '@/lib/telegram';
 import { cacheUtils } from '@/lib/cache';
 import { Gift } from 'lucide-react';
@@ -42,6 +43,10 @@ export const GameTab: React.FC = () => {
   const [currentFilterData, setCurrentFilterData] = useState<FilterOption[]>([]);
   const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Celebration modal state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [isFirstWin, setIsFirstWin] = useState(false);
 
   // Load gifts data from CDN on mount
   useEffect(() => {
@@ -205,19 +210,23 @@ export const GameTab: React.FC = () => {
           setGameMessage('Correct! Well done!');
           hapticFeedback('notification', 'success', webApp);
           
-          if (result.reward > 0) {
-            toast.success(`You earned ${result.reward} credits!`);
+          // Show celebration modal for first win or regular credit
+          if (result.is_first_win) {
+            setIsFirstWin(true);
+          } else {
+            setIsFirstWin(false);
           }
+          setShowCelebration(true);
           
           // Clear selection
           setSelectedGiftName(null);
           setSelectedModelNumber(null);
           setSelectedModelName(null);
           
-          // Auto-load next random game after 2 seconds
+          // Auto-load next random game after 2.5 seconds (after celebration closes)
           setTimeout(() => {
             loadDailyQuestion();
-          }, 2000);
+          }, 2500);
           
         } else {
           // Wrong answer - handle based on game type
@@ -864,6 +873,13 @@ export const GameTab: React.FC = () => {
           </div>
         </SheetContent>
       </Sheet>
+      
+      {/* Celebration Modal */}
+      <CelebrationModal
+        isOpen={showCelebration}
+        isFirstWin={isFirstWin}
+        onClose={() => setShowCelebration(false)}
+      />
     </div>
   );
 };

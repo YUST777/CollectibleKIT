@@ -59,11 +59,12 @@ export async function POST(request: NextRequest) {
     });
 
     // If answer is correct, record the game win for earning system
+    let isFirstWin = false;
     if (result.correct && userIdNum > 0) {
       try {
         // Check if this is the user's first win ever
         const user = await db.getUser(userIdNum);
-        const isFirstWin = user ? !user.first_win_claimed : false;
+        isFirstWin = user ? !user.first_win_claimed : false;
         
         // Record the game win
         const winRecorded = await db.recordGameWin(userIdNum, isFirstWin);
@@ -92,7 +93,8 @@ export async function POST(request: NextRequest) {
       correct: result.correct,
       is_first_solver: result.is_first_solver,
       reward: result.reward,
-      correct_answer: result.correct_answer
+      correct_answer: result.correct_answer,
+      is_first_win: isFirstWin
     });
 
   } catch (error) {
