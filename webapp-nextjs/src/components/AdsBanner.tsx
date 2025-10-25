@@ -27,6 +27,9 @@ export const AdsBanner: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [lastTouchTime, setLastTouchTime] = useState(0);
+  const [lastTouchX, setLastTouchX] = useState(0);
+  const [velocity, setVelocity] = useState(0);
   const [lottieData, setLottieData] = useState<Record<string, any>>({});
   const [isPremiumDrawerOpen, setIsPremiumDrawerOpen] = useState(false);
   const [isAdPricingDrawerOpen, setIsAdPricingDrawerOpen] = useState(false);
@@ -100,15 +103,19 @@ export const AdsBanner: React.FC = () => {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsDragging(true);
-    setStartX(e.touches[0].pageX - (scrollContainerRef.current?.offsetLeft || 0));
+    const touchX = e.touches[0].pageX - (scrollContainerRef.current?.offsetLeft || 0);
+    setStartX(touchX);
     setScrollLeft(scrollContainerRef.current?.scrollLeft || 0);
+    setLastTouchX(touchX);
+    setLastTouchTime(Date.now());
+    setVelocity(0);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
     e.preventDefault();
     const x = e.pageX - (scrollContainerRef.current?.offsetLeft || 0);
-    const walk = (x - startX) * 2;
+    const walk = (x - startX) * 1.5; // Reduced multiplier for smoother movement
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollLeft = scrollLeft - walk;
     }
@@ -116,8 +123,21 @@ export const AdsBanner: React.FC = () => {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
+    e.preventDefault(); // Prevent default scrolling behavior
     const x = e.touches[0].pageX - (scrollContainerRef.current?.offsetLeft || 0);
-    const walk = (x - startX) * 2;
+    const walk = (x - startX) * 1.2; // Reduced multiplier for smoother touch movement
+    
+    // Calculate velocity for momentum scrolling
+    const currentTime = Date.now();
+    const timeDelta = currentTime - lastTouchTime;
+    if (timeDelta > 0) {
+      const distanceDelta = x - lastTouchX;
+      const currentVelocity = distanceDelta / timeDelta;
+      setVelocity(currentVelocity);
+      setLastTouchX(x);
+      setLastTouchTime(currentTime);
+    }
+    
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollLeft = scrollLeft - walk;
     }
@@ -138,27 +158,55 @@ export const AdsBanner: React.FC = () => {
     const container = scrollContainerRef.current;
     const scrollPosition = container.scrollLeft;
     const itemWidth = container.offsetWidth;
-    const index = Math.round(scrollPosition / itemWidth);
-    setCurrentIndex(index);
-    container.scrollTo({
-      left: index * itemWidth,
-      behavior: 'smooth'
+    
+    // Use velocity to determine if we should go to next/previous slide
+    let targetIndex = Math.round(scrollPosition / itemWidth);
+    
+    // Apply momentum based on velocity
+    if (Math.abs(velocity) > 0.5) {
+      if (velocity > 0 && targetIndex > 0) {
+        targetIndex = Math.max(0, targetIndex - 1);
+      } else if (velocity < 0 && targetIndex < ads.length - 1) {
+        targetIndex = Math.min(ads.length - 1, targetIndex + 1);
+      }
+    }
+    
+    setCurrentIndex(targetIndex);
+    
+    // Use requestAnimationFrame for smoother animation
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        left: targetIndex * itemWidth,
+        behavior: 'smooth'
+      });
     });
   };
 
   useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
+    
     const handleScroll = () => {
       if (!scrollContainerRef.current || isDragging) return;
-      const container = scrollContainerRef.current;
-      const scrollPosition = container.scrollLeft;
-      const itemWidth = container.offsetWidth;
-      const index = Math.round(scrollPosition / itemWidth);
-      setCurrentIndex(index);
+      
+      // Debounce scroll events for better performance
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        
+        const scrollPosition = container.scrollLeft;
+        const itemWidth = container.offsetWidth;
+        const index = Math.round(scrollPosition / itemWidth);
+        setCurrentIndex(index);
+      }, 16); // ~60fps
     };
 
     const container = scrollContainerRef.current;
-    container?.addEventListener('scroll', handleScroll);
-    return () => container?.removeEventListener('scroll', handleScroll);
+    container?.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container?.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
   }, [isDragging]);
 
   // Load Lottie animations
@@ -191,7 +239,7 @@ export const AdsBanner: React.FC = () => {
       {/* Swipeable Container */}
       <div
         ref={scrollContainerRef}
-        className="flex overflow-x-scroll scrollbar-hide snap-x snap-mandatory cursor-grab active:cursor-grabbing"
+        className="flex overflow-x-scroll scrollbar-hide snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x momentum-scroll"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -199,7 +247,12 @@ export const AdsBanner: React.FC = () => {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        style={{ 
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none',
+          scrollBehavior: 'smooth',
+          WebkitOverflowScrolling: 'touch' // iOS momentum scrolling
+        }}
       >
         {ads.map((ad) => (
           <div
