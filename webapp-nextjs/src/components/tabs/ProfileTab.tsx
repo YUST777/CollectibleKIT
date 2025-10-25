@@ -467,52 +467,44 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
   const canConvert = userCredits >= requiredCredits;
 
   return (
-    <div className="space-y-6 px-4">
-      {/* Credit Balance */}
+    <div className="px-4">
+      {/* Unified Earn Section */}
       <div className="tg-card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-text-idle flex items-center gap-2">
-            <CurrencyDollarIcon className="w-5 h-5" />
-            Credit Balance
-          </h3>
-          <span className="text-2xl font-bold text-icon-active">{userCredits}</span>
+        <div className="flex items-center gap-2 mb-6">
+          <CurrencyDollarIcon className="w-6 h-6 text-icon-active" />
+          <h3 className="text-xl font-semibold text-text-idle">Earn & Convert</h3>
         </div>
-        
-        <div className="text-sm text-text-active">
-          {isPremium ? (
-            <span className="text-green-400">Premium: 50 credits = 0.1 TON</span>
-          ) : (
-            <span>Free: 100 credits = 0.1 TON</span>
-          )}
-        </div>
-      </div>
 
-      {/* TON Balance */}
-      <div className="tg-card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-text-idle flex items-center gap-2">
-            <GiftIcon className="w-5 h-5" />
-            TON Balance
-          </h3>
-          <span className="text-2xl font-bold text-yellow-600">{userTonBalance.toFixed(3)} TON</span>
+        {/* Balance Overview */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-box-bg rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <CurrencyDollarIcon className="w-4 h-4 text-icon-active" />
+              <span className="text-sm font-medium text-text-idle">Credits</span>
+            </div>
+            <div className="text-2xl font-bold text-icon-active">{userCredits}</div>
+            <div className="text-xs text-text-active">
+              {isPremium ? 'Premium: 50 = 0.1 TON' : 'Free: 100 = 0.1 TON'}
+            </div>
+          </div>
+          
+          <div className="bg-box-bg rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <GiftIcon className="w-4 h-4 text-yellow-600" />
+              <span className="text-sm font-medium text-text-idle">TON</span>
+            </div>
+            <div className="text-2xl font-bold text-yellow-600">{userTonBalance.toFixed(3)}</div>
+            <div className="text-xs text-text-active">
+              Min: 0.2 TON to withdraw
+            </div>
+          </div>
         </div>
-        
-        <div className="text-sm text-text-active">
-          Available for withdrawal (min: 0.2 TON)
-        </div>
-      </div>
 
-      {/* Convert Credits */}
-      <div className="tg-card">
-        <h3 className="text-lg font-semibold text-text-idle mb-4 flex items-center gap-2">
-          <ArrowPathIcon className="w-5 h-5" />
-          Convert Credits
-        </h3>
-        
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 bg-box-bg rounded-lg">
+        {/* Convert Section */}
+        <div className="bg-box-bg rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
             <div>
-              <div className="font-medium text-text-idle">Convert to TON</div>
+              <div className="font-medium text-text-idle mb-1">Convert Credits to TON</div>
               <div className="text-sm text-text-active">
                 {requiredCredits} credits → 0.1 TON
               </div>
@@ -529,57 +521,45 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
           </div>
           
           {!canConvert && (
-            <div className="text-sm text-text-active text-center">
+            <div className="text-sm text-text-active text-center mt-3 pt-3 border-t border-icon-idle/20">
               Need {requiredCredits - userCredits} more credits to convert
             </div>
           )}
         </div>
-      </div>
 
-      {/* Conversion History */}
-      {conversions.length > 0 && (
-        <div className="tg-card">
-          <h3 className="text-lg font-semibold text-text-idle mb-4 flex items-center gap-2">
-            <ClockIcon className="w-5 h-5" />
-            Recent Conversions
-          </h3>
-          
-          <div className="space-y-2">
-            {conversions.slice(0, 5).map((conversion, index) => (
-              <div key={index} className="flex items-center justify-between p-2 bg-box-bg rounded-lg">
-                <div className="text-sm">
-                  <div className="text-text-idle">
-                    {conversion.credits_spent} credits → {conversion.ton_earned.toFixed(3)} TON
-                  </div>
-                  <div className="text-text-active text-xs">
-                    {new Date(conversion.created_at).toLocaleDateString()}
+        {/* Recent Conversions - Compact */}
+        {conversions.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ClockIcon className="w-4 h-4 text-icon-active" />
+              <span className="text-sm font-medium text-text-idle">Recent Conversions</span>
+            </div>
+            
+            <div className="space-y-2">
+              {conversions.slice(0, 3).map((conversion, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-box-bg rounded text-sm">
+                  <div>
+                    <span className="text-text-idle">
+                      {conversion.credits_spent} credits → {conversion.ton_earned.toFixed(3)} TON
+                    </span>
+                    <span className="text-text-active text-xs ml-2">
+                      {new Date(conversion.created_at).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
-                <div className="text-xs text-icon-active">
-                  {conversion.conversion_rate}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Support Section */}
-      <div className="tg-card">
-        <h3 className="text-lg font-semibold text-text-idle mb-4 flex items-center gap-2">
-          <QuestionMarkCircleIcon className="w-5 h-5" />
-          Support
-        </h3>
-        
-        <div className="space-y-3">
+        {/* Support - Minimal */}
+        <div className="pt-4 border-t border-icon-idle/20">
           <button
             onClick={() => webApp?.openLink('https://t.me/TWETestBot')}
-            className="w-full flex items-center gap-3 p-3 bg-box-bg rounded-lg hover:bg-icon-idle/20 transition-colors"
+            className="flex items-center gap-2 text-sm text-text-active hover:text-icon-active transition-colors"
           >
-            <svg className="w-5 h-5 text-icon-active" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-            </svg>
-            <span className="text-text-idle">Contact Support</span>
+            <QuestionMarkCircleIcon className="w-4 h-4" />
+            Need help? Contact Support
           </button>
         </div>
       </div>
