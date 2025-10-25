@@ -63,7 +63,7 @@ export const LeaderboardTab: React.FC = () => {
           <div 
             className="w-8 h-8"
             dangerouslySetInnerHTML={{
-              __html: `<lottie-player src="/assets/1st Place Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
+              __html: `<lottie-player src="/assets/1st_Place_Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
             }}
           />
         </div>
@@ -74,7 +74,7 @@ export const LeaderboardTab: React.FC = () => {
           <div 
             className="w-8 h-8"
             dangerouslySetInnerHTML={{
-              __html: `<lottie-player src="/assets/2nd Place Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
+              __html: `<lottie-player src="/assets/2nd_Place_Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
             }}
           />
         </div>
@@ -85,7 +85,7 @@ export const LeaderboardTab: React.FC = () => {
           <div 
             className="w-8 h-8"
             dangerouslySetInnerHTML={{
-              __html: `<lottie-player src="/assets/3rd Place Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
+              __html: `<lottie-player src="/assets/3rd_Place_Medal.json" background="transparent" speed="1" style="width: 32px; height: 32px;" loop autoplay></lottie-player>`
             }}
           />
         </div>
