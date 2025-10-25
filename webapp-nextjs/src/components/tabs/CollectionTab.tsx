@@ -1124,9 +1124,9 @@ export const CollectionTab: React.FC = () => {
   }
 
   return (
-    <div className="space-y-2 py-2 animate-fade-in">
+    <div className="space-y-1 py-1 animate-fade-in">
       {/* Header with Profile Picture */}
-      <div className="flex items-center justify-between px-4 mb-2">
+      <div className="flex items-center justify-between px-4 mb-1">
         {/* Profile Picture */}
         <button
           onClick={() => {
@@ -1206,7 +1206,7 @@ export const CollectionTab: React.FC = () => {
 
       {/* Ideas View */}
       {showIdeas ? (
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center justify-center px-4">
             <button
               onClick={loadPublicCollections}
