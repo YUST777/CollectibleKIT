@@ -229,10 +229,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "referral_bonus": referral_bonus_granted
     }))
     
-    # Create keyboard with CollectibleKIT features
-    reply_keyboard = [
-        ["🆓 Free Plan", "💎 Paid Plan", "🎮 Play Games", "💰 My Credits"]
-    ]
+    # No persistent keyboard - only inline buttons
     
     inline_keyboard = [
         [InlineKeyboardButton("🚀 Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
@@ -262,7 +259,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_video(
                 video=video,
                 caption=welcome_message,
-                reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
                 parse_mode="Markdown"
             )
     except FileNotFoundError:
@@ -272,7 +268,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_photo(
                 photo=photo,
                 caption=welcome_message,
-                reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
                 parse_mode="Markdown"
             )
     except Exception as e:
@@ -280,7 +275,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Fallback to text only
         await update.message.reply_text(
             welcome_message,
-            reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
             parse_mode="Markdown"
         )
         

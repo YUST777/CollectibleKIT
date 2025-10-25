@@ -121,10 +121,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "referral_bonus": referral_bonus_granted
     }))
     
-    # Create keyboard with CollectibleKIT features
-    reply_keyboard = [
-        ["🆓 Free Plan", "💎 Paid Plan", "🎮 Play Games", "💰 My Credits"]
-    ]
+    # No persistent keyboard - only inline buttons
     
     inline_keyboard = [
         [InlineKeyboardButton("🚀 Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
@@ -154,7 +151,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_video(
                 video=video,
                 caption=welcome_message,
-                reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
                 parse_mode="Markdown"
             )
     except FileNotFoundError:
@@ -164,7 +160,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_photo(
                 photo=photo,
                 caption=welcome_message,
-                reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
                 parse_mode="Markdown"
             )
     except Exception as e:
@@ -172,7 +167,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Fallback to text only
         await update.message.reply_text(
             welcome_message,
-            reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
             parse_mode="Markdown"
         )
         
@@ -1006,10 +1000,6 @@ def main():
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("analytics", analytics))
             app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
-            app.add_handler(MessageHandler(filters.Regex("^🆓 Free Plan"), _handle_free_plan_text))
-            app.add_handler(MessageHandler(filters.Regex("^💎 Paid Plan"), _handle_paid_plan_text))
-            app.add_handler(MessageHandler(filters.Regex("^🎮 Play Games"), _handle_play_games_text))
-            app.add_handler(MessageHandler(filters.Regex("^💰 My Credits"), _handle_my_credits_text))
             
             # Callback handlers
             app.add_handler(CallbackQueryHandler(_handle_free_plan, pattern="^free_plan$"))
