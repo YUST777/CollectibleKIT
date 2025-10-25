@@ -1,7 +1,7 @@
 """
-Telegram bot for cutting images into 4x3 grid pieces for Telegram stories.
-Each piece is scaled to fill 1080x1336 content area and centered on 1080x1920 canvas.
-Supports watermarking, freemium model, and TON payments.
+CollectibleKIT Telegram Bot
+A comprehensive bot for CollectibleKIT with video start message, referral system, and credit earning games.
+Supports image cutting, watermarking, freemium model, TON payments, and gamification features.
 """
 
 import asyncio
@@ -26,7 +26,7 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     level=logging.DEBUG,
 )
-logger = logging.getLogger("story-puzzle-bot")
+logger = logging.getLogger("collectiblekit-bot")
 
 # Initialize database and payment manager
 db = BotDatabase()
@@ -34,7 +34,7 @@ payment_manager = PaymentManager(db)
 
 # Constants
 FREE_LIMIT = 3
-WATERMARK_TEXT = "@CanvasStoryBot"
+WATERMARK_TEXT = "@CollectibleKITbot"
 RECV_ADDR = "UQCFRqB2vZnGZRh3ZoZAItNidk8zpkN0uRHlhzrnwweU3mos"
 
 # Mini App configuration
@@ -121,9 +121,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "referral_bonus": referral_bonus_granted
     }))
     
-    # Create keyboard with Mini App button and inline buttons
+    # Create keyboard with CollectibleKIT features
     reply_keyboard = [
-        [KeyboardButton("🎨 Mini App (Recommended)", web_app=WebAppInfo(url=MINI_APP_URL))],
         ["🆓 Free Plan", "💎 Paid Plan", "🎮 Play Games", "💰 My Credits"]
     ]
     
@@ -1005,8 +1004,6 @@ def main():
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("analytics", analytics))
             app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
-            # Web app data handler removed - using native shareToStory() method
-            app.add_handler(MessageHandler(filters.Regex("^🎨 Mini App"), start))  # Handle Mini App button press
             app.add_handler(MessageHandler(filters.Regex("^🆓 Free Plan"), _handle_free_plan_text))
             app.add_handler(MessageHandler(filters.Regex("^💎 Paid Plan"), _handle_paid_plan_text))
             app.add_handler(MessageHandler(filters.Regex("^🎮 Play Games"), _handle_play_games_text))
