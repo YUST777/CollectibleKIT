@@ -441,21 +441,26 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Record broadcast command
     db.record_interaction(user_id, "broadcast_command")
     
+    # Create keyboard for broadcast type selection
+    keyboard = [
+        [InlineKeyboardButton("📝 Simple Text", callback_data="broadcast_simple")],
+        [InlineKeyboardButton("🎨 Rich Text (HTML)", callback_data="broadcast_rich")],
+    ]
+    
     # Start broadcast composition
     await update.message.reply_text(
         "📢 **Broadcast Message Composer**\n\n"
-        "Please send your broadcast message. You can send:\n"
-        "• Text only\n"
-        "• Text + Photo\n"
-        "• Text + Video\n\n"
-        "After you send the message, you'll see a preview with options to send or edit.\n\n"
-        "**Send your message now:**",
+        "Choose your broadcast type:\n\n"
+        "**📝 Simple Text**: Plain text messages\n"
+        "**🎨 Rich Text**: HTML formatting with bold, italic, links, and code\n\n"
+        "Select the type of broadcast you want to create:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
     
-    # Set state to waiting for broadcast content
-    context.user_data['broadcast_state'] = 'composing'
-    logger.info(f"Broadcast state set to 'composing' for user {user_id}")
+    # Set state to waiting for broadcast type selection
+    context.user_data['broadcast_state'] = 'selecting_type'
+    logger.info(f"Broadcast state set to 'selecting_type' for user {user_id}")
 
 
 async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -486,14 +491,20 @@ async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT
         'media_type': None
     }
     
+    # Get broadcast type (simple or rich)
+    broadcast_type = context.user_data.get('broadcast_type', 'simple')
+    
     # Extract text content
     if message.text:
         broadcast_content['text'] = message.text
         broadcast_content['media_type'] = 'text_only'
+        broadcast_content['parse_mode'] = 'HTML' if broadcast_type == 'rich' else 'Markdown'
     elif message.caption:
         broadcast_content['text'] = message.caption
+        broadcast_content['parse_mode'] = 'HTML' if broadcast_type == 'rich' else 'Markdown'
     else:
         broadcast_content['text'] = "📢 **Broadcast from CollectibleKIT**"
+        broadcast_content['parse_mode'] = 'Markdown'
     
     # Extract media content
     if message.photo:
@@ -590,6 +601,10 @@ async def handle_broadcast_callback(update: Update, context: ContextTypes.DEFAUL
         await _edit_broadcast(query, context)
     elif data == "broadcast_cancel":
         await _cancel_broadcast(query, context)
+    elif data == "broadcast_simple":
+        await _start_simple_broadcast(query, context)
+    elif data == "broadcast_rich":
+        await _start_rich_broadcast(query, context)
 
 
 async def _execute_broadcast(query, context, target_type):
@@ -696,7 +711,7 @@ async def _execute_broadcast(query, context, target_type):
                             chat_id=user['user_id'],
                             photo=InputFile(png_buffer, filename="broadcast_photo.png"),
                             caption=broadcast_content['text'],
-                            parse_mode="Markdown"
+                            parse_mode=broadcast_content.get('parse_mode', 'Markdown')
                         )
                         logger.info(f"Photo sent successfully to {user['user_id']} using download and PNG conversion")
                         
@@ -708,7 +723,7 @@ async def _execute_broadcast(query, context, target_type):
                                 chat_id=user['user_id'],
                                 photo=broadcast_content['photo'],
                                 caption=broadcast_content['text'],
-                                parse_mode="Markdown"
+                                parse_mode=broadcast_content.get('parse_mode', 'Markdown')
                             )
                             logger.info(f"Photo sent successfully to {user['user_id']} using fallback file_id method")
                         except Exception as fallback_error:
@@ -741,7 +756,7 @@ async def _execute_broadcast(query, context, target_type):
                             chat_id=user['user_id'],
                             video=InputFile(BytesIO(file_data), filename="broadcast_video.mp4"),
                             caption=broadcast_content['text'],
-                            parse_mode="Markdown"
+                            parse_mode=broadcast_content.get('parse_mode', 'Markdown')
                         )
                         logger.info(f"Video sent successfully to {user['user_id']} using download method")
                         
@@ -753,7 +768,7 @@ async def _execute_broadcast(query, context, target_type):
                                 chat_id=user['user_id'],
                                 video=broadcast_content['video'],
                                 caption=broadcast_content['text'],
-                                parse_mode="Markdown"
+                                parse_mode=broadcast_content.get('parse_mode', 'Markdown')
                             )
                             logger.info(f"Video sent successfully to {user['user_id']} using fallback file_id method")
                         except Exception as fallback_error:
@@ -768,7 +783,7 @@ async def _execute_broadcast(query, context, target_type):
                 await context.bot.send_message(
                     chat_id=user['user_id'],
                     text=broadcast_content['text'],
-                    parse_mode="Markdown"
+                    parse_mode=broadcast_content.get('parse_mode', 'Markdown')
                 )
             sent_count += 1
             logger.info(f"Successfully sent to user {user['user_id']}")
@@ -909,6 +924,52 @@ async def _cancel_broadcast(query, context):
     
     context.user_data.pop('broadcast_content', None)
     context.user_data.pop('broadcast_state', None)
+
+
+async def _start_simple_broadcast(query, context):
+    """Start simple text broadcast composition"""
+    await query.edit_message_text(
+        "📝 **Simple Text Broadcast**\n\n"
+        "Please send your broadcast message. You can send:\n"
+        "• Text only\n"
+        "• Text + Photo\n"
+        "• Text + Video\n\n"
+        "After you send the message, you'll see a preview with options to send or edit.\n\n"
+        "**Send your message now:**",
+        parse_mode="Markdown"
+    )
+    
+    # Set state to waiting for broadcast content
+    context.user_data['broadcast_state'] = 'composing'
+    context.user_data['broadcast_type'] = 'simple'
+    await query.answer("Simple text broadcast selected!")
+
+
+async def _start_rich_broadcast(query, context):
+    """Start rich text broadcast composition"""
+    await query.edit_message_text(
+        "🎨 **Rich Text Broadcast (HTML)**\n\n"
+        "You can use HTML formatting in your message:\n\n"
+        "**Available HTML tags:**\n"
+        "• `<b>Bold text</b>` - **Bold text**\n"
+        "• `<i>Italic text</i>` - *Italic text*\n"
+        "• `<code>Code text</code>` - `Code text`\n"
+        "• `<a href=\"https://example.com\">Link text</a>` - [Link text](https://example.com)\n\n"
+        "**Example:**\n"
+        "```\n"
+        "<b>New Product Launch!</b>\n\n"
+        "<i>Introducing our latest innovation</i>\n\n"
+        "Learn more: <a href=\"https://example.com\">Visit our website</a>\n\n"
+        "<code>Use code: NEW2024</code>\n"
+        "```\n\n"
+        "**Send your HTML formatted message now:**",
+        parse_mode="Markdown"
+    )
+    
+    # Set state to waiting for broadcast content
+    context.user_data['broadcast_state'] = 'composing'
+    context.user_data['broadcast_type'] = 'rich'
+    await query.answer("Rich text broadcast selected!")
 
 
 async def _handle_free_plan(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
