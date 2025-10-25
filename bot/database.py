@@ -162,6 +162,19 @@ class BotDatabase:
                 )
             """)
             
+            # Broadcasts table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS broadcasts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    message_text TEXT NOT NULL,
+                    total_sent INTEGER DEFAULT 0,
+                    total_failed INTEGER DEFAULT 0,
+                    created_at REAL NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id)
+                )
+            """)
+            
             # Index for performance
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_feed_events_created_at 
@@ -633,3 +646,49 @@ class BotDatabase:
         except Exception as e:
             logger.error(f"Error getting feed events: {e}")
             return []
+    
+    def get_all_users(self) -> list:
+        """Get all users for broadcasting"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute("""
+                    SELECT user_id, username, first_name, last_activity 
+                    FROM users 
+                    ORDER BY last_activity DESC
+                """)
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            logger.error(f"Error getting all users: {e}")
+            return []
+    
+    def get_active_users(self, days: int = 30) -> list:
+        """Get active users from the last N days"""
+        try:
+            cutoff_time = time.time() - (days * 24 * 60 * 60)
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute("""
+                    SELECT user_id, username, first_name, last_activity 
+                    FROM users 
+                    WHERE last_activity > ?
+                    ORDER BY last_activity DESC
+                """, (cutoff_time,))
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            logger.error(f"Error getting active users: {e}")
+            return []
+    
+    def record_broadcast(self, user_id: int, message_text: str, total_sent: int, total_failed: int) -> int:
+        """Record a broadcast message"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute("""
+                    INSERT INTO broadcasts (user_id, message_text, total_sent, total_failed, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (user_id, message_text, total_sent, total_failed, time.time()))
+                conn.commit()
+                return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"Error recording broadcast: {e}")
+            return None

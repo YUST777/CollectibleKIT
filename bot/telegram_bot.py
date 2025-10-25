@@ -255,6 +255,185 @@ async def analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("❌ Error generating analytics report.")
 
 
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send broadcast message to all users (admin only)"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow specific admin users to broadcast
+    ADMIN_USERS = {800092886}  # Add your admin user ID here
+    if user_id not in ADMIN_USERS:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    # Check if message is provided
+    if not context.args:
+        await update.message.reply_text(
+            "📢 **Broadcast System**\n\n"
+            "Usage: `/broadcast <message>`\n"
+            "Example: `/broadcast Hello everyone! New features are coming soon!`\n\n"
+            "Options:\n"
+            "• `/broadcast all <message>` - Send to all users\n"
+            "• `/broadcast active <message>` - Send to active users (last 30 days)\n"
+            "• `/broadcast <message>` - Send to all users (default)",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Record broadcast command
+    db.record_interaction(user_id, "broadcast_command")
+    
+    # Determine broadcast type and get users
+    broadcast_type = context.args[0].lower() if context.args else "all"
+    
+    if broadcast_type in ["all", "active"]:
+        message_text = " ".join(context.args[1:]) if len(context.args) > 1 else " ".join(context.args)
+        if broadcast_type == "active":
+            users = db.get_active_users(30)
+            target_description = "active users (last 30 days)"
+        else:
+            users = db.get_all_users()
+            target_description = "all users"
+    else:
+        # Default to all users
+        message_text = " ".join(context.args)
+        users = db.get_all_users()
+        target_description = "all users"
+    
+    if not message_text.strip():
+        await update.message.reply_text("❌ Please provide a message to broadcast.")
+        return
+    
+    if not users:
+        await update.message.reply_text("❌ No users found to broadcast to.")
+        return
+    
+    # Send confirmation message
+    confirmation_message = f"""
+📢 **Broadcast Confirmation**
+
+**Target:** {target_description}
+**Users:** {len(users)} users
+**Message:** {message_text[:100]}{'...' if len(message_text) > 100 else ''}
+
+⚠️ **This will send the message to {len(users)} users. Are you sure?**
+
+Reply with `CONFIRM` to proceed or `CANCEL` to abort.
+"""
+    
+    await update.message.reply_text(confirmation_message, parse_mode="Markdown")
+    
+    # Store broadcast data in context for confirmation
+    context.user_data['pending_broadcast'] = {
+        'message': message_text,
+        'users': users,
+        'target_description': target_description
+    }
+
+
+async def handle_broadcast_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle broadcast confirmation"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow specific admin users
+    ADMIN_USERS = {800092886}
+    if user_id not in ADMIN_USERS:
+        return
+    
+    # Check if there's a pending broadcast
+    if 'pending_broadcast' not in context.user_data:
+        return
+    
+    user_response = update.message.text.strip().upper()
+    
+    if user_response == "CANCEL":
+        await update.message.reply_text("❌ Broadcast cancelled.")
+        context.user_data.pop('pending_broadcast', None)
+        return
+    
+    if user_response != "CONFIRM":
+        await update.message.reply_text("❌ Invalid response. Please reply with `CONFIRM` or `CANCEL`.")
+        return
+    
+    # Get broadcast data
+    broadcast_data = context.user_data['pending_broadcast']
+    message_text = broadcast_data['message']
+    users = broadcast_data['users']
+    target_description = broadcast_data['target_description']
+    
+    # Clear pending broadcast
+    context.user_data.pop('pending_broadcast', None)
+    
+    # Start broadcasting
+    await update.message.reply_text(f"🚀 Starting broadcast to {len(users)} users...")
+    
+    sent_count = 0
+    failed_count = 0
+    failed_users = []
+    
+    # Send messages with rate limiting
+    for i, user in enumerate(users):
+        try:
+            # Rate limiting: wait 0.1 seconds between messages
+            if i > 0:
+                await asyncio.sleep(0.1)
+            
+            # Send message
+            await context.bot.send_message(
+                chat_id=user['user_id'],
+                text=f"📢 **Broadcast from CollectibleKIT**\n\n{message_text}",
+                parse_mode="Markdown"
+            )
+            sent_count += 1
+            
+            # Update progress every 50 messages
+            if (i + 1) % 50 == 0:
+                await update.message.reply_text(f"📤 Progress: {i + 1}/{len(users)} messages sent...")
+                
+        except Exception as e:
+            failed_count += 1
+            failed_users.append({
+                'user_id': user['user_id'],
+                'username': user.get('username', 'Unknown'),
+                'error': str(e)
+            })
+            logger.error(f"Failed to send broadcast to user {user['user_id']}: {e}")
+    
+    # Record broadcast in database
+    db.record_broadcast(user_id, message_text, sent_count, failed_count)
+    
+    # Send completion report
+    completion_message = f"""
+✅ **Broadcast Completed**
+
+📊 **Statistics:**
+• Total users: {len(users)}
+• Successfully sent: {sent_count}
+• Failed: {failed_count}
+• Success rate: {(sent_count / len(users) * 100):.1f}%
+
+📝 **Message sent:**
+{message_text[:200]}{'...' if len(message_text) > 200 else ''}
+"""
+    
+    if failed_users:
+        completion_message += f"\n❌ **Failed users ({len(failed_users)}):**\n"
+        for failed in failed_users[:10]:  # Show first 10 failures
+            completion_message += f"• {failed['username']} (ID: {failed['user_id']})\n"
+        if len(failed_users) > 10:
+            completion_message += f"... and {len(failed_users) - 10} more"
+    
+    await update.message.reply_text(completion_message, parse_mode="Markdown")
+    
+    # Log broadcast completion
+    logger.info(f"Broadcast completed: {sent_count} sent, {failed_count} failed")
+
+
 async def _handle_free_plan(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not _is_authorized(update):
         return
@@ -991,7 +1170,9 @@ def main():
             app.add_handler(CommandHandler("start", start))
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("analytics", analytics))
+            app.add_handler(CommandHandler("broadcast", broadcast))
             app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
+            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast_confirmation))
             
             # Callback handlers
             app.add_handler(CallbackQueryHandler(_handle_free_plan, pattern="^free_plan$"))
