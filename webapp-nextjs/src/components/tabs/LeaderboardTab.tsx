@@ -148,7 +148,7 @@ export const LeaderboardTab: React.FC = () => {
                 getMedalIcon(index + 1)
               ) : (
                 <div className="text-sm font-semibold text-yellow-400">
-                  {index + 1}
+                  #{index + 1}
                 </div>
               )}
             </div>
