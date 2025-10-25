@@ -169,7 +169,7 @@
   /* Ensure grid layout works properly */
   .gift-grid {
     display: grid !important;
-    gap: 6px;
+    gap: 12px;
   }
 
   /* Responsive gift slot sizing for larger grids */
