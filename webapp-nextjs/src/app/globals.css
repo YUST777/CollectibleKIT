@@ -169,7 +169,7 @@
   /* Ensure grid layout works properly */
   .gift-grid {
     display: grid !important;
-    gap: 6px;
+    gap: 2px;
   }
 
   /* Responsive gift slot sizing for larger grids */
@@ -177,6 +177,11 @@
     .gift-slot {
       min-height: 70px;
       max-height: 90px;
+    }
+    
+    /* Ultra-tight spacing on mobile to mimic Telegram profile gifts */
+    .gift-grid {
+      gap: 1px !important;
     }
   }
 
