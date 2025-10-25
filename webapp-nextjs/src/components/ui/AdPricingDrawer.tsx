@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
-import { X, Users, Zap, Star, MessageCircle, TrendingUp, Eye, Heart } from 'lucide-react';
+import { Users, Zap, Star, MessageCircle, TrendingUp, Eye, Heart } from 'lucide-react';
 
 interface AdPricingDrawerProps {
   isOpen: boolean;
@@ -115,17 +115,9 @@ export const AdPricingDrawer: React.FC<AdPricingDrawerProps> = ({ isOpen, onClos
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="h-[90vh] rounded-t-2xl">
         <SheetHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-xl font-bold text-text-idle">
-              Ad Placement Pricing
-            </SheetTitle>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-box-bg rounded-full transition-colors"
-            >
-              <X className="w-5 h-5 text-text-idle" />
-            </button>
-          </div>
+          <SheetTitle className="text-xl font-bold text-text-idle">
+            Ad Placement Pricing
+          </SheetTitle>
         </SheetHeader>
 
         <div className="space-y-6 overflow-y-auto">
