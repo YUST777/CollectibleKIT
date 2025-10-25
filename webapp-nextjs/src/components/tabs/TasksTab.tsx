@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useUser, useAppActions, useAppStore } from '@/store/useAppStore';
 import { useTelegram } from '@/components/providers/TelegramProvider';
@@ -35,18 +35,14 @@ export const TasksContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [taskStates, setTaskStates] = useState<Map<string, 'idle' | 'navigated' | 'checking' | 'completing'>>(new Map());
 
-  useEffect(() => {
-    if (user?.user_id) {
-      loadTasks();
-    }
-  }, [user?.user_id]);
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
+    console.log('loadTasks called');
     try {
       setLoading(true);
       const response = await fetch('/api/tasks');
       if (response.ok) {
         const data = await response.json();
+        console.log('Tasks loaded:', data.tasks?.length);
         setTasks(data.tasks || []);
       } else {
         console.error('Failed to load tasks');
@@ -58,7 +54,14 @@ export const TasksContent: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    console.log('TasksContent useEffect triggered, user:', user?.user_id);
+    if (user?.user_id) {
+      loadTasks();
+    }
+  }, [user?.user_id, loadTasks]);
 
   const handleTaskAction = async (task: Task) => {
     const taskState = taskStates.get(task.task_id) || 'idle';
