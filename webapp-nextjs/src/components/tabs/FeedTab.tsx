@@ -83,7 +83,7 @@ const FeedItem: React.FC<{ event: FeedEvent }> = ({ event }) => {
 
   return (
     <div className="flex items-center gap-2 p-2.5 bg-box-bg rounded-lg hover:bg-box-bg/80 transition-colors">
-      {/* User Avatar - Smaller */}
+      {/* User Avatar */}
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
         {firstLetter}
       </div>
@@ -91,7 +91,7 @@ const FeedItem: React.FC<{ event: FeedEvent }> = ({ event }) => {
       {/* Event Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-medium text-text-idle">
+          <span className="text-xs font-medium text-text-idle truncate">
             {userName}
           </span>
           <span className="text-xs text-text-active">
@@ -207,10 +207,10 @@ export const FeedTab: React.FC = () => {
               <p className="text-sm text-text-active">No activity yet</p>
               <p className="text-xs text-text-active mt-2">Be the first to earn credits and win rewards!</p>
             </div>
-          ) : (
-            <div className="space-y-2 px-2 pb-4">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
+                      ) : (
+             <div className="space-y-2 px-2 pb-4">
+               {/* Header */}
+               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-text-idle">Activity Feed</h3>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
