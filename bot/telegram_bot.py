@@ -135,11 +135,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if referral_bonus_granted:
         welcome_message += "\n\n**Referral Bonus!** You received 50 credits for joining through a referral!"
     
+    # Add the two inline buttons
+    inline_keyboard = [
+        [InlineKeyboardButton("Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
+        [InlineKeyboardButton("Join our community", url="https://t.me/The01Studio")],
+    ]
+    
     try:
         with open(start_video_path, "rb") as video:
             await update.message.reply_video(
                 video=video,
                 caption=welcome_message,
+                reply_markup=InlineKeyboardMarkup(inline_keyboard),
                 parse_mode="Markdown"
             )
     except FileNotFoundError:
@@ -149,6 +156,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_photo(
                 photo=photo,
                 caption=welcome_message,
+                reply_markup=InlineKeyboardMarkup(inline_keyboard),
                 parse_mode="Markdown"
             )
     except Exception as e:
@@ -156,19 +164,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Fallback to text only
         await update.message.reply_text(
             welcome_message,
+            reply_markup=InlineKeyboardMarkup(inline_keyboard),
             parse_mode="Markdown"
         )
-        
-    # Add the two inline buttons
-    inline_keyboard = [
-        [InlineKeyboardButton("Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
-        [InlineKeyboardButton("Join our community", url="https://t.me/The01Studio")],
-    ]
-    
-    await update.message.reply_text(
-        "Choose your option:",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard),
-    )
 
 
 async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
