@@ -655,6 +655,7 @@ class BotDatabase:
                 cursor = conn.execute("""
                     SELECT user_id, username, first_name, last_activity 
                     FROM users 
+                    WHERE user_id > 0
                     ORDER BY last_activity DESC
                 """)
                 return [dict(row) for row in cursor.fetchall()]
@@ -671,7 +672,7 @@ class BotDatabase:
                 cursor = conn.execute("""
                     SELECT user_id, username, first_name, last_activity 
                     FROM users 
-                    WHERE last_activity > ?
+                    WHERE user_id > 0 AND last_activity > ?
                     ORDER BY last_activity DESC
                 """, (cutoff_time,))
                 return [dict(row) for row in cursor.fetchall()]

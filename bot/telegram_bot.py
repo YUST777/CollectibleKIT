@@ -236,6 +236,52 @@ async def test_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.message.reply_text(message)
 
 
+async def send_to_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send message to specific chat ID (admin only)"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow specific admin users
+    ADMIN_USERS = {800092886}
+    if user_id not in ADMIN_USERS:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    if not context.args:
+        await update.message.reply_text(
+            "💬 **Send to Chat**\n\n"
+            "Usage: `/send_to_chat <chat_id> <message>`\n"
+            "Example: `/send_to_chat -1001234567890 Hello everyone!`\n\n"
+            "To get chat ID, add the bot to the chat and use /start",
+            parse_mode="Markdown"
+        )
+        return
+    
+    try:
+        chat_id = int(context.args[0])
+        message_text = " ".join(context.args[1:])
+        
+        if not message_text:
+            await update.message.reply_text("❌ Please provide a message to send.")
+            return
+        
+        # Send message to specified chat
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=message_text,
+            parse_mode="Markdown"
+        )
+        
+        await update.message.reply_text(f"✅ Message sent to chat {chat_id}")
+        
+    except ValueError:
+        await update.message.reply_text("❌ Invalid chat ID. Please provide a valid number.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error sending message: {str(e)}")
+
+
 async def analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show comprehensive bot analytics (admin only)"""
     if not _is_authorized(update):
@@ -393,6 +439,7 @@ async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT
     keyboard = [
         [InlineKeyboardButton("📤 Send to All Users", callback_data="broadcast_send_all")],
         [InlineKeyboardButton("👥 Send to Active Users", callback_data="broadcast_send_active")],
+        [InlineKeyboardButton("💬 Send to This Chat", callback_data="broadcast_send_chat")],
         [InlineKeyboardButton("✏️ Edit Message", callback_data="broadcast_edit")],
         [InlineKeyboardButton("❌ Cancel", callback_data="broadcast_cancel")]
     ]
@@ -440,6 +487,8 @@ async def handle_broadcast_callback(update: Update, context: ContextTypes.DEFAUL
         await _execute_broadcast(query, context, "all")
     elif data == "broadcast_send_active":
         await _execute_broadcast(query, context, "active")
+    elif data == "broadcast_send_chat":
+        await _execute_broadcast(query, context, "chat")
     elif data == "broadcast_edit":
         await _edit_broadcast(query, context)
     elif data == "broadcast_cancel":
@@ -459,6 +508,11 @@ async def _execute_broadcast(query, context, target_type):
     if target_type == "active":
         users = db.get_active_users(30)
         target_description = "active users (last 30 days)"
+    elif target_type == "chat":
+        # Send to current chat only
+        chat_id = query.message.chat_id
+        users = [{"user_id": chat_id, "username": "chat", "first_name": "Chat"}]
+        target_description = "current chat"
     else:
         users = db.get_all_users()
         target_description = "all users"
@@ -1326,6 +1380,7 @@ def main():
             app.add_handler(CommandHandler("credit", credit))
             app.add_handler(CommandHandler("analytics", analytics))
             app.add_handler(CommandHandler("test_users", test_users))
+            app.add_handler(CommandHandler("send_to_chat", send_to_chat))
             app.add_handler(CommandHandler("broadcast", broadcast))
             # Broadcast content handler (must come before photo handler)
             app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.VIDEO, handle_broadcast_content))
