@@ -1124,9 +1124,9 @@ export const CollectionTab: React.FC = () => {
   }
 
   return (
-    <div className="space-y-1 py-1 animate-fade-in">
+    <div className="collection-container space-y-1 py-1 animate-fade-in">
       {/* Header with Profile Picture */}
-      <div className="flex items-center justify-between px-4 mb-1">
+      <div className="flex items-center justify-between px-2 mb-1">
         {/* Profile Picture */}
         <button
           onClick={() => {
@@ -1169,7 +1169,7 @@ export const CollectionTab: React.FC = () => {
       <AdsBanner />
 
       {/* Tertiary Navigation */}
-      <div className="flex justify-start px-4">
+      <div className="flex justify-start px-2">
         <div className="flex space-x-8">
           <button
             onClick={() => {
@@ -1302,7 +1302,7 @@ export const CollectionTab: React.FC = () => {
       </div>
 
       {/* Combined Control Block - Compact & Minimalistic */}
-      <div className="flex items-center justify-center px-4">
+      <div className="flex items-center justify-center px-2">
         <div className="flex items-center gap-2 bg-gray-800/50 rounded-xl px-4 py-2.5 border border-gray-700/50 backdrop-blur-sm">
           {/* Grid Size Selector */}
           <div className="flex items-center gap-2">

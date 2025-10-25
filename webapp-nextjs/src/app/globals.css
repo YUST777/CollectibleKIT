@@ -176,13 +176,34 @@
   /* Responsive gift slot sizing for larger grids */
   @media (max-width: 768px) {
     .gift-slot {
-      min-height: 70px;
-      max-height: 90px;
+      min-height: 60px;
+      max-height: 80px;
     }
     
     /* Ultra-tight spacing on mobile to mimic Telegram profile gifts */
     .gift-grid {
       gap: 0px !important;
+      padding: 0 4px !important;
+    }
+  }
+  
+  /* Extra tight for very small screens */
+  @media (max-width: 480px) {
+    .gift-slot {
+      min-height: 50px;
+      max-height: 70px;
+    }
+    
+    .gift-grid {
+      gap: 0px !important;
+      padding: 0 2px !important;
+    }
+  }
+  
+  /* Mobile-specific container spacing */
+  @media (max-width: 768px) {
+    .collection-container {
+      padding: 0 4px !important;
     }
   }
 
