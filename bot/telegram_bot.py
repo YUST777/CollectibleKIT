@@ -451,14 +451,17 @@ async def handle_broadcast_content(update: Update, context: ContextTypes.DEFAULT
         broadcast_content['photo'] = message.photo[-1].file_id  # Store file ID instead of object
         broadcast_content['media_type'] = 'photo'
         logger.info(f"Stored photo file_id: {broadcast_content['photo']}")
+        logger.info(f"Photo file_id type: {type(broadcast_content['photo'])}")
     elif message.video:
         broadcast_content['video'] = message.video.file_id  # Store file ID instead of object
         broadcast_content['media_type'] = 'video'
         logger.info(f"Stored video file_id: {broadcast_content['video']}")
+        logger.info(f"Video file_id type: {type(broadcast_content['video'])}")
     elif message.document and message.document.mime_type.startswith('video/'):
         broadcast_content['video'] = message.document.file_id  # Store file ID instead of object
         broadcast_content['media_type'] = 'video'
         logger.info(f"Stored document video file_id: {broadcast_content['video']}")
+        logger.info(f"Document video file_id type: {type(broadcast_content['video'])}")
     
     # Store broadcast content
     context.user_data['broadcast_content'] = broadcast_content
@@ -549,6 +552,9 @@ async def _execute_broadcast(query, context, target_type):
     
     logger.info(f"Executing broadcast for target_type: {target_type}")
     logger.info(f"Broadcast content: {broadcast_content}")
+    logger.info(f"Media type: {broadcast_content.get('media_type')}")
+    logger.info(f"Photo file_id: {broadcast_content.get('photo')}")
+    logger.info(f"Video file_id: {broadcast_content.get('video')}")
     
     # Get users based on target type
     if target_type == "active":
@@ -596,26 +602,84 @@ async def _execute_broadcast(query, context, target_type):
             if broadcast_content['media_type'] == 'photo':
                 logger.info(f"Sending photo to user {user['user_id']}, file_id: {broadcast_content['photo']}")
                 try:
-                    await context.bot.send_photo(
-                        chat_id=user['user_id'],
-                        photo=broadcast_content['photo'],  # file_id
-                        caption=broadcast_content['text'],
-                        parse_mode="Markdown"
-                    )
-                    logger.info(f"Photo sent successfully to {user['user_id']}")
+                    # Ensure we have a valid file_id
+                    if not broadcast_content['photo']:
+                        logger.error(f"No photo file_id found for user {user['user_id']}")
+                        raise ValueError("No photo file_id available")
+                    
+                    # Try sending with file_id first
+                    try:
+                        await context.bot.send_photo(
+                            chat_id=user['user_id'],
+                            photo=broadcast_content['photo'],  # file_id
+                            caption=broadcast_content['text'],
+                            parse_mode="Markdown"
+                        )
+                        logger.info(f"Photo sent successfully to {user['user_id']} using file_id")
+                    except Exception as file_id_error:
+                        logger.warning(f"File_id method failed for user {user['user_id']}: {file_id_error}")
+                        # If file_id fails, try downloading and re-uploading
+                        logger.info(f"Attempting to download and re-upload photo for user {user['user_id']}")
+                        try:
+                            # Get the file object
+                            file = await context.bot.get_file(broadcast_content['photo'])
+                            # Download the file
+                            file_data = await file.download_as_bytearray()
+                            # Send as InputFile
+                            from telegram import InputFile
+                            await context.bot.send_photo(
+                                chat_id=user['user_id'],
+                                photo=InputFile(BytesIO(file_data), filename="broadcast_photo.jpg"),
+                                caption=broadcast_content['text'],
+                                parse_mode="Markdown"
+                            )
+                            logger.info(f"Photo sent successfully to {user['user_id']} using download method")
+                        except Exception as download_error:
+                            logger.error(f"Download method also failed for user {user['user_id']}: {download_error}")
+                            raise file_id_error  # Raise the original error
+                            
                 except Exception as e:
                     logger.error(f"Failed to send photo to {user['user_id']}: {e}")
                     raise
             elif broadcast_content['media_type'] == 'video':
                 logger.info(f"Sending video to user {user['user_id']}, file_id: {broadcast_content['video']}")
                 try:
-                    await context.bot.send_video(
-                        chat_id=user['user_id'],
-                        video=broadcast_content['video'],  # file_id
-                        caption=broadcast_content['text'],
-                        parse_mode="Markdown"
-                    )
-                    logger.info(f"Video sent successfully to {user['user_id']}")
+                    # Ensure we have a valid file_id
+                    if not broadcast_content['video']:
+                        logger.error(f"No video file_id found for user {user['user_id']}")
+                        raise ValueError("No video file_id available")
+                    
+                    # Try sending with file_id first
+                    try:
+                        await context.bot.send_video(
+                            chat_id=user['user_id'],
+                            video=broadcast_content['video'],  # file_id
+                            caption=broadcast_content['text'],
+                            parse_mode="Markdown"
+                        )
+                        logger.info(f"Video sent successfully to {user['user_id']} using file_id")
+                    except Exception as file_id_error:
+                        logger.warning(f"File_id method failed for user {user['user_id']}: {file_id_error}")
+                        # If file_id fails, try downloading and re-uploading
+                        logger.info(f"Attempting to download and re-upload video for user {user['user_id']}")
+                        try:
+                            # Get the file object
+                            file = await context.bot.get_file(broadcast_content['video'])
+                            # Download the file
+                            file_data = await file.download_as_bytearray()
+                            # Send as InputFile
+                            from telegram import InputFile
+                            await context.bot.send_video(
+                                chat_id=user['user_id'],
+                                video=InputFile(BytesIO(file_data), filename="broadcast_video.mp4"),
+                                caption=broadcast_content['text'],
+                                parse_mode="Markdown"
+                            )
+                            logger.info(f"Video sent successfully to {user['user_id']} using download method")
+                        except Exception as download_error:
+                            logger.error(f"Download method also failed for user {user['user_id']}: {download_error}")
+                            raise file_id_error  # Raise the original error
+                            
                 except Exception as e:
                     logger.error(f"Failed to send video to {user['user_id']}: {e}")
                     raise
