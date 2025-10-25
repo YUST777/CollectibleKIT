@@ -137,7 +137,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     # Add the two inline buttons
     inline_keyboard = [
-        [InlineKeyboardButton("Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
+        [InlineKeyboardButton("Start", web_app=WebAppInfo(url="https://t.me/CollectibleKITbot/CollectableKIT"))],
         [InlineKeyboardButton("Join our community", url="https://t.me/The01Studio")],
     ]
     
