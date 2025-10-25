@@ -467,148 +467,101 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
   const canConvert = userCredits >= requiredCredits;
 
   return (
-    <div className="px-4 py-6 space-y-6">
-      {/* Header Section */}
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-text-idle mb-2">Earn & Convert</h2>
-        <p className="text-text-active">Manage your credits and TON balance</p>
-      </div>
-
-      {/* Balance Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {/* Credit Balance Card */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-box-bg to-box-bg/80 rounded-2xl p-6 border border-icon-idle/20 hover:border-icon-active/30 transition-all duration-300">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-icon-active/10 rounded-full -translate-y-10 translate-x-10"></div>
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-icon-active/20 rounded-xl flex items-center justify-center">
-                  <CurrencyDollarIcon className="w-5 h-5 text-icon-active" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-text-idle">Credits</h3>
-                  <p className="text-xs text-text-active">Available balance</p>
-                </div>
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-icon-active mb-2">{userCredits}</div>
-            <div className="text-xs text-text-active">
-              {isPremium ? (
-                <span className="text-green-400">Premium: 50 credits = 0.1 TON</span>
-              ) : (
-                <span>Free: 100 credits = 0.1 TON</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* TON Balance Card */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-box-bg to-box-bg/80 rounded-2xl p-6 border border-icon-idle/20 hover:border-icon-active/30 transition-all duration-300">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/10 rounded-full -translate-y-10 translate-x-10"></div>
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center">
-                  <GiftIcon className="w-5 h-5 text-yellow-500" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-text-idle">TON Balance</h3>
-                  <p className="text-xs text-text-active">Withdrawable amount</p>
+    <div className="space-y-6 px-4">
+      {/* Combined Balance & Convert Card */}
+      <div className="tg-card">
+        <h3 className="text-lg font-semibold text-text-idle mb-6 flex items-center gap-2">
+          <CurrencyDollarIcon className="w-5 h-5" />
+          Earn & Convert
+        </h3>
+        
+        <div className="space-y-6">
+          {/* Credit Balance Section */}
+          <div className="flex items-center justify-between p-4 bg-box-bg rounded-lg">
+            <div className="flex items-center gap-3">
+              <CurrencyDollarIcon className="w-6 h-6 text-icon-active" />
+              <div>
+                <div className="font-medium text-text-idle">Credit Balance</div>
+                <div className="text-sm text-text-active">
+                  {isPremium ? (
+                    <span className="text-green-400">Premium: 50 credits = 0.1 TON</span>
+                  ) : (
+                    <span>Free: 100 credits = 0.1 TON</span>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="text-3xl font-bold text-yellow-500 mb-2">{userTonBalance.toFixed(3)}</div>
-            <div className="text-xs text-text-active">
-              Min withdrawal: 0.2 TON
-            </div>
+            <span className="text-2xl font-bold text-icon-active">{userCredits}</span>
           </div>
-        </div>
-      </div>
 
-      {/* Conversion Section */}
-      <div className="bg-gradient-to-br from-box-bg to-box-bg/80 rounded-2xl p-6 border border-icon-idle/20">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-icon-active/20 to-icon-active/10 rounded-xl flex items-center justify-center">
-            <ArrowPathIcon className="w-5 h-5 text-icon-active" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-text-idle">Convert Credits</h3>
-            <p className="text-sm text-text-active">Transform your credits into TON</p>
-          </div>
-        </div>
-
-        {/* Progress Indicator */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-idle">Progress to conversion</span>
-            <span className="text-sm text-icon-active">{userCredits}/{requiredCredits}</span>
-          </div>
-          <div className="w-full bg-icon-idle/20 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-icon-active to-icon-active/80 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${Math.min((userCredits / requiredCredits) * 100, 100)}%` }}
-            ></div>
-          </div>
-          {!canConvert && (
-            <p className="text-xs text-text-active mt-2 text-center">
-              Need {requiredCredits - userCredits} more credits to convert
-            </p>
-          )}
-        </div>
-
-        {/* Conversion Action */}
-        <div className="bg-box-bg/50 rounded-xl p-4 border border-icon-idle/10">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-sm font-medium text-text-idle mb-1">Convert to TON</div>
-              <div className="text-xs text-text-active">
-                {requiredCredits} credits → 0.1 TON
+          {/* TON Balance Section */}
+          <div className="flex items-center justify-between p-4 bg-box-bg rounded-lg">
+            <div className="flex items-center gap-3">
+              <GiftIcon className="w-6 h-6 text-yellow-600" />
+              <div>
+                <div className="font-medium text-text-idle">TON Balance</div>
+                <div className="text-sm text-text-active">
+                  Available for withdrawal (min: 0.2 TON)
+                </div>
               </div>
             </div>
-            <Button
-              onClick={handleConvertCredits}
-              disabled={!canConvert || isConverting}
-              loading={isConverting}
-              variant={canConvert ? 'primary' : 'secondary'}
-              size="sm"
-              className="ml-4"
-            >
-              {isConverting ? 'Converting...' : 'Convert'}
-            </Button>
+            <span className="text-2xl font-bold text-yellow-600">{userTonBalance.toFixed(3)} TON</span>
+          </div>
+
+          {/* Convert Credits Section */}
+          <div className="p-4 bg-box-bg rounded-lg">
+            <div className="flex items-center gap-2 mb-4">
+              <ArrowPathIcon className="w-5 h-5 text-icon-active" />
+              <span className="font-medium text-text-idle">Convert Credits</span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-text-idle">Convert to TON</div>
+                <div className="text-sm text-text-active">
+                  {requiredCredits} credits → 0.1 TON
+                </div>
+              </div>
+              <Button
+                onClick={handleConvertCredits}
+                disabled={!canConvert || isConverting}
+                loading={isConverting}
+                variant={canConvert ? 'primary' : 'secondary'}
+                size="sm"
+              >
+                {isConverting ? 'Converting...' : 'Convert'}
+              </Button>
+            </div>
+            
+            {!canConvert && (
+              <div className="text-sm text-text-active text-center mt-3">
+                Need {requiredCredits - userCredits} more credits to convert
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Conversion History */}
       {conversions.length > 0 && (
-        <div className="bg-gradient-to-br from-box-bg to-box-bg/80 rounded-2xl p-6 border border-icon-idle/20">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500/20 to-green-500/10 rounded-xl flex items-center justify-center">
-              <ClockIcon className="w-5 h-5 text-green-500" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-text-idle">Recent Conversions</h3>
-              <p className="text-sm text-text-active">Your conversion history</p>
-            </div>
-          </div>
+        <div className="tg-card">
+          <h3 className="text-lg font-semibold text-text-idle mb-4 flex items-center gap-2">
+            <ClockIcon className="w-5 h-5" />
+            Recent Conversions
+          </h3>
           
-          <div className="space-y-3">
-            {conversions.slice(0, 3).map((conversion, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-box-bg/50 rounded-xl border border-icon-idle/10 hover:border-icon-active/20 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-icon-active/10 rounded-lg flex items-center justify-center">
-                    <ArrowPathIcon className="w-4 h-4 text-icon-active" />
+          <div className="space-y-2">
+            {conversions.slice(0, 5).map((conversion, index) => (
+              <div key={index} className="flex items-center justify-between p-2 bg-box-bg rounded-lg">
+                <div className="text-sm">
+                  <div className="text-text-idle">
+                    {conversion.credits_spent} credits → {conversion.ton_earned.toFixed(3)} TON
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-text-idle">
-                      {conversion.credits_spent} credits → {conversion.ton_earned.toFixed(3)} TON
-                    </div>
-                    <div className="text-xs text-text-active">
-                      {new Date(conversion.created_at).toLocaleDateString()}
-                    </div>
+                  <div className="text-text-active text-xs">
+                    {new Date(conversion.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="text-xs text-icon-active font-medium">
+                <div className="text-xs text-icon-active">
                   {conversion.conversion_rate}
                 </div>
               </div>
@@ -618,36 +571,23 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
       )}
 
       {/* Support Section */}
-      <div className="bg-gradient-to-br from-box-bg to-box-bg/80 rounded-2xl p-6 border border-icon-idle/20">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-blue-500/10 rounded-xl flex items-center justify-center">
-            <QuestionMarkCircleIcon className="w-5 h-5 text-blue-500" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-text-idle">Need Help?</h3>
-            <p className="text-sm text-text-active">Get support from our team</p>
-          </div>
-        </div>
+      <div className="tg-card">
+        <h3 className="text-lg font-semibold text-text-idle mb-4 flex items-center gap-2">
+          <QuestionMarkCircleIcon className="w-5 h-5" />
+          Support
+        </h3>
         
-        <button
-          onClick={() => webApp?.openLink('https://t.me/TWETestBot')}
-          className="w-full flex items-center gap-3 p-4 bg-box-bg/50 rounded-xl border border-icon-idle/10 hover:border-icon-active/20 hover:bg-icon-active/5 transition-all duration-300 group"
-        >
-          <div className="w-10 h-10 bg-icon-active/10 rounded-xl flex items-center justify-center group-hover:bg-icon-active/20 transition-colors">
+        <div className="space-y-3">
+          <button
+            onClick={() => webApp?.openLink('https://t.me/TWETestBot')}
+            className="w-full flex items-center gap-3 p-3 bg-box-bg rounded-lg hover:bg-icon-idle/20 transition-colors"
+          >
             <svg className="w-5 h-5 text-icon-active" fill="currentColor" viewBox="0 0 24 24">
               <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
             </svg>
-          </div>
-          <div className="flex-1 text-left">
-            <div className="text-text-idle font-medium">Contact Support</div>
-            <div className="text-xs text-text-active">Get help with your account</div>
-          </div>
-          <div className="text-icon-active">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </button>
+            <span className="text-text-idle">Contact Support</span>
+          </button>
+        </div>
       </div>
     </div>
   );
