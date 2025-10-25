@@ -58,9 +58,8 @@ export const TasksContent: React.FC = () => {
 
   useEffect(() => {
     console.log('TasksContent useEffect triggered, user:', user?.user_id);
-    if (user?.user_id) {
-      loadTasks();
-    }
+    // Load tasks even if user is undefined (for testing in browser)
+    loadTasks();
   }, [user?.user_id, loadTasks]);
 
   const handleTaskAction = async (task: Task) => {
