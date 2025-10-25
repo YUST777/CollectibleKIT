@@ -127,15 +127,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
     start_video_path = os.path.join(assets_dir, "start.mp4")
     
-    welcome_message = "🎉 **Welcome to CollectibleKIT!**\n\n"
-    welcome_message += "🎮 **Use free tools.**\n"
-    welcome_message += "🎯 **Play free games and earn credits.**\n"
-    welcome_message += "💰 **Every 100 credits = 0.1 TON**\n\n"
+    welcome_message = "**Welcome to CollectibleKIT**\n\n"
+    welcome_message += "Use free tools.\n\n"
+    welcome_message += "Play free games and earn credits.\n\n"
+    welcome_message += "Every 100 credits = 0.1 TON"
     
     if referral_bonus_granted:
-        welcome_message += "🎁 **Referral Bonus!** You received 50 credits for joining through a referral!\n\n"
-    
-    welcome_message += "Send me any photo and I'll create a story canvas for you! 🔥"
+        welcome_message += "\n\n**Referral Bonus!** You received 50 credits for joining through a referral!"
     
     try:
         with open(start_video_path, "rb") as video:
@@ -161,7 +159,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             parse_mode="Markdown"
         )
         
-    # No additional inline buttons - clean interface
+    # Add the two inline buttons
+    inline_keyboard = [
+        [InlineKeyboardButton("Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
+        [InlineKeyboardButton("Join our community", url="https://t.me/The01Studio")],
+    ]
+    
+    await update.message.reply_text(
+        "Choose your option:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard),
+    )
 
 
 async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
