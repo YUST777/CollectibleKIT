@@ -153,6 +153,7 @@ class DatabaseService {
     // Use the same database as the bot
     this.dbPath = path.join(process.cwd(), '..', 'bot', 'bot_data.db');
     console.log('Database path:', this.dbPath);
+    console.log('Current working directory:', process.cwd());
     
     try {
       this.db = new sqlite3.Database(this.dbPath, (err) => {
@@ -1421,6 +1422,49 @@ class DatabaseService {
     } catch (error) {
       console.error('Error getting feed events:', error);
       return [];
+    }
+  }
+
+  async getTopUsersByCredits(limit: number = 50): Promise<any[]> {
+    try {
+      const rows = await this.dbAll(
+        `SELECT 
+          user_id,
+          username,
+          first_name,
+          credits,
+          created_at
+        FROM users 
+        WHERE credits > 0
+        ORDER BY credits DESC
+        LIMIT ?`,
+        [limit]
+      );
+      return rows;
+    } catch (error) {
+      console.error('Error getting top users:', error);
+      return [];
+    }
+  }
+
+  async getUserRankByCredits(userId: number): Promise<any> {
+    try {
+      const rows = await this.dbAll(
+        `SELECT 
+          user_id,
+          username,
+          first_name,
+          credits,
+          created_at,
+          ROW_NUMBER() OVER (ORDER BY credits DESC) as rank
+        FROM users 
+        WHERE user_id = ?`,
+        [userId]
+      );
+      return rows[0] || null;
+    } catch (error) {
+      console.error('Error getting user rank:', error);
+      return null;
     }
   }
 }

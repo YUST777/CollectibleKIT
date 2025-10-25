@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { FeedEvent } from '@/lib/database';
+import { LeaderboardTab } from './LeaderboardTab';
 import { 
   BanknotesIcon, 
   SparklesIcon, 
   CurrencyDollarIcon,
   CheckCircleIcon,
   TrophyIcon,
-  FireIcon
+  FireIcon,
+  ChartBarIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 // Helper function to format relative time
@@ -111,6 +114,7 @@ export const FeedTab: React.FC = () => {
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeInnerTab, setActiveInnerTab] = useState<'events' | 'leaderboard'>('events');
 
   const loadFeedEvents = async () => {
     try {
@@ -145,51 +149,80 @@ export const FeedTab: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) {
-    return (
-      <div className="px-4 py-8 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-text-idle mx-auto"></div>
-        <p className="text-sm text-text-active mt-4">Loading activity feed...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="px-4 py-8 text-center">
-        <p className="text-sm text-red-400">{error}</p>
+  return (
+    <div className="space-y-4">
+      {/* Inner Tab Navigation */}
+      <div className="flex border-b border-gray-700">
         <button
-          onClick={loadFeedEvents}
-          className="mt-4 px-4 py-2 bg-box-bg rounded-lg text-sm text-text-idle hover:bg-box-bg/80 transition-colors"
+          onClick={() => setActiveInnerTab('events')}
+          className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 text-sm font-medium transition-colors ${
+            activeInnerTab === 'events'
+              ? 'text-text-idle border-b-2 border-blue-500'
+              : 'text-text-active hover:text-text-idle'
+          }`}
         >
-          Retry
+          <ClockIcon className="w-4 h-4" />
+          <span>Events</span>
+        </button>
+        <button
+          onClick={() => setActiveInnerTab('leaderboard')}
+          className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 text-sm font-medium transition-colors ${
+            activeInnerTab === 'leaderboard'
+              ? 'text-text-idle border-b-2 border-blue-500'
+              : 'text-text-active hover:text-text-idle'
+          }`}
+        >
+          <ChartBarIcon className="w-4 h-4" />
+          <span>Leaderboard</span>
         </button>
       </div>
-    );
-  }
 
-  if (events.length === 0) {
-    return (
-      <div className="px-4 py-8 text-center">
-        <SparklesIcon className="w-12 h-12 text-text-active mx-auto mb-4" />
-        <p className="text-sm text-text-active">No activity yet</p>
-        <p className="text-xs text-text-active mt-2">Be the first to earn credits and win rewards!</p>
-      </div>
-    );
-  }
+      {/* Tab Content */}
+      {activeInnerTab === 'events' && (
+        <div>
+          {loading ? (
+            <div className="px-4 py-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-text-idle mx-auto"></div>
+              <p className="text-sm text-text-active mt-4">Loading activity feed...</p>
+            </div>
+          ) : error ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-sm text-red-400">{error}</p>
+              <button
+                onClick={loadFeedEvents}
+                className="mt-4 px-4 py-2 bg-box-bg rounded-lg text-sm text-text-idle hover:bg-box-bg/80 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="px-4 py-8 text-center">
+              <SparklesIcon className="w-12 h-12 text-text-active mx-auto mb-4" />
+              <p className="text-sm text-text-active">No activity yet</p>
+              <p className="text-xs text-text-active mt-2">Be the first to earn credits and win rewards!</p>
+            </div>
+          ) : (
+            <div className="space-y-2 px-4 pb-4">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-text-idle">Activity Feed</h3>
+                <span className="text-xs text-text-active">Updates every 30s</span>
+              </div>
 
-  return (
-    <div className="space-y-2 px-4 pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-text-idle">Activity Feed</h3>
-        <span className="text-xs text-text-active">Updates every 30s</span>
-      </div>
+              {/* Feed Items */}
+              {events.map((event) => (
+                <FeedItem key={event.id} event={event} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Feed Items */}
-      {events.map((event) => (
-        <FeedItem key={event.id} event={event} />
-      ))}
+      {activeInnerTab === 'leaderboard' && (
+        <div className="px-4">
+          <LeaderboardTab />
+        </div>
+      )}
     </div>
   );
 };
