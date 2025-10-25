@@ -131,11 +131,6 @@ export const LeaderboardTab: React.FC = () => {
             className="flex items-center justify-between p-3 bg-box-bg rounded-lg hover:bg-box-bg/80 transition-colors"
           >
             <div className="flex items-center space-x-3">
-              {index >= 3 && (
-                <div className="text-sm font-semibold text-yellow-400">
-                  #{index + 1}
-                </div>
-              )}
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                 {getUserAvatar(user)}
               </div>
@@ -149,7 +144,13 @@ export const LeaderboardTab: React.FC = () => {
               </div>
             </div>
             <div className="text-right">
-              {getMedalIcon(index + 1)}
+              {index < 3 ? (
+                getMedalIcon(index + 1)
+              ) : (
+                <div className="text-sm font-semibold text-yellow-400">
+                  {index + 1}
+                </div>
+              )}
             </div>
           </div>
         ))}
