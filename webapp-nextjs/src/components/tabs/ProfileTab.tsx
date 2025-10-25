@@ -466,101 +466,111 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
   const canConvert = userCredits >= requiredCredits;
 
   return (
-    <div className="px-4">
-      {/* Unified Earn Section */}
-      <div className="tg-card">
-        <div className="flex items-center gap-2 mb-6">
-          <CurrencyDollarIcon className="w-6 h-6 text-icon-active" />
-          <h3 className="text-xl font-semibold text-text-idle">Earn & Convert</h3>
+    <div className="px-4 space-y-4">
+      {/* Header Section */}
+      <div className="text-center py-6">
+        <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+          <CurrencyDollarIcon className="w-8 h-8 text-white" />
         </div>
+        <h2 className="text-2xl font-bold text-text-idle mb-2">Earn & Convert</h2>
+        <p className="text-text-active text-sm">Turn your credits into TON cryptocurrency</p>
+      </div>
 
-        {/* Balance Overview */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-box-bg rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <CurrencyDollarIcon className="w-4 h-4 text-icon-active" />
-              <span className="text-sm font-medium text-text-idle">Credits</span>
-            </div>
-            <div className="text-2xl font-bold text-icon-active">{userCredits}</div>
-            <div className="text-xs text-text-active">
-              {isPremium ? 'Premium: 50 = 0.1 TON' : 'Free: 100 = 0.1 TON'}
-            </div>
+      {/* Balance Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-4 border border-blue-500/30">
+          <div className="flex items-center justify-between mb-2">
+            <CurrencyDollarIcon className="w-5 h-5 text-blue-400" />
+            <span className="text-xs text-blue-300">Credits</span>
           </div>
-          
-          <div className="bg-box-bg rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <GiftIcon className="w-4 h-4 text-yellow-600" />
-              <span className="text-sm font-medium text-text-idle">TON</span>
-            </div>
-            <div className="text-2xl font-bold text-yellow-600">{userTonBalance.toFixed(3)}</div>
-            <div className="text-xs text-text-active">
-              Min: 0.2 TON to withdraw
-            </div>
+          <div className="text-2xl font-bold text-white mb-1">{userCredits}</div>
+          <div className="text-xs text-blue-200">
+            {isPremium ? '50 = 0.1 TON' : '100 = 0.1 TON'}
           </div>
         </div>
-
-        {/* Convert Section */}
-        <div className="bg-box-bg rounded-lg p-4 mb-4 border-t" style={{ borderColor: '#353433' }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium text-text-idle mb-1">Convert Credits to TON</div>
-              <div className="text-sm text-text-active">
-                {requiredCredits} credits → 0.1 TON
-              </div>
-            </div>
-            <Button
-              onClick={handleConvertCredits}
-              disabled={!canConvert || isConverting}
-              loading={isConverting}
-              variant={canConvert ? 'primary' : 'secondary'}
-              size="sm"
-            >
-              {isConverting ? 'Converting...' : 'Convert'}
-            </Button>
+        
+        <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl p-4 border border-yellow-500/30">
+          <div className="flex items-center justify-between mb-2">
+            <GiftIcon className="w-5 h-5 text-yellow-400" />
+            <span className="text-xs text-yellow-300">TON</span>
           </div>
-          
-          {!canConvert && (
-            <div className="text-sm text-text-active text-center mt-3 pt-3 border-t border-icon-idle/20">
+          <div className="text-2xl font-bold text-white mb-1">{userTonBalance.toFixed(3)}</div>
+          <div className="text-xs text-yellow-200">
+            Min: 0.2 TON to withdraw
+          </div>
+        </div>
+      </div>
+
+      {/* Convert Section */}
+      <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-6 border border-purple-500/20">
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-semibold text-text-idle mb-2">Convert Credits</h3>
+          <p className="text-sm text-text-active">
+            {requiredCredits} credits = 0.1 TON
+          </p>
+        </div>
+        
+        <Button
+          onClick={handleConvertCredits}
+          disabled={!canConvert || isConverting}
+          loading={isConverting}
+          variant={canConvert ? 'primary' : 'secondary'}
+          className="w-full h-12 text-lg font-medium"
+        >
+          {isConverting ? 'Converting...' : `Convert ${requiredCredits} Credits`}
+        </Button>
+        
+        {!canConvert && (
+          <div className="text-center mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+            <p className="text-sm text-red-300">
               Need {requiredCredits - userCredits} more credits to convert
-            </div>
-          )}
-        </div>
-
-        {/* Recent Conversions - Compact */}
-        {conversions.length > 0 && (
-          <div className="mb-4 border-t pt-4" style={{ borderColor: '#353433' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <ClockIcon className="w-4 h-4 text-icon-active" />
-              <span className="text-sm font-medium text-text-idle">Recent Conversions</span>
-            </div>
-            
-            <div className="space-y-2">
-              {conversions.slice(0, 3).map((conversion, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-box-bg rounded text-sm">
-                  <div>
-                    <span className="text-text-idle">
-                      {conversion.credits_spent} credits → {conversion.ton_earned.toFixed(3)} TON
-                    </span>
-                    <span className="text-text-active text-xs ml-2">
-                      {new Date(conversion.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            </p>
           </div>
         )}
+      </div>
 
-        {/* Support - Minimal */}
-        <div className="pt-4 border-t" style={{ borderColor: '#353433' }}>
-          <button
-            onClick={() => webApp?.openLink('https://t.me/TWETestBot')}
-            className="flex items-center gap-2 text-sm text-text-active hover:text-icon-active transition-colors"
-          >
-            <QuestionMarkCircleIcon className="w-4 h-4" />
-            Need help? Contact Support
-          </button>
+      {/* Recent Conversions */}
+      {conversions.length > 0 && (
+        <div className="bg-box-bg rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <ClockIcon className="w-5 h-5 text-icon-active" />
+            <h3 className="font-semibold text-text-idle">Recent Conversions</h3>
+          </div>
+          
+          <div className="space-y-3">
+            {conversions.slice(0, 3).map((conversion, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <CurrencyDollarIcon className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-text-idle">
+                      {conversion.credits_spent} credits → {conversion.ton_earned.toFixed(3)} TON
+                    </div>
+                    <div className="text-xs text-text-active">
+                      {new Date(conversion.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-green-400 font-medium">
+                  +{conversion.ton_earned.toFixed(3)} TON
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* Support */}
+      <div className="text-center">
+        <button
+          onClick={() => webApp?.openLink('https://t.me/TWETestBot')}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-text-active hover:text-icon-active transition-colors bg-box-bg rounded-lg hover:bg-icon-idle/10"
+        >
+          <QuestionMarkCircleIcon className="w-4 h-4" />
+          Need help? Contact Support
+        </button>
       </div>
     </div>
   );
