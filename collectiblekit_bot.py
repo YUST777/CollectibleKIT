@@ -229,13 +229,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "referral_bonus": referral_bonus_granted
     }))
     
-    # Create keyboard with Mini App button and inline buttons
+    # Create keyboard with CollectibleKIT features
     reply_keyboard = [
-        [KeyboardButton("🎨 Mini App (Recommended)", web_app=WebAppInfo(url=MINI_APP_URL))],
         ["🆓 Free Plan", "💎 Paid Plan", "🎮 Play Games", "💰 My Credits"]
     ]
     
     inline_keyboard = [
+        [InlineKeyboardButton("🚀 Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
+        [InlineKeyboardButton("👥 Join our community", url="https://t.me/The01Studio")],
         [InlineKeyboardButton("🆓 Free Plan", callback_data="free_plan")],
         [InlineKeyboardButton("💎 Paid Plan", callback_data="paid_plan")],
         [InlineKeyboardButton("🎮 Play Games", callback_data="play_games")],

@@ -127,6 +127,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     
     inline_keyboard = [
+        [InlineKeyboardButton("🚀 Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
+        [InlineKeyboardButton("👥 Join our community", url="https://t.me/The01Studio")],
         [InlineKeyboardButton("🆓 Free Plan", callback_data="free_plan")],
         [InlineKeyboardButton("💎 Paid Plan", callback_data="paid_plan")],
         [InlineKeyboardButton("🎮 Play Games", callback_data="play_games")],
