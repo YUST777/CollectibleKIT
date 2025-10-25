@@ -87,6 +87,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     # Handle referral parameters
     start_param = context.args[0] if context.args else None
+    referral_bonus_granted = False
+    
     if start_param and start_param.startswith('ref_'):
         try:
             referrer_id = int(start_param.replace('ref_', ''))
@@ -101,6 +103,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     invited_photo=update.effective_user.photo.small_file_id if update.effective_user.photo else ''
                 )
                 
+                # Grant referral bonus credits (50 credits for both referrer and referee)
+                db.add_credits(user_id, 50)  # Bonus for new user
+                db.add_credits(referrer_id, 50)  # Bonus for referrer
+                referral_bonus_granted = True
+                
                 logger.info(f"✅ Referral processed successfully: {user_id} referred by {referrer_id}")
         except (ValueError, Exception) as e:
             logger.error(f"Error processing referral: {e}")
@@ -110,35 +117,69 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db.record_interaction(user_id, "start", json.dumps({
         "username": username,
         "first_name": first_name,
-        "start_param": start_param
+        "start_param": start_param,
+        "referral_bonus": referral_bonus_granted
     }))
     
     # Create keyboard with Mini App button and inline buttons
     reply_keyboard = [
         [KeyboardButton("🎨 Mini App (Recommended)", web_app=WebAppInfo(url=MINI_APP_URL))],
-        ["🆓 Free Plan", "💎 Paid Plan"]
+        ["🆓 Free Plan", "💎 Paid Plan", "🎮 Play Games", "💰 My Credits"]
     ]
     
     inline_keyboard = [
         [InlineKeyboardButton("🆓 Free Plan", callback_data="free_plan")],
         [InlineKeyboardButton("💎 Paid Plan", callback_data="paid_plan")],
+        [InlineKeyboardButton("🎮 Play Games", callback_data="play_games")],
+        [InlineKeyboardButton("💰 My Credits", callback_data="my_credits")],
     ]
     
-    # Send the start image with welcome message
+    # Send the start video with welcome message
     assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
-    start_image_path = os.path.join(assets_dir, "start.jpg")
-    with open(start_image_path, "rb") as photo:
-        await update.message.reply_photo(
-            photo=photo,
-            caption="Welcome!\n\n🎨 **Try our Mini App for the best experience!**\n\nSend me any photo of any size, and I will create a story canvas for you — just like @etosirius's profile 🔥",
+    start_video_path = os.path.join(assets_dir, "start.mp4")
+    
+    welcome_message = "🎉 **Welcome to CollectibleKIT!**\n\n"
+    welcome_message += "🎮 **Use free tools.**\n"
+    welcome_message += "🎯 **Play free games and earn credits.**\n"
+    welcome_message += "💰 **Every 100 credits = 0.1 TON**\n\n"
+    
+    if referral_bonus_granted:
+        welcome_message += "🎁 **Referral Bonus!** You received 50 credits for joining through a referral!\n\n"
+    
+    welcome_message += "Send me any photo and I'll create a story canvas for you! 🔥"
+    
+    try:
+        with open(start_video_path, "rb") as video:
+            await update.message.reply_video(
+                video=video,
+                caption=welcome_message,
+                reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
+                parse_mode="Markdown"
+            )
+    except FileNotFoundError:
+        # Fallback to image if video not found
+        start_image_path = os.path.join(assets_dir, "start.jpg")
+        with open(start_image_path, "rb") as photo:
+            await update.message.reply_photo(
+                photo=photo,
+                caption=welcome_message,
+                reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        logger.error(f"Error sending start media: {e}")
+        # Fallback to text only
+        await update.message.reply_text(
+            welcome_message,
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=False),
+            parse_mode="Markdown"
         )
         
-        # Send inline buttons separately for other options
-        await update.message.reply_text(
-            "Or use these options:",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard),
-        )
+    # Send inline buttons separately for other options
+    await update.message.reply_text(
+        "Choose your option:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard),
+    )
 
 
 async def credit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -282,6 +323,380 @@ async def _handle_paid_plan(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             reply_markup=InlineKeyboardMarkup(keyboard),
         )
     await cq.answer("Paid plans shown!")
+
+
+async def _handle_play_games(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle play games callback - show available games"""
+    if not _is_authorized(update):
+        return
+    assert update.callback_query is not None
+    cq = update.callback_query
+    user_id = cq.from_user.id
+    
+    # Record games interaction
+    db.record_interaction(user_id, "games_clicked")
+    
+    keyboard = [
+        [InlineKeyboardButton("🎯 Daily Quiz (10 credits)", callback_data="daily_quiz")],
+        [InlineKeyboardButton("🎲 Lucky Spin (5 credits)", callback_data="lucky_spin")],
+        [InlineKeyboardButton("📝 Share Story (20 credits)", callback_data="share_story")],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")],
+    ]
+    
+    await cq.message.reply_text(
+        "🎮 **CollectibleKIT Games**\n\n"
+        "Play games and earn credits!\n"
+        "Every 100 credits = 0.1 TON\n\n"
+        "Choose a game to play:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    await cq.answer("Games menu opened!")
+
+
+async def _handle_my_credits(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle my credits callback - show user's credit balance and earning options"""
+    if not _is_authorized(update):
+        return
+    assert update.callback_query is not None
+    cq = update.callback_query
+    user_id = cq.from_user.id
+    
+    # Get user data
+    user = db.get_user(user_id)
+    stats = db.get_user_stats(user_id)
+    
+    # Record credits interaction
+    db.record_interaction(user_id, "credits_clicked")
+    
+    # Calculate TON equivalent
+    ton_equivalent = user['credits'] / 1000  # 100 credits = 0.1 TON, so 1000 credits = 1 TON
+    
+    keyboard = [
+        [InlineKeyboardButton("🎮 Play Games", callback_data="play_games")],
+        [InlineKeyboardButton("🔗 Invite Friends", callback_data="invite_friends")],
+        [InlineKeyboardButton("💎 Buy Credits", callback_data="paid_plan")],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")],
+    ]
+    
+    credits_message = f"💰 **Your Credits**\n\n"
+    credits_message += f"Current Credits: {user['credits']}\n"
+    credits_message += f"TON Equivalent: {ton_equivalent:.3f} TON\n"
+    credits_message += f"Free Cuts Used: {user['free_uses']}/3\n\n"
+    credits_message += f"**Earn Credits:**\n"
+    credits_message += f"• Play games: 5-20 credits\n"
+    credits_message += f"• Invite friends: 50 credits each\n"
+    credits_message += f"• Share stories: 20 credits\n\n"
+    credits_message += f"**Withdraw:** 100 credits = 0.1 TON"
+    
+    await cq.message.reply_text(
+        credits_message,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    await cq.answer("Credits info shown!")
+
+
+async def _handle_invite_friends(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle invite friends callback - show referral link"""
+    if not _is_authorized(update):
+        return
+    assert update.callback_query is not None
+    cq = update.callback_query
+    user_id = cq.from_user.id
+    
+    # Record invite interaction
+    db.record_interaction(user_id, "invite_clicked")
+    
+    # Get referral stats
+    referral_stats = db.get_referral_stats(user_id)
+    
+    keyboard = [
+        [InlineKeyboardButton("🔙 Back to Credits", callback_data="my_credits")],
+    ]
+    
+    invite_message = f"🔗 **Invite Friends & Earn Credits**\n\n"
+    invite_message += f"**Your Referral Link:**\n"
+    invite_message += f"`https://t.me/CollectibleKITbot?start=ref_{user_id}`\n\n"
+    invite_message += f"**How it works:**\n"
+    invite_message += f"• Share your link with friends\n"
+    invite_message += f"• You get 50 credits when they join\n"
+    invite_message += f"• They get 50 credits too!\n\n"
+    invite_message += f"**Your Stats:**\n"
+    invite_message += f"• Total referrals: {referral_stats['total_referrals']}\n"
+    invite_message += f"• Recent referrals: {referral_stats['recent_referrals']}\n\n"
+    invite_message += f"Copy the link above and share it with your friends!"
+    
+    await cq.message.reply_text(
+        invite_message,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    await cq.answer("Referral link shown!")
+
+
+async def _handle_back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle back to menu callback"""
+    if not _is_authorized(update):
+        return
+    assert update.callback_query is not None
+    cq = update.callback_query
+    
+    # Just answer the callback - the user can use /start to get back to main menu
+    await cq.answer("Use /start to return to main menu")
+
+
+# Text message handlers for keyboard buttons
+async def _handle_free_plan_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle free plan text message"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    user = db.get_user(user_id, update.message.from_user.username, update.message.from_user.first_name)
+    remaining_free = max(0, FREE_LIMIT - user['free_uses'])
+    db.record_interaction(user_id, "free_plan_clicked", json.dumps({
+        "remaining_free": remaining_free
+    }))
+    
+    # Send the free plan image
+    assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
+    freeplan_image_path = os.path.join(assets_dir, "freeplan.jpg")
+    with open(freeplan_image_path, "rb") as photo:
+        await update.message.reply_photo(
+            photo=photo,
+            caption="You're lucky today — congratulations! 🎉 You've received a free trial plan with 3 photo cuts at no cost 😍\n\nSend me a photo to start cutting!"
+        )
+
+
+async def _handle_paid_plan_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle paid plan text message"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    db.record_interaction(user_id, "paid_plan_clicked")
+    
+    keyboard = [
+        [InlineKeyboardButton("Buy 1 cut - 0.1 TON", callback_data="buy_1")],
+        [InlineKeyboardButton("Buy 3 cuts - 0.2 TON", callback_data="buy_3")],
+        [InlineKeyboardButton("Buy 10 cuts - 0.5 TON", callback_data="buy_10")],
+    ]
+    
+    # Send the premium image
+    assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
+    premium_image_path = os.path.join(assets_dir, "preuime .jpg")
+    with open(premium_image_path, "rb") as photo:
+        await update.message.reply_photo(
+            photo=photo,
+            caption="Welcome to the Premium Section!\nOur offers are very cheap — I recommend the 10 cuts package with a 50% discount 💀\n\n"
+            "Pricing:\n"
+            "- 0.1 TON → 1 cut\n"
+            "- 0.2 TON → 3 cuts\n"
+            "- 0.5 TON → 10 cuts",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+
+
+async def _handle_play_games_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle play games text message"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    db.record_interaction(user_id, "games_clicked")
+    
+    keyboard = [
+        [InlineKeyboardButton("🎯 Daily Quiz (10 credits)", callback_data="daily_quiz")],
+        [InlineKeyboardButton("🎲 Lucky Spin (5 credits)", callback_data="lucky_spin")],
+        [InlineKeyboardButton("📝 Share Story (20 credits)", callback_data="share_story")],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")],
+    ]
+    
+    await update.message.reply_text(
+        "🎮 **CollectibleKIT Games**\n\n"
+        "Play games and earn credits!\n"
+        "Every 100 credits = 0.1 TON\n\n"
+        "Choose a game to play:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+
+async def _handle_my_credits_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle my credits text message"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    user = db.get_user(user_id)
+    stats = db.get_user_stats(user_id)
+    
+    db.record_interaction(user_id, "credits_clicked")
+    
+    # Calculate TON equivalent
+    ton_equivalent = user['credits'] / 1000  # 100 credits = 0.1 TON, so 1000 credits = 1 TON
+    
+    keyboard = [
+        [InlineKeyboardButton("🎮 Play Games", callback_data="play_games")],
+        [InlineKeyboardButton("🔗 Invite Friends", callback_data="invite_friends")],
+        [InlineKeyboardButton("💎 Buy Credits", callback_data="paid_plan")],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")],
+    ]
+    
+    credits_message = f"💰 **Your Credits**\n\n"
+    credits_message += f"Current Credits: {user['credits']}\n"
+    credits_message += f"TON Equivalent: {ton_equivalent:.3f} TON\n"
+    credits_message += f"Free Cuts Used: {user['free_uses']}/3\n\n"
+    credits_message += f"**Earn Credits:**\n"
+    credits_message += f"• Play games: 5-20 credits\n"
+    credits_message += f"• Invite friends: 50 credits each\n"
+    credits_message += f"• Share stories: 20 credits\n\n"
+    credits_message += f"**Withdraw:** 100 credits = 0.1 TON"
+    
+    await update.message.reply_text(
+        credits_message,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+
+# Game handlers
+async def _handle_daily_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle daily quiz game"""
+    if not _is_authorized(update):
+        return
+    assert update.callback_query is not None
+    cq = update.callback_query
+    user_id = cq.from_user.id
+    
+    # Simple quiz question
+    question = "🎯 **Daily Quiz**\n\nWhat is the capital of France?"
+    options = ["London", "Berlin", "Paris", "Madrid"]
+    correct_answer = "Paris"
+    
+    keyboard = [
+        [InlineKeyboardButton("A) London", callback_data="quiz_answer_London")],
+        [InlineKeyboardButton("B) Berlin", callback_data="quiz_answer_Berlin")],
+        [InlineKeyboardButton("C) Paris", callback_data="quiz_answer_Paris")],
+        [InlineKeyboardButton("D) Madrid", callback_data="quiz_answer_Madrid")],
+    ]
+    
+    await cq.message.reply_text(
+        question,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    await cq.answer("Quiz started!")
+
+
+async def _handle_lucky_spin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle lucky spin game"""
+    if not _is_authorized(update):
+        return
+    assert update.callback_query is not None
+    cq = update.callback_query
+    user_id = cq.from_user.id
+    
+    import random
+    
+    # Random spin result
+    spin_results = [
+        {"credits": 5, "message": "🎉 You won 5 credits!"},
+        {"credits": 10, "message": "🎉 You won 10 credits!"},
+        {"credits": 15, "message": "🎉 You won 15 credits!"},
+        {"credits": 0, "message": "😔 Better luck next time!"},
+    ]
+    
+    result = random.choice(spin_results)
+    
+    if result["credits"] > 0:
+        db.add_credits(user_id, result["credits"])
+        db.record_interaction(user_id, "lucky_spin_won", json.dumps({
+            "credits_won": result["credits"]
+        }))
+    else:
+        db.record_interaction(user_id, "lucky_spin_lost")
+    
+    keyboard = [
+        [InlineKeyboardButton("🎮 Play Again", callback_data="lucky_spin")],
+        [InlineKeyboardButton("🔙 Back to Games", callback_data="play_games")],
+    ]
+    
+    await cq.message.reply_text(
+        f"🎲 **Lucky Spin**\n\n{result['message']}\n\nYour current credits: {db.get_user(user_id)['credits']}",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    await cq.answer("Spin completed!")
+
+
+async def _handle_share_story(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle share story game"""
+    if not _is_authorized(update):
+        return
+    assert update.callback_query is not None
+    cq = update.callback_query
+    user_id = cq.from_user.id
+    
+    # Grant credits for sharing story
+    db.add_credits(user_id, 20)
+    db.record_interaction(user_id, "story_shared", json.dumps({
+        "credits_earned": 20
+    }))
+    
+    keyboard = [
+        [InlineKeyboardButton("🎮 Back to Games", callback_data="play_games")],
+    ]
+    
+    await cq.message.reply_text(
+        f"📝 **Story Shared!**\n\n🎉 You earned 20 credits for sharing your story!\n\nYour current credits: {db.get_user(user_id)['credits']}",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    await cq.answer("Story shared!")
+
+
+async def _handle_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle quiz answer"""
+    if not _is_authorized(update):
+        return
+    assert update.callback_query is not None
+    cq = update.callback_query
+    user_id = cq.from_user.id
+    
+    # Extract answer from callback data
+    answer = cq.data.replace("quiz_answer_", "")
+    correct_answer = "Paris"
+    
+    if answer == correct_answer:
+        # Correct answer - grant credits
+        db.add_credits(user_id, 10)
+        db.record_interaction(user_id, "quiz_correct", json.dumps({
+            "answer": answer,
+            "credits_earned": 10
+        }))
+        
+        message = f"✅ **Correct!**\n\n🎉 You earned 10 credits!\n\nYour current credits: {db.get_user(user_id)['credits']}"
+    else:
+        # Wrong answer
+        db.record_interaction(user_id, "quiz_incorrect", json.dumps({
+            "answer": answer,
+            "correct_answer": correct_answer
+        }))
+        
+        message = f"❌ **Wrong answer!**\n\nThe correct answer was: {correct_answer}\n\nBetter luck next time!"
+    
+    keyboard = [
+        [InlineKeyboardButton("🎮 Back to Games", callback_data="play_games")],
+    ]
+    
+    await cq.message.reply_text(
+        message,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    await cq.answer("Quiz completed!")
 
 
 async def _handle_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -592,12 +1007,25 @@ def main():
             app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo))
             # Web app data handler removed - using native shareToStory() method
             app.add_handler(MessageHandler(filters.Regex("^🎨 Mini App"), start))  # Handle Mini App button press
+            app.add_handler(MessageHandler(filters.Regex("^🆓 Free Plan"), _handle_free_plan_text))
+            app.add_handler(MessageHandler(filters.Regex("^💎 Paid Plan"), _handle_paid_plan_text))
+            app.add_handler(MessageHandler(filters.Regex("^🎮 Play Games"), _handle_play_games_text))
+            app.add_handler(MessageHandler(filters.Regex("^💰 My Credits"), _handle_my_credits_text))
             
             # Callback handlers
             app.add_handler(CallbackQueryHandler(_handle_free_plan, pattern="^free_plan$"))
             app.add_handler(CallbackQueryHandler(_handle_paid_plan, pattern="^paid_plan$"))
             app.add_handler(CallbackQueryHandler(_handle_buy_callback, pattern="^buy_"))
             app.add_handler(CallbackQueryHandler(_handle_check_payment, pattern="^check_"))
+            app.add_handler(CallbackQueryHandler(_handle_play_games, pattern="^play_games$"))
+            app.add_handler(CallbackQueryHandler(_handle_my_credits, pattern="^my_credits$"))
+            app.add_handler(CallbackQueryHandler(_handle_invite_friends, pattern="^invite_friends$"))
+            app.add_handler(CallbackQueryHandler(_handle_back_to_menu, pattern="^back_to_menu$"))
+            # Game handlers
+            app.add_handler(CallbackQueryHandler(_handle_daily_quiz, pattern="^daily_quiz$"))
+            app.add_handler(CallbackQueryHandler(_handle_lucky_spin, pattern="^lucky_spin$"))
+            app.add_handler(CallbackQueryHandler(_handle_share_story, pattern="^share_story$"))
+            app.add_handler(CallbackQueryHandler(_handle_quiz_answer, pattern="^quiz_answer_"))
 
             logger.info("Bot handlers registered. Starting polling...")
             app.run_polling()
