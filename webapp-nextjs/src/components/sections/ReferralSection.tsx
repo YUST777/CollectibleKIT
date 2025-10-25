@@ -152,7 +152,7 @@ export const ReferralSection: React.FC = () => {
         </div>
 
         {/* Share Section */}
-        <div className="bg-box-bg rounded-lg p-4 mb-4 border-t border-icon-idle/5">
+        <div className="bg-box-bg rounded-lg p-4 mb-4 border-t" style={{ borderColor: '#353433' }}>
           <div className="flex items-center gap-2 mb-3">
             <Share2 className="w-4 h-4 text-icon-active" />
             <span className="text-sm font-medium text-text-idle">Your Referral Link</span>
@@ -186,7 +186,7 @@ export const ReferralSection: React.FC = () => {
         </div>
 
         {/* Invited Friends - Compact */}
-        <div className="mb-4 border-t border-icon-idle/5 pt-4">
+        <div className="mb-4 border-t pt-4" style={{ borderColor: '#353433' }}>
           <div className="flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 text-icon-active" />
             <span className="text-sm font-medium text-text-idle">Invited Friends</span>

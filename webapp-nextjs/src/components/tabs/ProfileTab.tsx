@@ -500,7 +500,7 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
         </div>
 
         {/* Convert Section */}
-        <div className="bg-box-bg rounded-lg p-4 mb-4 border-t border-icon-idle/5">
+        <div className="bg-box-bg rounded-lg p-4 mb-4 border-t" style={{ borderColor: '#353433' }}>
           <div className="flex items-center justify-between">
             <div>
               <div className="font-medium text-text-idle mb-1">Convert Credits to TON</div>
@@ -528,7 +528,7 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
 
         {/* Recent Conversions - Compact */}
         {conversions.length > 0 && (
-          <div className="mb-4 border-t border-icon-idle/5 pt-4">
+          <div className="mb-4 border-t pt-4" style={{ borderColor: '#353433' }}>
             <div className="flex items-center gap-2 mb-3">
               <ClockIcon className="w-4 h-4 text-icon-active" />
               <span className="text-sm font-medium text-text-idle">Recent Conversions</span>
@@ -552,7 +552,7 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
         )}
 
         {/* Support - Minimal */}
-        <div className="pt-4 border-t border-icon-idle/5">
+        <div className="pt-4 border-t" style={{ borderColor: '#353433' }}>
           <button
             onClick={() => webApp?.openLink('https://t.me/TWETestBot')}
             className="flex items-center gap-2 text-sm text-text-active hover:text-icon-active transition-colors"
