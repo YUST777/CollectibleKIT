@@ -389,6 +389,101 @@ async def test_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error(f"Test broadcast failed: {e}")
 
 
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Admin command to show user statistics, database, and profit information"""
+    if not _is_authorized(update):
+        return
+    
+    user_id = update.message.from_user.id
+    
+    # Only allow specific admin users
+    ADMIN_USERS = {800092886}  # Add your admin user ID here
+    if user_id not in ADMIN_USERS:
+        await update.message.reply_text("❌ Access denied. Admin only command.")
+        return
+    
+    # Record admin command
+    db.record_interaction(user_id, "admin_command")
+    
+    try:
+        # Get analytics summary
+        stats = db.get_analytics_summary()
+        
+        # Get all users for database display
+        all_users = db.get_all_users()
+        active_users = db.get_active_users(30)
+        
+        # Create user database table
+        user_table = "📊 **User Database**\n\n"
+        user_table += f"**Total Users:** {len(all_users)}\n"
+        user_table += f"**Active Users (30 days):** {len(active_users)}\n\n"
+        
+        # Show first 20 users with clean formatting
+        user_table += "**User List (First 20):**\n"
+        user_table += "```\n"
+        user_table += f"{'ID':<12} {'Username':<20} {'Name':<25} {'Status':<10}\n"
+        user_table += "-" * 70 + "\n"
+        
+        for i, user in enumerate(all_users[:20]):
+            user_id_display = str(user['user_id'])
+            username = user.get('username', 'N/A') or 'N/A'
+            first_name = user.get('first_name', 'N/A') or 'N/A'
+            
+            # Truncate long names
+            if len(first_name) > 20:
+                first_name = first_name[:17] + "..."
+            if len(username) > 15:
+                username = username[:12] + "..."
+            
+            # Determine status
+            if user['user_id'] in VIP_USERS:
+                status = "VIP"
+            elif user.get('last_activity', 0) > (time.time() - 7 * 24 * 3600):
+                status = "Active"
+            else:
+                status = "Inactive"
+            
+            user_table += f"{user_id_display:<12} {username:<20} {first_name:<25} {status:<10}\n"
+        
+        user_table += "```\n"
+        
+        # Add profit information
+        profit_info = f"""
+💰 **Revenue & Profit Analysis**
+
+**Total Revenue:** {stats['total_revenue_ton']:.2f} TON
+**Premium Subscriptions:** {stats['paid_requests']} paid requests
+**Free Requests:** {stats['free_requests']} free requests
+**Conversion Rate:** {(stats['paid_requests'] / max(stats['free_requests'], 1) * 100):.1f}%
+
+**Revenue Breakdown:**
+• 0.1 TON packages: {stats.get('revenue_0_1', 0):.2f} TON
+• 0.2 TON packages: {stats.get('revenue_0_2', 0):.2f} TON  
+• 0.5 TON packages: {stats.get('revenue_0_5', 0):.2f} TON
+
+**User Activity:**
+• Total Users: {stats['total_users']}
+• Active (7 days): {stats['active_users_7d']}
+• Total Interactions: {stats['total_interactions']}
+"""
+        
+        # Combine all information
+        admin_message = user_table + profit_info
+        
+        # Split message if too long (Telegram limit is 4096 characters)
+        if len(admin_message) > 4000:
+            # Send user table first
+            await update.message.reply_text(user_table, parse_mode="Markdown")
+            # Send profit info separately
+            await update.message.reply_text(profit_info, parse_mode="Markdown")
+        else:
+            await update.message.reply_text(admin_message, parse_mode="Markdown")
+        
+    except Exception as e:
+        logger.exception("Admin command error: %s", e)
+        await update.message.reply_text("❌ Error generating admin report.")
+
+
 async def analytics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show comprehensive bot analytics (admin only)"""
     if not _is_authorized(update):
@@ -1701,6 +1796,7 @@ def main():
             # Handlers
             app.add_handler(CommandHandler("start", start))
             app.add_handler(CommandHandler("credit", credit))
+            app.add_handler(CommandHandler("admin", admin))
             app.add_handler(CommandHandler("analytics", analytics))
             app.add_handler(CommandHandler("test_users", test_users))
             app.add_handler(CommandHandler("send_to_chat", send_to_chat))
