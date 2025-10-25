@@ -120,7 +120,7 @@ export const LeaderboardTab: React.FC = () => {
     <div className="space-y-4">
       {/* Leaderboard Header */}
       <div className="text-center py-4">
-        <h2 className="text-lg font-semibold text-text-idle">🏆</h2>
+        <h2 className="text-lg font-semibold text-text-idle">Leaderboard</h2>
       </div>
 
       {/* Leaderboard List */}

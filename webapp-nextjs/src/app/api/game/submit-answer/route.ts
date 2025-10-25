@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       try {
         // Check if this is the user's first win ever
         const user = await db.getUser(userIdNum);
-        const isFirstWin = user && !user.first_win_claimed;
+        const isFirstWin = user ? !user.first_win_claimed : false;
         
         // Record the game win
         const winRecorded = await db.recordGameWin(userIdNum, isFirstWin);

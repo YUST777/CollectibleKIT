@@ -132,6 +132,13 @@ export interface User {
   free_remaining: string;
   created_at?: number;
   last_activity?: number;
+  ton_balance?: number;
+  first_win_claimed?: boolean;
+  daily_wins_count?: number;
+  last_win_date?: string;
+  streak_days?: number;
+  last_streak_click?: string;
+  streak_completed?: boolean;
 }
 
 export interface StoryPiece {
