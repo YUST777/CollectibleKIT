@@ -47,7 +47,7 @@ class TONWalletService:
             # Initialize wallet from mnemonic
             mnemonics = self.mnemonic.split()
             self.wallet = await WALLET_VERSION.from_mnemonic(
-                client=self.client,
+                provider=self.client,
                 mnemonics=mnemonics
             )
             
