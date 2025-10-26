@@ -111,6 +111,39 @@ async def main():
                 tracker.update_transaction_status(transaction_id, 'completed', tx_hash)
                 print(f"SUCCESS: Withdrawal completed")
                 print(f"TRANSACTION_HASH: {tx_hash}")
+                
+                # Send Telegram notification
+                try:
+                    # Get bot token from environment
+                    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+                    if bot_token:
+                        from telegram.ext import Application
+                        
+                        # Create bot application
+                        app = Application.builder().token(bot_token).build()
+                        
+                        # Format the TON amount
+                        amount_str = f"{args.amount:.1f}" if args.amount == int(args.amount) else f"{args.amount:.2f}"
+                        
+                        # Create the notification message
+                        message = f"🎉 Your {amount_str} TON withdrawal (https://tonscan.org/tx/{tx_hash}) was successful — enjoy!"
+                        
+                        # Send the message to the user
+                        await app.bot.send_message(
+                            chat_id=args.user_id,
+                            text=message,
+                            parse_mode="Markdown"
+                        )
+                        
+                        print(f"NOTIFICATION: Sent withdrawal notification to user {args.user_id}")
+                    else:
+                        print("WARNING: TELEGRAM_BOT_TOKEN not found, skipping notification")
+                        
+                except ImportError as e:
+                    print(f"WARNING: Cannot send notification - missing dependencies: {e}")
+                except Exception as e:
+                    print(f"WARNING: Failed to send notification: {e}")
+                
                 sys.exit(0)
             else:
                 # Mark as failed

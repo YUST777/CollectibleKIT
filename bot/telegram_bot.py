@@ -102,6 +102,27 @@ def _detect_html_formatting(text: str) -> bool:
     return False
 
 
+async def send_withdrawal_notification(context: ContextTypes.DEFAULT_TYPE, user_id: int, amount: float, tx_hash: str) -> None:
+    """Send withdrawal success notification to user"""
+    try:
+        # Format the TON amount
+        amount_str = f"{amount:.1f}" if amount == int(amount) else f"{amount:.2f}"
+        
+        # Create the notification message
+        message = f"🎉 Your {amount_str} TON withdrawal (https://tonscan.org/tx/{tx_hash}) was successful — enjoy!"
+        
+        # Send the message to the user
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode="Markdown"
+        )
+        
+        logger.info(f"Withdrawal notification sent to user {user_id}: {amount} TON, tx: {tx_hash}")
+        
+    except Exception as e:
+        logger.error(f"Failed to send withdrawal notification to user {user_id}: {e}")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not _is_authorized(update):
         return
