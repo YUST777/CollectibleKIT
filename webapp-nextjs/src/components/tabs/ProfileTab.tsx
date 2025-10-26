@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser, useTonBalance, useAppActions, useAppStore } from '@/store/useAppStore';
-import { Button } from '@/components/ui/Button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { hapticFeedback } from '@/lib/telegram';
 import { ReferralSection } from '@/components/sections/ReferralSection';
@@ -17,6 +17,7 @@ import {
   CurrencyDollarIcon,
   ArrowPathIcon,
   ClockIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -85,9 +86,8 @@ export const ProfileTab: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: user?.user_id,
           amount: tonBalance.balance,
-          wallet_address: tonBalance.walletAddress,
+          walletAddress: tonBalance.walletAddress,
         }),
       });
       
@@ -390,6 +390,7 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
   const [conversions, setConversions] = useState<any[]>([]);
   const [userCredits, setUserCredits] = useState(0);
   const [userTonBalance, setUserTonBalance] = useState(0);
+  const [isEarningInfoOpen, setIsEarningInfoOpen] = useState(false);
 
   useEffect(() => {
     // Load user data and conversions
@@ -468,6 +469,17 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
 
   return (
     <div className="space-y-6 px-4">
+      {/* Header with Info Button */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-text-idle">Earn TON</h2>
+        <button
+          onClick={() => setIsEarningInfoOpen(true)}
+          className="p-2 rounded-full bg-icon-idle/20 hover:bg-icon-idle/30 transition-colors"
+        >
+          <InformationCircleIcon className="w-5 h-5 text-icon-active" />
+        </button>
+      </div>
+
       {/* Combined Balance & Convert Card */}
       <div className="tg-card">
         {/* Two Numbers at Top */}
@@ -548,6 +560,170 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
           </button>
         </div>
       </div>
+
+      {/* Earning Info Drawer */}
+      <Sheet open={isEarningInfoOpen} onOpenChange={setIsEarningInfoOpen}>
+        <SheetContent className="bg-[#1c1c1d] flex flex-col">
+          <SheetHeader>
+            <SheetTitle className="text-white text-center">
+              How to Earn TON
+            </SheetTitle>
+          </SheetHeader>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto space-y-6 py-4">
+            {/* Overview */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-4 text-white">
+              <h3 className="text-lg font-semibold mb-2">CollectableKIT Overview</h3>
+              <p className="text-sm text-blue-100">
+                A Telegram Mini App that rewards users with TON cryptocurrency for engaging with creative tools and games.
+              </p>
+            </div>
+
+            {/* Monetization Model */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white">Monetization Model</h3>
+              
+              {/* Pricing Table */}
+              <div className="bg-[#2a2a2b] rounded-xl overflow-hidden">
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center text-gray-400 text-sm font-medium">
+                    Free Tier
+                  </div>
+                  <div className="text-center text-purple-400 text-sm font-bold">
+                    Premium Tier (1 TON/month)
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-300 font-medium">20 credits</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white font-bold">Unlimited credits</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-300 font-medium">1 credit per action</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white font-bold">Unlimited (no watermarks)</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-300 font-medium">5 wins/day</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white font-bold">10 wins/day</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-300 font-medium">0.1 TON at 100 wins</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white font-bold">0.1 TON at 50 wins</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 p-3">
+                  <div className="text-center">
+                    <div className="text-gray-400 text-sm">With Watermark</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-purple-400 font-medium">Exclusive Patterns</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Earning Methods */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white">How to Earn Credits</h3>
+              
+              <div className="space-y-3">
+                <div className="bg-[#2a2a2b] rounded-lg p-4">
+                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                    <GiftIcon className="w-5 h-5 text-yellow-500" />
+                    Mini-Games
+                  </h4>
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li>• <strong>Zoom Game:</strong> Guess the gift model from zoomed image (4 options)</li>
+                    <li>• <strong>Emoji Game:</strong> Match 3 out of 5 emoji patterns</li>
+                    <li>• <strong>Win Rate:</strong> ~40% (balanced for fun and challenge)</li>
+                    <li>• <strong>Reward:</strong> 1 credit per win</li>
+                  </ul>
+                </div>
+
+                <div className="bg-[#2a2a2b] rounded-lg p-4">
+                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                    <UserIcon className="w-5 h-5 text-green-500" />
+                    Daily Activities
+                  </h4>
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li>• <strong>Daily Login:</strong> 1 credit bonus</li>
+                    <li>• <strong>First Win Bonus:</strong> 0.1 TON (min. 0.2 TON withdrawal)</li>
+                    <li>• <strong>Referrals:</strong> 5 credits + 0.05 TON if friend goes premium</li>
+                  </ul>
+                </div>
+
+                <div className="bg-[#2a2a2b] rounded-lg p-4">
+                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                    <CurrencyDollarIcon className="w-5 h-5 text-blue-500" />
+                    Credit Usage
+                  </h4>
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li>• <strong>Save Collection:</strong> 1 credit</li>
+                    <li>• <strong>Cut Photo:</strong> 1 credit</li>
+                    <li>• <strong>Share Publicly:</strong> 1 credit</li>
+                    <li>• <strong>Premium Users:</strong> Unlimited usage</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* TON Rewards */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white">TON Rewards</h3>
+              
+              <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl p-4 text-white">
+                <h4 className="font-semibold mb-2">Conversion Rates</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Free Users:</span>
+                    <span className="font-bold">100 credits → 0.1 TON</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Premium Users:</span>
+                    <span className="font-bold">50 credits → 0.1 TON</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Minimum Withdrawal:</span>
+                    <span className="font-bold">0.2 TON</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div className="bg-green-900/30 border border-green-600/30 rounded-lg p-4">
+              <h4 className="text-green-300 font-semibold mb-2">💡 Pro Tips</h4>
+              <ul className="text-green-200/80 text-sm space-y-1">
+                <li>• Play games daily to maximize credit earnings</li>
+                <li>• Premium users earn TON 2x faster</li>
+                <li>• Share your creations to promote the app</li>
+                <li>• Invite friends for bonus credits and TON</li>
+                <li>• First win gives instant 0.1 TON bonus</li>
+              </ul>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
