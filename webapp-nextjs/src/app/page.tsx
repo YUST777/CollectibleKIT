@@ -10,19 +10,19 @@ export default function Home() {
   const { isReady, user: telegramUser } = useTelegram();
 
   useEffect(() => {
-    // Show loading screen until Telegram is ready
-    if (isReady) {
-      setIsLoading(false);
-    }
+    // CRITICAL FIX: Show app immediately after short delay
+    // Don't wait for Telegram.WebApp to prevent infinite loading
     
-    // Fallback: if not ready after 5 seconds, show app anyway
-    const fallbackTimer = setTimeout(() => {
-      console.log('⚠️ Fallback: Showing app without Telegram initialization');
-      setIsLoading(false);
-    }, 5000);
+    console.log('📱 Initializing app...');
     
-    return () => clearTimeout(fallbackTimer);
-  }, [isReady]);
+    // Quick timeout to show app ASAP (1 second max)
+    const timer = setTimeout(() => {
+      console.log('✅ App ready - showing MainApp');
+      setIsLoading(false);
+    }, 1000); // Reduced from 5000 to 1000ms
+    
+    return () => clearTimeout(timer);
+  }, []); // No dependencies - just run once
 
   if (isLoading) {
     return <LoadingScreen />;
