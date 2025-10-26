@@ -108,8 +108,20 @@ async def send_withdrawal_notification(context: ContextTypes.DEFAULT_TYPE, user_
         # Format the TON amount
         amount_str = f"{amount:.1f}" if amount == int(amount) else f"{amount:.2f}"
         
+        # Convert Base64 hash to hex for TONScan URL
+        try:
+            import base64
+            # Decode Base64 to bytes, then convert to hex
+            hash_bytes = base64.b64decode(tx_hash)
+            hex_hash = hash_bytes.hex()
+            tonscan_url = f"https://tonscan.org/tx/{hex_hash}"
+        except Exception as e:
+            logger.warning(f"Could not convert hash {tx_hash} to hex: {e}")
+            # Fallback to using the original hash
+            tonscan_url = f"https://tonscan.org/tx/{tx_hash}"
+        
         # Create the notification message
-        message = f"🎉 Your {amount_str} TON withdrawal (https://tonscan.org/tx/{tx_hash}) was successful — enjoy!"
+        message = f"🎉 Your {amount_str} TON withdrawal ({tonscan_url}) was successful — enjoy!"
         
         # Send the message to the user
         await context.bot.send_message(

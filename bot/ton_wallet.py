@@ -136,16 +136,71 @@ class TONWalletService:
             
             logger.info(f"✅ Transaction sent! Hash: {tx_hash}")
             
-            # Wait a bit for transaction to be processed
-            await asyncio.sleep(2)
+            # Wait for transaction to be processed and get real hash
+            await asyncio.sleep(3)
             
-            return tx_hash
+            # Try to get the real transaction hash from blockchain
+            real_tx_hash = await self._get_real_transaction_hash(tx_hash)
+            if real_tx_hash:
+                logger.info(f"✅ Real transaction hash found: {real_tx_hash}")
+                return real_tx_hash
+            else:
+                logger.warning(f"Could not get real transaction hash, using: {tx_hash}")
+                return tx_hash
             
         except Exception as e:
             logger.error(f"❌ Error sending TON: {str(e)}")
             logger.exception(e)
             return None
     
+    async def _get_real_transaction_hash(self, tx_hash: str) -> Optional[str]:
+        """Get the real transaction hash from blockchain using TON Center API"""
+        try:
+            import requests
+            
+            # Get wallet address
+            wallet_address = self.wallet.address.to_str(is_bounceable=False, is_url_safe=True)
+            
+            # Use TON Center API to get recent transactions
+            api_url = "https://toncenter.com/api/v3/transactions"
+            params = {
+                "account": wallet_address,
+                "limit": 10,
+                "sort": "desc"
+            }
+            
+            response = requests.get(api_url, params=params, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                logger.info(f"API Response: {data}")
+                
+                transactions = data.get('transactions', [])
+                
+                # Look for the most recent transaction (should be our withdrawal)
+                if transactions:
+                    latest_tx = transactions[0]
+                    logger.info(f"Latest transaction: {latest_tx}")
+                    
+                    # Try different possible hash field names
+                    real_hash = None
+                    if isinstance(latest_tx.get('hash'), dict):
+                        real_hash = latest_tx.get('hash', {}).get('hash', '')
+                    elif isinstance(latest_tx.get('hash'), str):
+                        real_hash = latest_tx.get('hash', '')
+                    elif 'tx_hash' in latest_tx:
+                        real_hash = latest_tx.get('tx_hash', '')
+                    elif 'transaction_hash' in latest_tx:
+                        real_hash = latest_tx.get('transaction_hash', '')
+                    
+                    if real_hash:
+                        logger.info(f"Found real transaction hash: {real_hash}")
+                        return real_hash
+                        
+        except Exception as e:
+            logger.error(f"Failed to get real transaction hash: {e}")
+        
+        return None
+
     async def close(self):
         """Close connection to TON network"""
         try:
