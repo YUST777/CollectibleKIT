@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { TelegramProvider } from '@/components/providers/TelegramProvider';
-import { MonetagSDK } from '@/components/MonetagSDK';
+// MonetagSDK completely removed - SDK loads dynamically only when needed
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -75,7 +75,6 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <TelegramProvider>
-          <MonetagSDK />
           <div className="min-h-screen bg-bg-main text-text-idle">
             {children}
           </div>
