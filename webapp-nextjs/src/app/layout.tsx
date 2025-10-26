@@ -36,7 +36,12 @@ export default function RootLayout({
         {/* TON Connect UI */}
         <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js" />
         
-        {/* Monetag SDK will be loaded conditionally based on user type in MonetagSDK component */}
+        {/* Monetag SDK for In-App Interstitial Ads */}
+        <script 
+          src="//libtl.com/sdk.js" 
+          data-zone="10065186" 
+          data-sdk="show_10065186"
+        />
         
         {/* Telegram Analytics SDK - Disabled until token is configured */}
         {/* Uncomment and add your token from https://t.me/TonBuilders_bot */}

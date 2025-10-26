@@ -50,6 +50,7 @@ export const GameTab: React.FC = () => {
   
   // Game counter for ads (show ad every 3 games)
   const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [isAnswerCorrect, setIsAnswerCorrect] = useState(false);
 
   // Load gifts data from CDN on mount
   useEffect(() => {
@@ -211,6 +212,12 @@ export const GameTab: React.FC = () => {
           setGameMessage('Correct! Well done!');
           hapticFeedback('notification', 'success', webApp);
           
+          // Mark answer as correct to show NEXT button
+          setIsAnswerCorrect(true);
+          
+          // Increment game counter
+          setGamesPlayed(prev => prev + 1);
+          
           // Show celebration modal for first win or regular credit
           if (result.is_first_win) {
             setIsFirstWin(true);
@@ -223,59 +230,6 @@ export const GameTab: React.FC = () => {
           setSelectedGiftName(null);
           setSelectedModelNumber(null);
           setSelectedModelName(null);
-          
-          // Increment game counter and trigger ad every 3 games
-          const newGameCount = gamesPlayed + 1;
-          setGamesPlayed(newGameCount);
-          
-          // Trigger rewarded interstitial ad after every 3 games
-          if (newGameCount % 3 === 0) {
-            console.log(`🎮 Showing ad after ${newGameCount} games`);
-            
-            // Show ad after celebration modal closes
-            setTimeout(async () => {
-              // Load Monetag SDK dynamically when needed (prevents blocking app load)
-              if (!(window as any).show_10065186) {
-                console.log('⏳ Loading Monetag SDK dynamically...');
-                try {
-                  await new Promise<void>((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = '//libtl.com/sdk.js';
-                    script.setAttribute('data-zone', '10065186');
-                    script.setAttribute('data-sdk', 'show_10065186');
-                    script.async = true;
-                    
-                    script.onload = () => {
-                      console.log('✅ Monetag SDK loaded');
-                      // Wait a bit for SDK to initialize
-                      setTimeout(resolve, 500);
-                    };
-                    script.onerror = reject;
-                    
-                    document.head.appendChild(script);
-                  });
-                } catch (error) {
-                  console.error('❌ Failed to load Monetag SDK:', error);
-                  return;
-                }
-              }
-              
-              // Show ad
-              const showAd = (window as any).show_10065186;
-              if (typeof showAd === 'function') {
-                showAd({ ymid: user?.user_id?.toString() || 'anonymous' })
-                  .then(() => console.log('✅ Rewarded ad completed'))
-                  .catch(() => console.log('⚠️ Ad skipped or failed'));
-              } else {
-                console.error('❌ show_10065186 function not available');
-              }
-            }, 2800); // After celebration modal
-          }
-          
-          // Auto-load next random game after 2.5 seconds (after celebration closes)
-          setTimeout(() => {
-            loadDailyQuestion();
-          }, 2500);
           
         } else {
           // Wrong answer - handle based on game type
@@ -357,6 +311,48 @@ export const GameTab: React.FC = () => {
     loadDailyQuestion();
   };
 
+  const handleNextGame = async () => {
+    try {
+      // Check if we should show ad (every 3 games)
+      const shouldShowAd = gamesPlayed > 0 && gamesPlayed % 3 === 0;
+      
+      if (shouldShowAd) {
+        // Show Monetag In-App Interstitial ad
+        console.log('📺 Showing ad after 3 games');
+        
+        try {
+          // @ts-ignore - Monetag SDK
+          if (window.show_10065186) {
+            await window.show_10065186({
+              type: 'inApp',
+              inAppSettings: {
+                frequency: 1,
+                capping: 0.1,
+                interval: 30,
+                timeout: 5,
+                everyPage: false
+              }
+            });
+            console.log('✅ Ad shown successfully');
+          } else {
+            console.warn('⚠️ Monetag SDK not loaded');
+          }
+        } catch (adError) {
+          console.error('Ad error:', adError);
+          // Continue to next game even if ad fails
+        }
+      }
+      
+      // Reset state and load next game
+      setIsAnswerCorrect(false);
+      setGameMessage('');
+      loadDailyQuestion();
+      
+    } catch (error) {
+      console.error('Error loading next game:', error);
+      toast.error('Failed to load next game');
+    }
+  };
 
   const renderEmojiHints = () => {
     if (!currentQuestion || currentQuestion.game_type !== 'emoji') return null;
@@ -637,25 +633,40 @@ export const GameTab: React.FC = () => {
 
           {/* Selection Buttons */}
           <div className="flex gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={openFilterDrawer}
-              className="flex-1"
-            >
-              <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
-              {selectedGiftName || selectedModelName ? 'Change Selection' : 'Select Gift & Model'}
-            </Button>
-            
-            <Button
-              size="sm"
-              onClick={submitAnswer}
-              disabled={!selectedGiftName || !selectedModelName || isLoading}
-              loading={isLoading}
-              className="px-6"
-            >
-              Submit
-            </Button>
+            {!isAnswerCorrect ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={openFilterDrawer}
+                  className="flex-1"
+                >
+                  <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
+                  {selectedGiftName || selectedModelName ? 'Change Selection' : 'Select Gift & Model'}
+                </Button>
+                
+                <Button
+                  size="sm"
+                  onClick={submitAnswer}
+                  disabled={!selectedGiftName || !selectedModelName || isLoading}
+                  loading={isLoading}
+                  className="px-6"
+                >
+                  Submit
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleNextGame}
+                  className="flex-1 animate-bounce"
+                >
+                  NEXT
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
