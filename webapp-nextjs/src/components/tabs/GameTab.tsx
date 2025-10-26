@@ -47,6 +47,43 @@ export const GameTab: React.FC = () => {
   // Celebration modal state
   const [showCelebration, setShowCelebration] = useState(false);
   const [isFirstWin, setIsFirstWin] = useState(false);
+  
+  // Game counter for ads (show ad every 3 games)
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+
+  // Function to trigger Monetag In-App Interstitial ad
+  const triggerAd = () => {
+    try {
+      // Get the Monetag SDK function from window
+      const showAd = window.show_10065186;
+      
+      if (typeof showAd === 'function') {
+        console.log('🎬 Triggering Monetag In-App Interstitial ad...');
+        
+        // Show ad with configuration from docs
+        // Using ymid to track which user triggered the ad
+        showAd({
+          type: 'inApp',
+          inAppSettings: {
+            frequency: 1, // Show 1 ad
+            capping: 0.1, // Within 0.1 hours (6 minutes)
+            interval: 30, // 30 second interval
+            timeout: 5, // 5 second delay before first ad
+            everyPage: false // Session saved when navigating between pages
+          },
+          ymid: user?.user_id?.toString() || 'anonymous' // Track user ID
+        }).then(() => {
+          console.log('✅ Ad shown successfully');
+        }).catch((error: any) => {
+          console.log('⚠️ Ad failed or was skipped:', error);
+        });
+      } else {
+        console.warn('⚠️ Monetag SDK not loaded yet');
+      }
+    } catch (error) {
+      console.error('Error triggering ad:', error);
+    }
+  };
 
   // Load gifts data from CDN on mount
   useEffect(() => {
@@ -220,6 +257,19 @@ export const GameTab: React.FC = () => {
           setSelectedGiftName(null);
           setSelectedModelNumber(null);
           setSelectedModelName(null);
+          
+          // Increment game counter and trigger ad every 3 games
+          const newGameCount = gamesPlayed + 1;
+          setGamesPlayed(newGameCount);
+          
+          // Trigger ad after every 3 games (on the 3rd, 6th, 9th, etc.)
+          if (newGameCount % 3 === 0) {
+            console.log(`🎮 Triggering ad after ${newGameCount} games`);
+            // Small delay before showing ad
+            setTimeout(() => {
+              triggerAd();
+            }, 1000);
+          }
           
           // Auto-load next random game after 2.5 seconds (after celebration closes)
           setTimeout(() => {
@@ -530,6 +580,18 @@ export const GameTab: React.FC = () => {
           <div className="w-full h-0.5 bg-gray-400"></div>
           <div className="w-full h-0.5 bg-gray-400"></div>
         </button>
+      </div>
+
+      {/* Debug: Manual Ad Trigger Button (remove in production) */}
+      <div className="px-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={triggerAd}
+          className="w-full"
+        >
+          🎬 Test Ad ({gamesPlayed} games played)
+        </Button>
       </div>
 
       {/* Ads Banner */}

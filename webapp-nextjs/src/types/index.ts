@@ -11,6 +11,18 @@ declare global {
     };
     lottie?: any;
     TonConnectUI?: any;
+    // Monetag SDK
+    show_10065186?: (config?: {
+      type?: 'inApp';
+      inAppSettings?: {
+        frequency?: number;
+        capping?: number;
+        interval?: number;
+        timeout?: number;
+        everyPage?: boolean;
+      };
+      ymid?: string;
+    }) => Promise<void>;
   }
 }
 

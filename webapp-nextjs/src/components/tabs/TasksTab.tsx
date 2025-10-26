@@ -72,20 +72,20 @@ export const TasksContent: React.FC = () => {
       // Navigate to the relevant tab
       if (task.task_id.includes('story')) {
         setCurrentTab('story');
-        toast('Navigate to Story tab to create and share your story');
+        toast('Navigate to Story tab to create and share your story.');
       } else if (task.task_id.includes('games')) {
         setCurrentTab('game');
-        toast('Navigate to Game tab to complete both daily games');
+        toast('Navigate to Game tab to complete both daily games.');
       } else if (task.task_id.includes('collection')) {
         setCurrentTab('collection');
-        toast('Navigate to Collection tab to create a public collection');
+        toast('Navigate to Collection tab to create a public collection.');
       } else if (task.task_id.includes('promote')) {
         // For promote task, directly trigger the share story function
         await triggerPromoteStoryCanvas();
         return;
       } else if (task.task_id.includes('invite')) {
         setCurrentTab('referral');
-        toast('Navigate to Referral tab to share your referral link');
+        toast('Navigate to Referral tab to share your referral link.');
       }
     } else if (taskState === 'navigated') {
       // Second click: Check if task is completed
