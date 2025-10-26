@@ -189,13 +189,20 @@ export async function getUserFromTelegram(request: Request): Promise<{ id: numbe
       }
     }
     
-    // Fallback: return the known VIP user for testing
-    console.log('⚠️ Using fallback user data');
-    return {
-      id: 7152782013,
-      first_name: "Создатель историй",
-      is_premium: true
-    };
+    // Development mode: Allow testing in browser with a default user
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 Development mode: Using default test user');
+      return {
+        id: 123456789, // Default test user ID
+        first_name: 'Test',
+        last_name: 'User',
+        username: 'testuser',
+        is_premium: false
+      };
+    }
+    
+    console.log('❌ No valid Telegram authentication found');
+    return null;
   } catch (error) {
     console.error('Error getting user from Telegram:', error);
     return null;
