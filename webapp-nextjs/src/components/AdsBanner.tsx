@@ -56,7 +56,7 @@ export const AdsBanner: React.FC = () => {
       id: 3,
       bgGradient: 'from-purple-500 via-pink-500 to-rose-500',
       mainText: 'Buy Premium now',
-      subText: 'Have 300 Credits for 1 TON !!',
+      subText: 'Get unlimited credits for 1 TON/month',
       elementLottie: '/buypreuimead.json',
       link: undefined // Add your payment link here
     },
@@ -386,14 +386,14 @@ export const AdsBanner: React.FC = () => {
             {/* Premium Badge */}
             <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 p-6 rounded-2xl text-center">
               <div className="text-white text-3xl font-bold mb-2">
-                300 Credits
+                Premium Plan
               </div>
               <div className="text-white/90 text-lg">
-                For only 1 TON
+                1 TON/month
               </div>
               <div className="mt-3 text-white/70 text-sm flex items-center justify-center gap-1">
                 <PartyPopper className="w-4 h-4" />
-                <span>Best value package!</span>
+                <span>Unlimited everything!</span>
               </div>
             </div>
 
@@ -418,21 +418,22 @@ export const AdsBanner: React.FC = () => {
                 {/* Credits Row */}
                 <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
                   <div className="text-center">
-                    <div className="text-gray-300 font-medium">3 Credits</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-white font-bold text-xl">300 Credits</div>
-                  </div>
-                </div>
-
-                {/* Tools Usage Row */}
-                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
-                  <div className="text-center">
-                    <div className="text-gray-300 font-medium">Limited</div>
+                    <div className="text-gray-300 font-medium">20 Credits</div>
                   </div>
                   <div className="text-center flex items-center justify-center">
                     <Sparkles className="w-5 h-5 text-yellow-400 mr-1" />
-                    <div className="text-white font-bold text-lg">∞ Tools Usage</div>
+                    <div className="text-white font-bold text-xl">∞ Unlimited</div>
+                  </div>
+                </div>
+
+                {/* Game Wins Per Day Row */}
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-300 font-medium">5 wins/day</div>
+                  </div>
+                  <div className="text-center flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-blue-400 mr-1" />
+                    <div className="text-white font-bold text-lg">10 wins/day</div>
                   </div>
                 </div>
 
@@ -447,14 +448,25 @@ export const AdsBanner: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Priority Processing Row */}
+                {/* TON Rewards Row */}
+                <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
+                  <div className="text-center">
+                    <div className="text-gray-300 font-medium">0.1 TON at 100 wins</div>
+                  </div>
+                  <div className="text-center flex items-center justify-center">
+                    <Gem className="w-5 h-5 text-yellow-400 mr-1" />
+                    <div className="text-white font-bold text-lg">0.1 TON at 50 wins</div>
+                  </div>
+                </div>
+
+                {/* Exclusive Features Row */}
                 <div className="grid grid-cols-2 gap-2 p-3">
                   <div className="text-center">
                     <div className="text-gray-400 text-sm">Standard</div>
                   </div>
                   <div className="text-center flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-blue-400 mr-1" />
-                    <div className="text-blue-400 font-medium">Priority Processing</div>
+                    <Crown className="w-5 h-5 text-purple-400 mr-1" />
+                    <div className="text-purple-400 font-medium">Exclusive Patterns</div>
                   </div>
                 </div>
               </div>
@@ -474,10 +486,10 @@ export const AdsBanner: React.FC = () => {
                   ) : (
                     <Gem className="w-7 h-7" />
                   )}
-                  <span>Amazing Value</span>
+                  <span>Monthly Subscription</span>
                 </div>
                 <div className="text-green-200/80 text-sm text-center">
-                  That's less than 0.0034 TON per image!
+                  Get 2x faster TON rewards & unlimited usage!
                 </div>
               </div>
             </div>
@@ -489,7 +501,7 @@ export const AdsBanner: React.FC = () => {
               onClick={handleBuyPremium}
               className="w-full bg-gradient-to-r from-[#0098EA] to-[#0088CC] hover:from-[#0088CC] hover:to-[#0078BB] text-white font-bold py-4 text-lg flex items-center justify-center gap-2 shadow-lg"
             >
-              <span>Buy Now for 1 TON</span>
+              <span>Subscribe for 1 TON/month</span>
               {lottieData['/tonlogo.json'] ? (
                 <div className="w-7 h-7">
                   <Lottie
@@ -504,7 +516,7 @@ export const AdsBanner: React.FC = () => {
               )}
             </Button>
             <div className="text-center text-gray-400 text-xs mt-2">
-              Secure payment via TON blockchain
+              Renews monthly • Secure payment via TON blockchain
             </div>
           </div>
         </SheetContent>
