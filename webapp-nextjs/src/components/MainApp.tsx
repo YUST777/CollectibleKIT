@@ -35,6 +35,30 @@ export const MainApp: React.FC = () => {
   }));
 
   useEffect(() => {
+    // SKIP user initialization to prevent infinite loading
+    // Initialize user later or on-demand
+    console.log('⚠️ Skipping user initialization to prevent infinite loading');
+    
+    // Set a dummy user so app can render
+    setUser({
+      user_id: 0,
+      username: 'user',
+      first_name: 'User',
+      user_type: 'normal',
+      watermark: true,
+      credits: 0,
+      free_uses: 3,
+      can_process: true,
+      credits_remaining: 0,
+      free_remaining: '3',
+      created_at: Date.now(),
+      last_activity: Date.now(),
+    });
+    
+    return;
+    
+    // REMOVED: The code below was causing infinite loading
+    /*
     const initializeUser = async () => {
       // Add timeout to prevent infinite loading
       const timeout = setTimeout(() => {
@@ -190,32 +214,7 @@ export const MainApp: React.FC = () => {
         }
       } catch (error) {
         console.error('Error initializing app:', error);
-      } finally {
-        clearTimeout(timeout);
-      }
-    };
-
-    // Wrap in try-catch to prevent infinite loading
-    try {
-      initializeUser();
-    } catch (error) {
-      console.error('Failed to initialize user:', error);
-      // Set fallback user so app can load
-      setUser({
-        user_id: 0,
-        username: 'guest',
-        first_name: 'Guest',
-        user_type: 'normal',
-        watermark: true,
-        credits: 0,
-        free_uses: 3,
-        can_process: true,
-        credits_remaining: 0,
-        free_remaining: '3',
-        created_at: Date.now(),
-        last_activity: Date.now(),
-      });
-    }
+    */
   }, [setUser, setTonBalance]);
 
   const renderTabContent = () => {
