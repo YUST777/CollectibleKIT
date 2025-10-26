@@ -119,8 +119,15 @@ class TONWalletService:
                 body=comment  # Optional comment
             )
             
-            # Get transaction hash
-            tx_hash = result.hash.hex()
+            # Get transaction hash - result might be different types
+            if hasattr(result, 'hash'):
+                tx_hash = result.hash.hex()
+            elif hasattr(result, 'hex'):
+                tx_hash = result.hex()
+            else:
+                # If result is just an int or other type, convert to hex
+                tx_hash = hex(result) if isinstance(result, int) else str(result)
+            
             logger.info(f"✅ Transaction sent! Hash: {tx_hash}")
             
             # Wait a bit for transaction to be processed
