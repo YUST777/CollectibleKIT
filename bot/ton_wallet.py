@@ -10,6 +10,7 @@ from typing import Optional
 from pytoniq import LiteBalancer, WalletV4R2
 from memo_system import get_memo_system
 from transaction_tracker import get_transaction_tracker
+from address_utils import convert_to_friendly_address
 
 logger = logging.getLogger(__name__)
 
@@ -104,16 +105,15 @@ class TONWalletService:
             
             logger.info(f"📤 Sending {amount_ton} TON to {destination_address}")
             
-            # Convert address to Address object if it's a string
-            from pytoniq_core import Address
+            # Convert address to friendly format if needed
+            friendly_address = convert_to_friendly_address(destination_address)
+            if not friendly_address:
+                logger.error(f"Invalid address format: {destination_address}")
+                return None
             
-            # Handle both raw (0:...) and user-friendly formats
-            if destination_address.startswith('0:') or destination_address.startswith('-1:'):
-                # Raw format
-                recipient = Address(destination_address)
-            else:
-                # User-friendly format (UQ..., EQ...)
-                recipient = Address(destination_address)
+            # Use the converted friendly address
+            from pytoniq_core import Address
+            recipient = Address(friendly_address)
             
             # Use memo if provided, otherwise use comment
             transaction_body = memo if memo else comment
