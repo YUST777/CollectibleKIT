@@ -8,7 +8,7 @@ export interface WithdrawalResult {
 }
 
 export class TonWalletService {
-  private static readonly PYTHON_SCRIPT = path.join(process.cwd(), '..', 'bot', 'ton_wallet.py');
+  private static readonly PYTHON_SCRIPT = path.join(process.cwd(), '..', 'bot', 'ton_wallet_cli.py');
 
   /**
    * Send TON withdrawal
