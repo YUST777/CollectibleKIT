@@ -84,8 +84,8 @@ export const TasksContent: React.FC = () => {
         await triggerPromoteStoryCanvas();
         return;
       } else if (task.task_id.includes('invite')) {
-        setCurrentTab('profile');
-        toast('Navigate to Profile tab to share your referral link');
+        setCurrentTab('referral');
+        toast('Navigate to Referral tab to share your referral link');
       }
     } else if (taskState === 'navigated') {
       // Second click: Check if task is completed
