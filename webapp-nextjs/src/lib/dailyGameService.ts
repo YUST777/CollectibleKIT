@@ -310,6 +310,13 @@ export class DailyGameService {
         });
       }
 
+      // Record game completion for task tracking
+      if (userId > 0) {
+        const timeSlot = gameType === 'emoji' ? 'morning' : 'afternoon';
+        await db.createDailyGameSolve(userId, today, timeSlot, answer, false);
+        console.log(`📝 Recorded game completion: ${timeSlot} game for user ${userId}`);
+      }
+
       // Increment global solve counter
       await db.incrementTotalGameSolves();
 
