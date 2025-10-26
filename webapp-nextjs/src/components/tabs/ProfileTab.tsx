@@ -625,10 +625,10 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
 
                 <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-700">
                   <div className="text-center">
-                    <div className="text-gray-300 font-medium">0.1 TON at 100 wins</div>
+                    <div className="text-gray-300 font-medium">100 credits → 0.1 TON</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-white font-bold">0.1 TON at 50 wins</div>
+                    <div className="text-white font-bold">50 credits → 0.1 TON</div>
                   </div>
                 </div>
 
@@ -716,8 +716,8 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
             <div className="bg-green-900/30 border border-green-600/30 rounded-lg p-4">
               <h4 className="text-green-300 font-semibold mb-2">💡 Pro Tips</h4>
               <ul className="text-green-200/80 text-sm space-y-1">
-                <li>• Play games daily to maximize credit earnings</li>
-                <li>• Premium users earn TON 2x faster</li>
+                <li>• Earn credits through games, tasks, daily login, and more</li>
+                <li>• Premium users convert credits to TON 2x faster</li>
                 <li>• Share your creations to promote the app</li>
                 <li>• Complete referral task to earn credits</li>
                 <li>• Complete special missions in Tasks tab to earn TON</li>
