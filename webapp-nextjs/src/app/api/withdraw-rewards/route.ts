@@ -2,30 +2,48 @@ import { NextRequest, NextResponse } from 'next/server';
 import { UserService } from '@/lib/userService';
 import { TonWalletService } from '@/lib/tonWalletService';
 import { db } from '@/lib/database';
+import { getUserFromTelegram } from '@/lib/telegram';
+
+// Rate limiting storage
+const rateLimit = new Map<number, number[]>();
 
 export async function POST(request: NextRequest) {
   try {
     console.log('💰 Processing withdrawal request');
 
+    // ✅ SECURITY FIX: Add authentication check
+    const user = await getUserFromTelegram(request);
+    if (!user) {
+      console.log('❌ Unauthorized withdrawal attempt - no valid user');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // ✅ SECURITY FIX: Add rate limiting
+    const now = Date.now();
+    const userRequests = rateLimit.get(user.id) || [];
+    const recentRequests = userRequests.filter(time => now - time < 60000); // 1 minute window
+    
+    if (recentRequests.length >= 3) { // Max 3 withdrawal attempts per minute
+      console.log(`❌ Rate limit exceeded for user ${user.id}`);
+      return NextResponse.json({ error: 'Rate limit exceeded. Please wait before trying again.' }, { status: 429 });
+    }
+    
+    recentRequests.push(now);
+    rateLimit.set(user.id, recentRequests);
+
     const body = await request.json();
-    const { userId, amount, walletAddress } = body;
+    const { amount, walletAddress } = body; // Remove userId from body - use authenticated user
 
     // Validate required fields
-    if (!userId || !amount || !walletAddress) {
+    if (!amount || !walletAddress) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: userId, amount, or walletAddress' },
+        { success: false, error: 'Missing required fields: amount or walletAddress' },
         { status: 400 }
       );
     }
 
-    // Validate userId
-    const userIdNum = parseInt(userId);
-    if (isNaN(userIdNum) || userIdNum <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
+    // ✅ SECURITY FIX: Use authenticated user ID
+    const userIdNum = user.id;
 
     // Validate amount
     const amountNum = parseFloat(amount);
@@ -36,18 +54,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate wallet address
-    if (!TonWalletService.validateWalletAddress(walletAddress)) {
+    // ✅ SECURITY FIX: Sanitize and validate wallet address
+    const sanitizedWalletAddress = walletAddress.replace(/[^A-Za-z0-9_-]/g, '');
+    if (sanitizedWalletAddress !== walletAddress || sanitizedWalletAddress.length < 40) {
+      console.log(`❌ Invalid wallet address format from user ${userIdNum}: ${walletAddress}`);
+      return NextResponse.json(
+        { success: false, error: 'Invalid TON wallet address format' },
+        { status: 400 }
+      );
+    }
+
+    if (!TonWalletService.validateWalletAddress(sanitizedWalletAddress)) {
       return NextResponse.json(
         { success: false, error: 'Invalid TON wallet address' },
         { status: 400 }
       );
     }
 
-    console.log('Withdrawal request:', {
+    // ✅ SECURITY FIX: Add security logging
+    console.log('🔒 Withdrawal request:', {
       userId: userIdNum,
       amount: amountNum,
-      walletAddress: walletAddress
+      walletAddress: sanitizedWalletAddress,
+      timestamp: new Date().toISOString(),
+      ip: request.headers.get('x-forwarded-for') || 'unknown'
     });
 
     // Check user permissions and balance
@@ -81,12 +111,12 @@ export async function POST(request: NextRequest) {
       
       const pythonScript = path.join(process.cwd(), '..', 'bot', 'ton_wallet_cli.py');
       
-      // First check if withdrawal is allowed (dry run)
+      // ✅ SECURITY FIX: Use sanitized wallet address
       const checkProcess = spawn('python3', [
         pythonScript,
         '--user-id', userIdNum.toString(),
         '--amount', amountNum.toString(),
-        '--wallet', walletAddress,
+        '--wallet', sanitizedWalletAddress,
         '--check-only'  // We'll add this flag to the CLI
       ], {
         cwd: process.cwd(),
@@ -96,16 +126,16 @@ export async function POST(request: NextRequest) {
       let checkOutput = '';
       let checkError = '';
 
-      checkProcess.stdout.on('data', (data) => {
+      checkProcess.stdout.on('data', (data: any) => {
         checkOutput += data.toString();
       });
 
-      checkProcess.stderr.on('data', (data) => {
+      checkProcess.stderr.on('data', (data: any) => {
         checkError += data.toString();
       });
 
-      const checkResult = await new Promise((resolve) => {
-        checkProcess.on('close', (code) => {
+      const checkResult = await new Promise<{code: any, output: string, error: string}>((resolve) => {
+        checkProcess.on('close', (code: any) => {
           resolve({ code, output: checkOutput, error: checkError });
         });
       });
@@ -122,15 +152,19 @@ export async function POST(request: NextRequest) {
       }
 
     } catch (error) {
-      console.error('Error checking daily limits:', error);
-      // Continue with withdrawal if limit check fails
+      console.error('❌ Error checking daily limits:', error);
+      // ✅ SECURITY FIX: Don't continue if limit check fails
+      return NextResponse.json(
+        { success: false, error: 'Daily limit check failed. Please try again later.' },
+        { status: 500 }
+      );
     }
 
     // Process withdrawal
     const withdrawalResult = await TonWalletService.sendWithdrawal(
       userIdNum,
       amountNum,
-      walletAddress
+      sanitizedWalletAddress
     );
 
     if (!withdrawalResult.success) {
@@ -171,7 +205,7 @@ export async function POST(request: NextRequest) {
         pythonScript,
         '--user-id', userIdNum.toString(),
         '--amount', amountNum.toString(),
-        '--wallet', walletAddress,
+        '--wallet', sanitizedWalletAddress,
         '--record-only'  // We'll add this flag to the CLI
       ], {
         cwd: process.cwd(),
@@ -196,7 +230,7 @@ export async function POST(request: NextRequest) {
       success: true,
       transaction_hash: withdrawalResult.transaction_hash,
       amount: amountNum,
-      wallet_address: walletAddress
+      wallet_address: sanitizedWalletAddress
     });
 
   } catch (error) {

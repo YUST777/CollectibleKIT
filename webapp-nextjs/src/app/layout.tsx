@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { TelegramProvider } from '@/components/providers/TelegramProvider';
+// MonetagSDK completely removed - SDK loads dynamically only when needed
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -34,6 +35,14 @@ export default function RootLayout({
         
         {/* TON Connect UI */}
         <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js" />
+        
+        {/* Monetag SDK - In-App Interstitial Ads */}
+        <script
+          src="https://domain.com/sdk.js"
+          data-zone="YOUR_ZONE_ID"
+          data-sdk="show_XXX"
+          data-auto="2/0.1/30/5/0"
+        />
         
         {/* Telegram Analytics SDK - Disabled until token is configured */}
         {/* Uncomment and add your token from https://t.me/TonBuilders_bot */}

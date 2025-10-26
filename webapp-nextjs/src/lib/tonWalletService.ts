@@ -86,7 +86,7 @@ export class TonWalletService {
           console.log('Python output:', stdout);
           
           // Try to extract transaction hash from output
-          const txHashMatch = stdout.match(/transaction[_\s]*hash[:\s]*([a-f0-9]{64})/i);
+          const txHashMatch = stdout.match(/TRANSACTION_HASH[:\s]*([A-Za-z0-9+/=]+)/i);
           const transactionHash = txHashMatch ? txHashMatch[1] : undefined;
           
           resolve({ 
