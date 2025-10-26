@@ -8,6 +8,8 @@ import asyncio
 import logging
 from typing import Optional
 from pytoniq import LiteBalancer, WalletV4R2
+from memo_system import get_memo_system
+from transaction_tracker import get_transaction_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +81,7 @@ class TONWalletService:
             logger.error(f"Error getting wallet balance: {str(e)}")
             return 0.0
     
-    async def send_ton(self, destination_address: str, amount_ton: float, comment: str = "") -> Optional[str]:
+    async def send_ton(self, destination_address: str, amount_ton: float, comment: str = "", memo: str = None) -> Optional[str]:
         """
         Send TON to a destination address
         
@@ -87,6 +89,7 @@ class TONWalletService:
             destination_address: Recipient's TON wallet address (user-friendly or raw format)
             amount_ton: Amount in TON to send
             comment: Optional comment/memo for the transaction
+            memo: Encrypted memo for transaction tracking
             
         Returns:
             Transaction hash if successful, None otherwise
@@ -112,11 +115,14 @@ class TONWalletService:
                 # User-friendly format (UQ..., EQ...)
                 recipient = Address(destination_address)
             
+            # Use memo if provided, otherwise use comment
+            transaction_body = memo if memo else comment
+            
             # Create and send transaction
             result = await self.wallet.transfer(
                 destination=recipient,
                 amount=amount_nanoton,
-                body=comment  # Optional comment
+                body=transaction_body  # Memo or comment
             )
             
             # Get transaction hash - result might be different types
@@ -162,7 +168,7 @@ def get_wallet_service() -> TONWalletService:
 
 async def send_withdrawal(user_wallet_address: str, amount_ton: float, user_id: int) -> Optional[str]:
     """
-    Helper function to send TON withdrawal to user
+    Helper function to send TON withdrawal to user with encrypted memo and tracking
     
     Args:
         user_wallet_address: User's TON wallet address
@@ -173,6 +179,8 @@ async def send_withdrawal(user_wallet_address: str, amount_ton: float, user_id: 
         Transaction hash if successful, None otherwise
     """
     wallet_service = get_wallet_service()
+    memo_system = get_memo_system()
+    tracker = get_transaction_tracker()
     
     # Initialize if not already done
     if not wallet_service.wallet:
@@ -180,13 +188,28 @@ async def send_withdrawal(user_wallet_address: str, amount_ton: float, user_id: 
         if not success:
             return None
     
-    # Send the transaction
-    comment = f"Withdrawal for user {user_id}"
+    # Create encrypted memo for tracking
+    memo = memo_system.create_withdrawal_memo(user_id, amount_ton)
+    transaction_id = memo_system.extract_transaction_id(memo)
+    
+    # Record withdrawal in database
+    tracker.record_withdrawal(user_id, amount_ton, user_wallet_address, memo=memo)
+    
+    # Send the transaction with memo
     tx_hash = await wallet_service.send_ton(
         destination_address=user_wallet_address,
         amount_ton=amount_ton,
-        comment=comment
+        memo=memo
     )
+    
+    if tx_hash:
+        # Update transaction status
+        tracker.update_transaction_status(transaction_id, 'completed', tx_hash)
+        logger.info(f"Withdrawal sent with memo: {transaction_id}")
+    else:
+        # Mark as failed
+        tracker.update_transaction_status(transaction_id, 'failed')
+        logger.error(f"Withdrawal failed for transaction: {transaction_id}")
     
     return tx_hash
 
