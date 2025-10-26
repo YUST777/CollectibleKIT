@@ -33,6 +33,7 @@ export const AdsBanner: React.FC = () => {
   const [lottieData, setLottieData] = useState<Record<string, any>>({});
   const [isPremiumDrawerOpen, setIsPremiumDrawerOpen] = useState(false);
   const [isAdPricingDrawerOpen, setIsAdPricingDrawerOpen] = useState(false);
+  const [isGiftsChartDrawerOpen, setIsGiftsChartDrawerOpen] = useState(false);
 
   const ads: Ad[] = [
     {
@@ -73,6 +74,12 @@ export const AdsBanner: React.FC = () => {
     // Open ad pricing drawer for ad #1 (Put your ad here)
     if (adId === 1) {
       setIsAdPricingDrawerOpen(true);
+      return;
+    }
+    
+    // Open gifts chart drawer for ad #2
+    if (adId === 2) {
+      setIsGiftsChartDrawerOpen(true);
       return;
     }
     
@@ -508,6 +515,57 @@ export const AdsBanner: React.FC = () => {
         isOpen={isAdPricingDrawerOpen} 
         onClose={() => setIsAdPricingDrawerOpen(false)} 
       />
+
+      {/* Gifts Chart Drawer */}
+      <Sheet open={isGiftsChartDrawerOpen} onOpenChange={setIsGiftsChartDrawerOpen}>
+        <SheetContent className="bg-[#1c1c1d] flex flex-col">
+          <SheetHeader>
+            <SheetTitle className="text-white text-center">
+              Gifts Chart
+            </SheetTitle>
+          </SheetHeader>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto space-y-6 py-4">
+            {/* Text Content */}
+            <div className="text-center space-y-2">
+              <h3 className="text-white text-xl font-semibold">
+                Want to know all the Gifts/Stickers pricess live ?
+              </h3>
+              <p className="text-gray-300 text-base">
+                Use @giftschartbot
+              </p>
+            </div>
+
+            {/* Image */}
+            <div className="flex justify-center">
+              <Image
+                src="/Kissed_Frog_card.png"
+                alt="Gifts Chart Example"
+                width={350}
+                height={450}
+                className="rounded-lg"
+                priority
+              />
+            </div>
+
+            {/* Description */}
+            <div className="text-center text-gray-400 text-sm px-4">
+              Examble here is the live price of a rondome gift or a sticker
+            </div>
+
+            {/* Open Now Button */}
+            <div className="px-4">
+              <Button
+                onClick={() => window.open('https://t.me/giftsChartBot', '_blank')}
+                className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-600 hover:from-cyan-600 hover:to-blue-600 text-white font-bold py-4 text-lg shadow-lg"
+              >
+                Open Now
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
