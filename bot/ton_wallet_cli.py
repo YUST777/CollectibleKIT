@@ -16,6 +16,7 @@ sys.path.append(str(Path(__file__).parent))
 
 from ton_wallet import send_withdrawal, get_wallet_service
 from address_utils import convert_to_friendly_address
+from daily_withdrawal_tracker import get_daily_withdrawal_tracker
 
 async def main():
     """Main CLI function"""
@@ -24,6 +25,7 @@ async def main():
     parser.add_argument('--amount', type=float, help='Amount in TON to withdraw')
     parser.add_argument('--wallet', type=str, help='Destination wallet address')
     parser.add_argument('--balance', action='store_true', help='Get wallet balance')
+    parser.add_argument('--check-only', action='store_true', help='Only check daily limits without processing withdrawal')
     
     args = parser.parse_args()
     
@@ -56,8 +58,35 @@ async def main():
             sys.exit(0)
         
         elif args.user_id and args.amount and args.wallet:
-            # Process withdrawal
+            # Check daily withdrawal limits
+            tracker = get_daily_withdrawal_tracker()
+            withdrawal_check = tracker.can_withdraw(args.user_id, args.amount)
+            
+            if not withdrawal_check['can_withdraw']:
+                print(f"ERROR: {withdrawal_check['reason']}")
+                print(f"Daily limit: {withdrawal_check['max_daily']} TON")
+                print(f"Already withdrawn today: {withdrawal_check['daily_withdrawn']} TON")
+                print(f"Remaining today: {withdrawal_check['remaining_today']} TON")
+                print(f"User type: {'Premium' if withdrawal_check['is_premium'] else 'Free'}")
+                sys.exit(1)
+            
+            # If check-only mode, just return the validation result
+            if args.check_only:
+                print("CHECK: Daily limits validation passed")
+                print(f"User type: {'Premium' if withdrawal_check['is_premium'] else 'Free'}")
+                print(f"Daily limit: {withdrawal_check['max_daily']} TON")
+                print(f"Already withdrawn today: {withdrawal_check['daily_withdrawn']} TON")
+                print(f"Remaining today: {withdrawal_check['remaining_today']} TON")
+                sys.exit(0)
+            
+            # Process withdrawal with daily limits
             print(f"Processing withdrawal: User {args.user_id}, Amount {args.amount} TON, Wallet {args.wallet}")
+            
+            # Check if amount needs to be adjusted
+            if 'adjusted_amount' in withdrawal_check and withdrawal_check['adjusted_amount'] != args.amount:
+                print(f"WARNING: {withdrawal_check['reason']}")
+                print(f"Adjusted amount from {args.amount} to {withdrawal_check['adjusted_amount']} TON")
+                args.amount = withdrawal_check['adjusted_amount']
             
             # Convert wallet address to friendly format if needed
             friendly_address = convert_to_friendly_address(args.wallet)
@@ -66,6 +95,10 @@ async def main():
                 sys.exit(1)
             
             print(f"Converted address: {friendly_address}")
+            print(f"User type: {'Premium' if withdrawal_check['is_premium'] else 'Free'}")
+            print(f"Daily limit: {withdrawal_check['max_daily']} TON")
+            print(f"Already withdrawn today: {withdrawal_check['daily_withdrawn']} TON")
+            print(f"Remaining today: {withdrawal_check['remaining_today']} TON")
             
             # Get mnemonic from environment
             mnemonic = os.getenv('TON_WALLET_MNEMONIC')
@@ -109,6 +142,11 @@ async def main():
             if tx_hash:
                 # Update transaction status
                 tracker.update_transaction_status(transaction_id, 'completed', tx_hash)
+                
+                # Record withdrawal in daily tracker
+                daily_tracker = get_daily_withdrawal_tracker()
+                daily_tracker.record_withdrawal(args.user_id, args.amount, tx_hash)
+                
                 print(f"SUCCESS: Withdrawal completed")
                 print(f"TRANSACTION_HASH: {tx_hash}")
                 

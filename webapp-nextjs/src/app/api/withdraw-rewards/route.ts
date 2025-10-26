@@ -74,6 +74,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check daily withdrawal limits by calling the Python CLI
+    try {
+      const { spawn } = require('child_process');
+      const path = require('path');
+      
+      const pythonScript = path.join(process.cwd(), '..', 'bot', 'ton_wallet_cli.py');
+      
+      // First check if withdrawal is allowed (dry run)
+      const checkProcess = spawn('python3', [
+        pythonScript,
+        '--user-id', userIdNum.toString(),
+        '--amount', amountNum.toString(),
+        '--wallet', walletAddress,
+        '--check-only'  // We'll add this flag to the CLI
+      ], {
+        cwd: process.cwd(),
+        env: { ...process.env }
+      });
+
+      let checkOutput = '';
+      let checkError = '';
+
+      checkProcess.stdout.on('data', (data) => {
+        checkOutput += data.toString();
+      });
+
+      checkProcess.stderr.on('data', (data) => {
+        checkError += data.toString();
+      });
+
+      const checkResult = await new Promise((resolve) => {
+        checkProcess.on('close', (code) => {
+          resolve({ code, output: checkOutput, error: checkError });
+        });
+      });
+
+      // If check failed, return the error
+      if (checkResult.code !== 0) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: checkResult.error || 'Daily withdrawal limit exceeded' 
+          },
+          { status: 400 }
+        );
+      }
+
+    } catch (error) {
+      console.error('Error checking daily limits:', error);
+      // Continue with withdrawal if limit check fails
+    }
+
     // Process withdrawal
     const withdrawalResult = await TonWalletService.sendWithdrawal(
       userIdNum,
