@@ -233,12 +233,41 @@ export const GameTab: React.FC = () => {
             console.log(`🎮 Showing ad after ${newGameCount} games`);
             
             // Show ad after celebration modal closes
-            setTimeout(() => {
+            setTimeout(async () => {
+              // Load Monetag SDK dynamically when needed (prevents blocking app load)
+              if (!(window as any).show_10065186) {
+                console.log('⏳ Loading Monetag SDK dynamically...');
+                try {
+                  await new Promise<void>((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = '//libtl.com/sdk.js';
+                    script.setAttribute('data-zone', '10065186');
+                    script.setAttribute('data-sdk', 'show_10065186');
+                    script.async = true;
+                    
+                    script.onload = () => {
+                      console.log('✅ Monetag SDK loaded');
+                      // Wait a bit for SDK to initialize
+                      setTimeout(resolve, 500);
+                    };
+                    script.onerror = reject;
+                    
+                    document.head.appendChild(script);
+                  });
+                } catch (error) {
+                  console.error('❌ Failed to load Monetag SDK:', error);
+                  return;
+                }
+              }
+              
+              // Show ad
               const showAd = (window as any).show_10065186;
               if (typeof showAd === 'function') {
                 showAd({ ymid: user?.user_id?.toString() || 'anonymous' })
                   .then(() => console.log('✅ Rewarded ad completed'))
                   .catch(() => console.log('⚠️ Ad skipped or failed'));
+              } else {
+                console.error('❌ show_10065186 function not available');
               }
             }, 2800); // After celebration modal
           }
