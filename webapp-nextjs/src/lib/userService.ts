@@ -21,6 +21,9 @@ const TEST_USERS = new Set([
   9876543210,
 ]);
 
+// AD TESTING USER - This ID will see ads (for Monetag testing)
+const AD_TEST_USER_ID = 7660176383;
+
 export interface UserPermissions {
   can_process: boolean;
   user_type: 'vip' | 'premium' | 'normal' | 'test';
@@ -63,7 +66,15 @@ export class UserService {
       let creditsRemaining: number | 'unlimited' = user.credits;
       let freeRemaining = user.free_uses;
 
-      if (VIP_USERS.has(userId)) {
+      // Special case: Ad testing user - force to normal user to see ads
+      if (userId === AD_TEST_USER_ID) {
+        userType = 'normal';
+        canProcess = true;
+        watermark = true;
+        creditsRemaining = 0;
+        freeRemaining = user.free_uses || 10; // Give free uses for testing
+        console.log(`🎬 AD TEST USER detected: ${userId} - Will see ads`);
+      } else if (VIP_USERS.has(userId)) {
         userType = 'vip';
         canProcess = true;
         watermark = false;
