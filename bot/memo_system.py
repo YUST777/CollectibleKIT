@@ -42,7 +42,7 @@ class MemoSystem:
     
     def create_withdrawal_memo(self, user_id: int, amount_ton: float, transaction_type: str = "withdrawal") -> str:
         """
-        Create encrypted memo for withdrawal transaction
+        Create short memo for withdrawal transaction (max 16 chars)
         
         Args:
             user_id: Telegram user ID
@@ -50,34 +50,24 @@ class MemoSystem:
             transaction_type: Type of transaction
             
         Returns:
-            Encrypted memo string
+            Short memo string (16 chars max)
         """
-        # Generate unique UUID for this transaction
-        transaction_id = str(uuid.uuid4())
+        # Generate unique short ID (8 chars)
+        short_id = str(uuid.uuid4()).replace('-', '')[:8]
         
-        # Create memo data
-        memo_data = {
-            "transaction_id": transaction_id,
-            "user_id": user_id,
-            "amount_ton": amount_ton,
-            "type": transaction_type,
-            "timestamp": int(uuid.uuid4().time_low),  # Simple timestamp
-            "platform": "collectiblekit"
-        }
+        # Create short memo: W + short_id + last 2 digits of user_id
+        # Format: W12345678 (W for withdrawal, 8 char ID)
+        memo = f"W{short_id}"
         
-        # Convert to JSON and encrypt
-        json_data = json.dumps(memo_data)
-        encrypted_data = self.cipher.encrypt(json_data.encode())
+        # Store full data in database separately
+        self._store_memo_data(short_id, user_id, amount_ton, transaction_type)
         
-        # Encode to base64 for safe transmission
-        memo = base64.urlsafe_b64encode(encrypted_data).decode()
-        
-        logger.info(f"Created withdrawal memo: {transaction_id} for user {user_id}")
+        logger.info(f"Created short withdrawal memo: {memo} for user {user_id}")
         return memo
     
     def create_deposit_memo(self, user_id: int, amount_ton: float, transaction_type: str = "deposit") -> str:
         """
-        Create encrypted memo for deposit transaction
+        Create short memo for deposit transaction (max 16 chars)
         
         Args:
             user_id: Telegram user ID
@@ -85,9 +75,76 @@ class MemoSystem:
             transaction_type: Type of transaction
             
         Returns:
-            Encrypted memo string
+            Short memo string (16 chars max)
         """
-        return self.create_withdrawal_memo(user_id, amount_ton, transaction_type)
+        # Generate unique short ID (8 chars)
+        short_id = str(uuid.uuid4()).replace('-', '')[:8]
+        
+        # Create short memo: D + short_id
+        # Format: D12345678 (D for deposit, 8 char ID)
+        memo = f"D{short_id}"
+        
+        # Store full data in database separately
+        self._store_memo_data(short_id, user_id, amount_ton, transaction_type)
+        
+        logger.info(f"Created short deposit memo: {memo} for user {user_id}")
+        return memo
+    
+    def _store_memo_data(self, short_id: str, user_id: int, amount_ton: float, transaction_type: str):
+        """Store memo data in database for later retrieval"""
+        try:
+            import sqlite3
+            with sqlite3.connect("bot_data.db") as conn:
+                cursor = conn.cursor()
+                
+                # Create memo_data table if not exists
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS memo_data (
+                        short_id TEXT PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        amount_ton REAL NOT NULL,
+                        transaction_type TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Insert memo data
+                cursor.execute("""
+                    INSERT OR REPLACE INTO memo_data 
+                    (short_id, user_id, amount_ton, transaction_type)
+                    VALUES (?, ?, ?, ?)
+                """, (short_id, user_id, amount_ton, transaction_type))
+                
+                conn.commit()
+                
+        except Exception as e:
+            logger.error(f"Failed to store memo data: {str(e)}")
+    
+    def get_memo_data(self, short_id: str) -> Optional[Dict[str, Any]]:
+        """Get memo data by short ID"""
+        try:
+            import sqlite3
+            with sqlite3.connect("bot_data.db") as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT * FROM memo_data WHERE short_id = ?
+                """, (short_id,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        "short_id": row[0],
+                        "user_id": row[1],
+                        "amount_ton": row[2],
+                        "transaction_type": row[3],
+                        "created_at": row[4]
+                    }
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to get memo data: {str(e)}")
+            return None
     
     def decrypt_memo(self, encrypted_memo: str) -> Optional[Dict[str, Any]]:
         """
@@ -118,49 +175,54 @@ class MemoSystem:
     
     def extract_transaction_id(self, memo: str) -> Optional[str]:
         """
-        Extract transaction ID from memo without full decryption
+        Extract transaction ID from short memo
         
         Args:
-            memo: Encrypted memo string
+            memo: Short memo string (e.g., W12345678)
             
         Returns:
-            Transaction ID or None if invalid
+            Short ID or None if invalid
         """
-        memo_data = self.decrypt_memo(memo)
-        return memo_data.get('transaction_id') if memo_data else None
+        if len(memo) == 9 and memo[0] in ['W', 'D']:
+            return memo[1:]  # Return the 8-char ID part
+        return None
     
     def is_valid_memo(self, memo: str) -> bool:
         """
-        Check if memo is valid and can be decrypted
+        Check if memo is valid short format
         
         Args:
-            memo: Encrypted memo string
+            memo: Short memo string
             
         Returns:
             True if valid, False otherwise
         """
-        return self.decrypt_memo(memo) is not None
+        return len(memo) == 9 and memo[0] in ['W', 'D'] and memo[1:].isalnum()
     
     def get_memo_info(self, memo: str) -> Optional[Dict[str, Any]]:
         """
-        Get readable info from memo
+        Get readable info from short memo
         
         Args:
-            memo: Encrypted memo string
+            memo: Short memo string (e.g., W12345678)
             
         Returns:
             Memo info dict or None if invalid
         """
-        memo_data = self.decrypt_memo(memo)
+        short_id = self.extract_transaction_id(memo)
+        if not short_id:
+            return None
+        
+        memo_data = self.get_memo_data(short_id)
         if not memo_data:
             return None
         
         return {
-            "transaction_id": memo_data.get('transaction_id'),
+            "short_id": memo_data.get('short_id'),
             "user_id": memo_data.get('user_id'),
             "amount_ton": memo_data.get('amount_ton'),
-            "type": memo_data.get('type'),
-            "platform": memo_data.get('platform')
+            "type": memo_data.get('transaction_type'),
+            "memo_type": memo[0]  # W or D
         }
 
 # Global instance
