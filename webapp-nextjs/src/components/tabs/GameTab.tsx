@@ -47,6 +47,9 @@ export const GameTab: React.FC = () => {
   // Celebration modal state
   const [showCelebration, setShowCelebration] = useState(false);
   const [isFirstWin, setIsFirstWin] = useState(false);
+  
+  // Game counter for ads (show ad every 3 games)
+  const [gamesPlayed, setGamesPlayed] = useState(0);
 
   // Load gifts data from CDN on mount
   useEffect(() => {
@@ -220,6 +223,25 @@ export const GameTab: React.FC = () => {
           setSelectedGiftName(null);
           setSelectedModelNumber(null);
           setSelectedModelName(null);
+          
+          // Increment game counter and trigger ad every 3 games
+          const newGameCount = gamesPlayed + 1;
+          setGamesPlayed(newGameCount);
+          
+          // Trigger rewarded interstitial ad after every 3 games
+          if (newGameCount % 3 === 0) {
+            console.log(`🎮 Showing ad after ${newGameCount} games`);
+            
+            // Show ad after celebration modal closes
+            setTimeout(() => {
+              const showAd = (window as any).show_10065186;
+              if (typeof showAd === 'function') {
+                showAd({ ymid: user?.user_id?.toString() || 'anonymous' })
+                  .then(() => console.log('✅ Rewarded ad completed'))
+                  .catch(() => console.log('⚠️ Ad skipped or failed'));
+              }
+            }, 2800); // After celebration modal
+          }
           
           // Auto-load next random game after 2.5 seconds (after celebration closes)
           setTimeout(() => {

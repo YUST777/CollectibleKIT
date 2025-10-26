@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { TelegramProvider } from '@/components/providers/TelegramProvider';
+import { MonetagSDK } from '@/components/MonetagSDK';
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -35,13 +36,7 @@ export default function RootLayout({
         {/* TON Connect UI */}
         <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js" />
         
-        {/* Monetag SDK - In-App Interstitial */}
-        <script 
-          src="//libtl.com/sdk.js" 
-          data-zone="10065186" 
-          data-sdk="show_10065186"
-          data-auto="1/0.1/30/5/0"
-        />
+        {/* Monetag SDK will be loaded conditionally based on user type in MonetagSDK component */}
         
         {/* Telegram Analytics SDK - Disabled until token is configured */}
         {/* Uncomment and add your token from https://t.me/TonBuilders_bot */}
@@ -80,6 +75,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <TelegramProvider>
+          <MonetagSDK />
           <div className="min-h-screen bg-bg-main text-text-idle">
             {children}
           </div>
