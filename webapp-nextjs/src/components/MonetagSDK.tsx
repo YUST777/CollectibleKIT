@@ -7,8 +7,12 @@ export const MonetagSDK: React.FC = () => {
   const user = useUser();
 
   useEffect(() => {
-    // Wait 5 seconds after user logs in to ensure app is ready
-    const loadSDKDelay = setTimeout(() => {
+    // Per Monetag docs: Wait for Telegram.WebApp.ready() BEFORE loading SDK
+    // This prevents ads from blocking app initialization
+    
+    if (typeof window === 'undefined') return;
+    
+    const loadSDK = () => {
       // Only load for normal users or ad test user (7660176383)
       if (!user || !user.user_id) {
         return;
@@ -18,7 +22,7 @@ export const MonetagSDK: React.FC = () => {
       const isAdTestUser = user.user_id === 7660176383;
       
       if (user.user_type !== 'normal' && !isAdTestUser) {
-        console.log('⏭️ Skipping Monetag SDK - VIP/Premium user or not normal');
+        console.log('⏭️ Skipping Monetag SDK - VIP/Premium user');
         return;
       }
 
@@ -30,18 +34,18 @@ export const MonetagSDK: React.FC = () => {
         return;
       }
 
-      console.log('⏳ Loading Monetag SDK for rewarded interstitial...');
+      console.log('⏳ Loading Monetag SDK (after Telegram.WebApp.ready())...');
 
-      // Load Monetag SDK (Rewarded Interstitial - triggered after 3 games)
+      // Load Monetag SDK per docs: https://docs.monetag.com/docs/ad-integration
       const script = document.createElement('script');
       script.src = '//libtl.com/sdk.js';
       script.setAttribute('data-zone', '10065186');
       script.setAttribute('data-sdk', 'show_10065186');
-      // NO data-auto - manual triggering only
+      // NO data-auto - manual triggering only after 3 games
       script.async = true;
       
       script.onload = () => {
-        console.log('✅ Monetag SDK loaded successfully for rewarded interstitial');
+        console.log('✅ Monetag SDK loaded - ready for manual triggering');
       };
       
       script.onerror = () => {
@@ -49,9 +53,21 @@ export const MonetagSDK: React.FC = () => {
       };
       
       document.head.appendChild(script);
-    }, 5000); // Wait 5 seconds to ensure app is fully loaded
+    };
 
-    return () => clearTimeout(loadSDKDelay);
+    // Wait for Telegram.WebApp.ready() before loading SDK
+    // This ensures proper UI positioning and prevents blocking
+    if (window.Telegram?.WebApp) {
+      console.log('📱 Waiting for Telegram.WebApp.ready()...');
+      window.Telegram.WebApp.ready();
+      
+      // Load SDK after Telegram is ready (with delay to ensure app loads first)
+      setTimeout(loadSDK, 3000);
+    } else {
+      console.log('⚠️ Telegram.WebApp not available, delaying SDK load');
+      // Fallback: wait longer if Telegram SDK not available
+      setTimeout(loadSDK, 5000);
+    }
   }, [user?.user_id, user?.user_type]);
 
   return null;
