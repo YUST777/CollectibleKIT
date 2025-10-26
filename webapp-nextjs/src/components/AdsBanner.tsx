@@ -48,7 +48,7 @@ export const AdsBanner: React.FC = () => {
       id: 2,
       bgGradient: 'from-cyan-400 via-[#0bb3fe] to-blue-500',
       mainText: 'Gifts chart',
-      subText: 'Every nft have a price know it live',
+      subText: 'Every NFT has a price - know it live!',
       elementImage: '/adno2element.png',
       link: undefined // Add your link here
     },
@@ -542,7 +542,7 @@ export const AdsBanner: React.FC = () => {
             {/* Text Content */}
             <div className="text-center space-y-2">
               <h3 className="text-white text-xl font-semibold">
-                Want to know all the Gifts/Stickers pricess live ?
+                Want to know all the Gifts/Stickers prices live?
               </h3>
               <p className="text-gray-300 text-base">
                 Use @giftschartbot
@@ -563,7 +563,7 @@ export const AdsBanner: React.FC = () => {
 
             {/* Description */}
             <div className="text-center text-gray-400 text-sm px-4">
-              Examble here is the live price of a rondome gift or a sticker
+              Example here is the live price of a random gift or sticker
             </div>
 
             {/* Open Now Button */}
