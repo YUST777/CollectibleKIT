@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser, useTonBalance, useAppActions, useAppStore } from '@/store/useAppStore';
+import { Button } from '@/components/ui/Button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { hapticFeedback } from '@/lib/telegram';
