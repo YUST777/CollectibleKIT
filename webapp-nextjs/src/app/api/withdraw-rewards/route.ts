@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Check user permissions and balance
-    const userInfo = await UserService.getUserInfo(userIdNum);
+    const userInfo = await db.getUser(userIdNum);
     if (!userInfo) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -59,16 +59,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user has enough credits (assuming 1 credit = 1 TON for simplicity)
-    const availableCredits = typeof userInfo.credits_remaining === 'number' 
-      ? userInfo.credits_remaining 
+    // Check if user has enough TON balance
+    const availableTon = typeof userInfo.ton_balance === 'number' 
+      ? userInfo.ton_balance 
       : 0;
 
-    if (availableCredits < amountNum) {
+    if (availableTon < amountNum) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `Insufficient credits. Available: ${availableCredits}, Requested: ${amountNum}` 
+          error: `Insufficient TON balance. Available: ${availableTon}, Requested: ${amountNum}` 
         },
         { status: 400 }
       );
@@ -143,10 +143,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Deduct credits from user
-    const deductSuccess = await UserService.addCredits(userIdNum, -amountNum);
+    // Deduct TON balance from user
+    const deductSuccess = await db.dbRun(
+      'UPDATE users SET ton_balance = ton_balance - ? WHERE user_id = ?',
+      [amountNum, userIdNum]
+    );
     if (!deductSuccess) {
-      console.error('❌ Failed to deduct credits after successful withdrawal');
+      console.error('❌ Failed to deduct TON balance after successful withdrawal');
       // Note: In a real scenario, you might want to handle this differently
       // as the withdrawal was successful but we couldn't update the user's balance
     }
@@ -155,6 +158,36 @@ export async function POST(request: NextRequest) {
       transactionHash: withdrawalResult.transaction_hash,
       amount: amountNum
     });
+
+    // Record withdrawal in daily tracker
+    try {
+      const { spawn } = require('child_process');
+      const path = require('path');
+      
+      const pythonScript = path.join(process.cwd(), '..', 'bot', 'ton_wallet_cli.py');
+      
+      // Record the withdrawal in daily tracker
+      const recordProcess = spawn('python3', [
+        pythonScript,
+        '--user-id', userIdNum.toString(),
+        '--amount', amountNum.toString(),
+        '--wallet', walletAddress,
+        '--record-only'  // We'll add this flag to the CLI
+      ], {
+        cwd: process.cwd(),
+        env: { ...process.env }
+      });
+
+      recordProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log('✅ Daily withdrawal recorded successfully');
+        } else {
+          console.warn('⚠️ Failed to record daily withdrawal');
+        }
+      });
+    } catch (error) {
+      console.error('Error recording daily withdrawal:', error);
+    }
 
     // Record feed event for TON withdrawal
     await db.recordFeedEvent(userIdNum, 'ton_withdrawal', { amount: amountNum });

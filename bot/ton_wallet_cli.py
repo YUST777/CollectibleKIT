@@ -26,6 +26,7 @@ async def main():
     parser.add_argument('--wallet', type=str, help='Destination wallet address')
     parser.add_argument('--balance', action='store_true', help='Get wallet balance')
     parser.add_argument('--check-only', action='store_true', help='Only check daily limits without processing withdrawal')
+    parser.add_argument('--record-only', action='store_true', help='Only record withdrawal in daily tracker without processing')
     
     args = parser.parse_args()
     
@@ -77,6 +78,15 @@ async def main():
                 print(f"Daily limit: {withdrawal_check['max_daily']} TON")
                 print(f"Already withdrawn today: {withdrawal_check['daily_withdrawn']} TON")
                 print(f"Remaining today: {withdrawal_check['remaining_today']} TON")
+                sys.exit(0)
+            
+            # If record-only mode, just record the withdrawal
+            if args.record_only:
+                # Record withdrawal in daily tracker
+                daily_tracker = get_daily_withdrawal_tracker()
+                daily_tracker.record_withdrawal(args.user_id, args.amount, "api_withdrawal")
+                print("RECORD: Withdrawal recorded in daily tracker")
+                print(f"User: {args.user_id}, Amount: {args.amount} TON")
                 sys.exit(0)
             
             # Process withdrawal with daily limits
