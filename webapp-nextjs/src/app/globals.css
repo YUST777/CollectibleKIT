@@ -161,23 +161,23 @@
   /* Collection Tab Styles */
   .gift-slot {
     @apply aspect-square;
-    min-height: 180px;
-    max-height: 210px;
+    min-height: 120px;
+    max-height: 140px;
     display: block;
   }
 
   /* Ensure grid layout works properly */
   .gift-grid {
     display: grid !important;
-    row-gap: 1px;
-    column-gap: 1px;
+    row-gap: 6px;
+    column-gap: 6px;
   }
 
   /* Responsive gift slot sizing for larger grids */
   @media (max-width: 768px) {
     .gift-slot {
-      min-height: 150px;
-      max-height: 180px;
+      min-height: 100px;
+      max-height: 120px;
     }
   }
 

@@ -1137,7 +1137,7 @@ export const CollectionTab: React.FC = () => {
                  
                  {/* Delete button - always visible on mobile */}
                  <button
-                   className="delete-button absolute top-1 right-1 w-6 h-6 flex items-center justify-center z-30 md:opacity-0 md:hover:opacity-100"
+                   className="delete-button absolute top-0 right-0 w-6 h-6 flex items-center justify-center z-30 md:opacity-0 md:hover:opacity-100"
                    onClick={(e) => {
                      e.stopPropagation();
                      handleDeleteBox(slotNumber);
