@@ -34,6 +34,30 @@ export const AdsBanner: React.FC = () => {
   const [isPremiumDrawerOpen, setIsPremiumDrawerOpen] = useState(false);
   const [isAdPricingDrawerOpen, setIsAdPricingDrawerOpen] = useState(false);
   const [isGiftsChartDrawerOpen, setIsGiftsChartDrawerOpen] = useState(false);
+  const [randomPriceCardUrl, setRandomPriceCardUrl] = useState<string>('/Kissed_Frog_card.png');
+
+  // Load random price card URL on mount
+  useEffect(() => {
+    const loadRandomPriceCard = async () => {
+      try {
+        const response = await fetch('/cdn_links.json');
+        const data = await response.json();
+        
+        // Combine gifts and stickers
+        const allItems = [...data.gifts, ...data.stickers];
+        
+        // Pick a random item
+        const randomIndex = Math.floor(Math.random() * allItems.length);
+        const randomItem = allItems[randomIndex];
+        
+        setRandomPriceCardUrl(randomItem.url);
+      } catch (error) {
+        console.error('Failed to load random price card:', error);
+      }
+    };
+    
+    loadRandomPriceCard();
+  }, [isGiftsChartDrawerOpen]);
 
   const ads: Ad[] = [
     {
@@ -552,7 +576,7 @@ export const AdsBanner: React.FC = () => {
             {/* Image */}
             <div className="flex justify-center">
               <Image
-                src="/Kissed_Frog_card.png"
+                src={randomPriceCardUrl}
                 alt="Gifts Chart Example"
                 width={350}
                 height={450}
