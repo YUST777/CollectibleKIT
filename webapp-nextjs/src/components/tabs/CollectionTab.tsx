@@ -315,7 +315,6 @@ export const CollectionTab: React.FC = () => {
     }
     
     // Set ribbon number from existing design if available
-    const existingDesign = userDesigns[slotNumber];
     setRibbonNumber(existingDesign?.ribbonNumber || 1);
     
     // Open the filter drawer directly with "gift" tab selected
