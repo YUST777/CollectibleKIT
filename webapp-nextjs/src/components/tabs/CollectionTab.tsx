@@ -76,6 +76,8 @@ export const CollectionTab: React.FC = () => {
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
   const [boxPositions, setBoxPositions] = useState<{ [key: number]: { x: number; y: number } }>({});
   const [isDragging, setIsDragging] = useState(false);
+  const touchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasMovedRef = useRef<boolean>(false);
 
   // Load saved positions from localStorage
   useEffect(() => {
@@ -95,6 +97,15 @@ export const CollectionTab: React.FC = () => {
       localStorage.setItem('giftBoxPositions', JSON.stringify(boxPositions));
     }
   }, [boxPositions]);
+
+  // Cleanup touch timer on unmount
+  useEffect(() => {
+    return () => {
+      if (touchTimerRef.current) {
+        clearTimeout(touchTimerRef.current);
+      }
+    };
+  }, []);
 
   // Load initial data with caching
   useEffect(() => {
@@ -640,65 +651,76 @@ export const CollectionTab: React.FC = () => {
   };
 
   const handleTouchStart = (e: React.TouchEvent, slotNumber: number) => {
-    // Store the initial touch position and time
+    // Prevent default to avoid conflicts
+    e.preventDefault();
+    
     const touch = e.touches[0];
     const startX = touch.clientX;
     const startY = touch.clientY;
-    const startTime = Date.now();
+    hasMovedRef.current = false;
     
-    let hasMoved = false;
-    let longPressTimer: NodeJS.Timeout;
-    
-    // Set up long press detection
-    longPressTimer = setTimeout(() => {
-      if (!hasMoved) {
+    // Set up long press detection - after 300ms, enable drag mode
+    touchTimerRef.current = setTimeout(() => {
+      if (!hasMovedRef.current && !isDragging) {
         setDraggedSlot(slotNumber);
         setIsDragging(true);
         
-        // Add haptic feedback if available
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
+        // Haptic feedback
+        hapticFeedback('impact');
         
-        // Add visual feedback
+        // Visual feedback
         const element = e.currentTarget as HTMLElement;
-        element.style.transform = 'scale(1.05)';
-        element.style.opacity = '0.8';
-        element.style.zIndex = '1000';
+        if (element) {
+          element.style.transform = 'scale(1.05)';
+          element.style.opacity = '0.8';
+          element.style.zIndex = '1000';
+          element.classList.add('dragging');
+        }
       }
-    }, 300); // 300ms for long press
+    }, 300);
     
+    // Track movement
     const handleTouchMove = (moveEvent: TouchEvent) => {
       const currentTouch = moveEvent.touches[0];
       const deltaX = Math.abs(currentTouch.clientX - startX);
       const deltaY = Math.abs(currentTouch.clientY - startY);
       
-      // If moved more than 10px, consider it a drag
       if (deltaX > 10 || deltaY > 10) {
-        hasMoved = true;
-        clearTimeout(longPressTimer);
-        
-        if (!isDragging) {
-          setDraggedSlot(slotNumber);
-          setIsDragging(true);
-          
-          // Add visual feedback
-          const element = e.currentTarget as HTMLElement;
-          element.style.transform = 'scale(1.05)';
-          element.style.opacity = '0.8';
-          element.style.zIndex = '1000';
-        }
+        hasMovedRef.current = true;
       }
     };
     
-    const handleTouchEnd = (endEvent: TouchEvent) => {
-      clearTimeout(longPressTimer);
+    const handleTouchEnd = () => {
+      if (touchTimerRef.current) {
+        clearTimeout(touchTimerRef.current);
+        touchTimerRef.current = null;
+      }
+      
+      // If not moved and not dragging, it's a click - open editor
+      if (!hasMovedRef.current && !isDragging) {
+        openGiftDesigner(slotNumber);
+      }
+      
+      // If was dragging but didn't complete a move, reset
+      if (isDragging && draggedSlot === slotNumber) {
+        const element = e.currentTarget as HTMLElement;
+        if (element) {
+          element.style.transform = '';
+          element.style.opacity = '';
+          element.style.zIndex = '';
+          element.classList.remove('dragging');
+        }
+        setDraggedSlot(null);
+        setIsDragging(false);
+      }
+      
+      hasMovedRef.current = false;
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
     };
     
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchend', handleTouchEnd, { once: true });
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -740,16 +762,21 @@ export const CollectionTab: React.FC = () => {
           newDesigns[targetSlot] = sourceDesign;
           
           setUserDesigns(newDesigns);
+          
+          hapticFeedback('notification', 'success');
         }
       }
     }
     
     // Reset visual feedback
-    const draggedElement = document.querySelector(`[data-slot="${draggedSlot}"] .gift-preview-card`) as HTMLElement;
-    if (draggedElement) {
-      draggedElement.style.transform = '';
-      draggedElement.style.opacity = '';
-    }
+    const allSlotElements = document.querySelectorAll('[data-slot]');
+    allSlotElements.forEach(el => {
+      const htmlEl = el as HTMLElement;
+      htmlEl.style.transform = '';
+      htmlEl.style.opacity = '';
+      htmlEl.style.zIndex = '';
+      htmlEl.classList.remove('dragging');
+    });
     
     setDraggedSlot(null);
     setDragOverSlot(null);
@@ -948,18 +975,18 @@ export const CollectionTab: React.FC = () => {
         key={slotNumber} 
         className="gift-slot relative"
         data-slot={slotNumber}
-        draggable={!!design}
-        onDragStart={(e) => handleDragStart(e, slotNumber)}
-        onDragOver={(e) => handleDragOver(e, slotNumber)}
-        onDragLeave={handleDragLeave}
-        onDrop={(e) => handleDrop(e, slotNumber)}
         onTouchStart={(e) => handleTouchStart(e, slotNumber)}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         <div 
           className={`gift-preview-card relative ${isDragged ? 'opacity-50 scale-95' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''}`}
-          onClick={() => !isDragging && openGiftDesigner(slotNumber)}
+          onClick={() => {
+            // Only open editor if not dragging
+            if (!isDragging) {
+              openGiftDesigner(slotNumber);
+            }
+          }}
         >
           {design ? (
             <div className="gift-preview-content">
