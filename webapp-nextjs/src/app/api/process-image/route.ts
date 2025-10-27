@@ -99,11 +99,25 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Request recorded in database:', requestResult.requestId);
 
+    // Determine final watermark text
+    let finalWatermark: string | undefined;
+    if (permissions.watermark) {
+      // User has watermark enabled
+      if (customWatermark && customWatermark.trim()) {
+        // Premium user with custom watermark
+        finalWatermark = customWatermark.trim();
+      } else {
+        // Free user with default watermark
+        finalWatermark = '@collectiblekit_bot';
+      }
+    }
+    // VIP/premium users without watermark get undefined (no watermark)
+
     // Process image
     const processingResult = await ImageProcessingService.processImage(
       imageBuffer,
       userId,
-      customWatermark
+      finalWatermark
     );
 
     if (!processingResult.success) {
