@@ -1583,9 +1583,14 @@ export const CollectionTab: React.FC = () => {
                 <input
                   type="number"
                   value={ribbonNumber}
-                  onChange={(e) => setRibbonNumber(parseInt(e.target.value) || 1)}
-                  className="w-16 bg-gray-800 text-white text-xs font-bold text-center border border-gray-600 rounded px-2 py-1"
-                  min="1"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val)) {
+                      setRibbonNumber(val);
+                    }
+                  }}
+                  className="w-20 bg-gray-800 text-white text-xs font-bold text-center border border-gray-600 rounded px-2 py-1"
+                  min="0"
                   step="1"
                   onClick={(e) => e.stopPropagation()}
                   placeholder={useRealGift ? "Gift #" : "Ribbon #"}
@@ -1858,9 +1863,14 @@ export const CollectionTab: React.FC = () => {
             <div className="mt-6 pt-4 border-t border-gray-700">
               <button
                 onClick={saveGiftDesign}
-                disabled={!selectedGiftName || selectedModelNumber === null || selectedBackdropIndex === null}
+                disabled={
+                  useRealGift 
+                    ? !selectedGiftName || !ribbonNumber 
+                    : !selectedGiftName || selectedModelNumber === null || selectedBackdropIndex === null
+                }
                 className={`w-full py-3 px-4 rounded-xl font-semibold text-white transition-all ${
-                  selectedGiftName && selectedModelNumber !== null && selectedBackdropIndex !== null
+                  (useRealGift && selectedGiftName && ribbonNumber) || 
+                  (!useRealGift && selectedGiftName && selectedModelNumber !== null && selectedBackdropIndex !== null)
                     ? 'bg-blue-600 hover:bg-blue-700 active:scale-95'
                     : 'bg-gray-600 cursor-not-allowed opacity-50'
                 }`}
