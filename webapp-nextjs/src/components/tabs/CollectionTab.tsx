@@ -54,6 +54,7 @@ export const CollectionTab: React.FC = () => {
     // Handle special cases - map API gift names to file names
     const nameMap: { [key: string]: string } = {
       'Jack in the Box': 'Jack_in_the_Box',
+      'Jack-in-the-Box': 'Jack_in_the_Box',
       'B Day Candle': 'B_Day_Candle',
       'B-Day Candle': 'B_Day_Candle',
       'Westside Sign': 'WestsideSign',
