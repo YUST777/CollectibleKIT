@@ -50,7 +50,7 @@ export const CollectionTab: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [ribbonNumber, setRibbonNumber] = useState<number>(1);
   const [useRealGift, setUseRealGift] = useState(false);
-  const [realGiftDominantColor, setRealGiftDominantColor] = useState<string>('#8B4513');
+  const [realGiftDominantColor, setRealGiftDominantColor] = useState<string>('#000000');
 
   // Helper function to extract dominant color from image using a proxy approach
   const extractDominantColor = async (imageSrc: string): Promise<string> => {
@@ -1278,12 +1278,12 @@ export const CollectionTab: React.FC = () => {
                      className="ribbon-telegram absolute top-0 right-0 z-40 pointer-events-none"
                      style={{
                        background: design.isRealGift 
-                         ? (design.realGiftDominantColor || '#8B4513') // Use extracted color or default
+                         ? '#000000' // Black for real gifts
                          : (backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
                            ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
                            : '#8B4513'),
                        '--ribbon-color': design.isRealGift 
-                         ? (design.realGiftDominantColor || '#8B4513') // Use extracted color or default
+                         ? '#000000' // Black for real gifts
                          : (backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
                            ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
                            : '#8B4513')
@@ -1691,8 +1691,8 @@ export const CollectionTab: React.FC = () => {
                 <div 
                   className="ribbon-telegram absolute top-0 right-0 z-40 pointer-events-none"
                   style={{
-                    background: useRealGift ? realGiftDominantColor : '#8B4513',
-                    '--ribbon-color': useRealGift ? realGiftDominantColor : '#8B4513'
+                    background: useRealGift ? '#000000' : '#8B4513',
+                    '--ribbon-color': useRealGift ? '#000000' : '#8B4513'
                   } as React.CSSProperties}
                 >
                   <span className="text-white text-[10px] font-bold whitespace-nowrap">#{ribbonNumber}</span>
