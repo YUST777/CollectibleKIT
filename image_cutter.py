@@ -69,6 +69,33 @@ def cut_image_into_pieces(input_path, output_dir="cuts", rows=3, cols=3):
     return True
 
 def main():
+    # Check if running from command line with arguments (for API use)
+    if len(sys.argv) >= 3:
+        input_file = sys.argv[1]
+        output_directory = sys.argv[2]
+        rows = 4  # Default to 4x3 (12 pieces) for Telegram stories
+        cols = 3
+        
+        # Check for custom rows/cols in arguments
+        if len(sys.argv) >= 5:
+            rows = int(sys.argv[3])
+            cols = int(sys.argv[4])
+        
+        if not os.path.exists(input_file):
+            print(f"Error: {input_file} not found!")
+            return
+        
+        # Cut the image directly
+        success = cut_image_into_pieces(input_file, output_directory, rows, cols)
+        
+        if success:
+            print("\n✅ Done! Your image pieces are ready for Telegram stories!")
+            print(f"📁 Check the '{output_directory}' folder for all pieces.")
+        else:
+            print("\n❌ Failed to cut the image.")
+        return
+    
+    # Interactive mode (old behavior)
     # Default settings
     input_file = "full2.jpg"
     output_directory = "cuts_full2"

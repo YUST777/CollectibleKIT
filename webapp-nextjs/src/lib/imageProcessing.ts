@@ -14,7 +14,7 @@ export interface ProcessingResult {
 
 export class ImageProcessingService {
   private static readonly TEMP_DIR = path.join(process.cwd(), 'temp_uploads');
-  private static readonly PYTHON_SCRIPT = path.join(process.cwd(), '..', 'process_image.py');
+  private static readonly PYTHON_SCRIPT = path.join(process.cwd(), '..', 'image_cutter.py');
 
   /**
    * Process image using Python script
@@ -161,16 +161,22 @@ export class ImageProcessingService {
     try {
       const userOutputDir = path.join(this.TEMP_DIR, `user_${userId}_${timestamp}`);
       
-      // Look for story piece files
-      for (let i = 1; i <= 12; i++) {
-        const piecePath = path.join(userOutputDir, `story_piece_${i}.png`);
-        
-        if (fs.existsSync(piecePath)) {
-          const imageBuffer = fs.readFileSync(piecePath);
-          const base64 = imageBuffer.toString('base64');
-          const dataUrl = `data:image/png;base64,${base64}`;
-          storyPieces.push(dataUrl);
-        }
+      // Look for story piece files (image_cutter.py creates files like 1cut.png, 2cut.png, etc.)
+      const files = fs.readdirSync(userOutputDir).filter(f => f.endsWith('.png') && f.includes('cut'));
+      
+      // Sort files by number
+      const sortedFiles = files.sort((a, b) => {
+        const numA = parseInt(a.match(/(\d+)cut/)?.[1] || '0');
+        const numB = parseInt(b.match(/(\d+)cut/)?.[1] || '0');
+        return numA - numB;
+      });
+      
+      for (const file of sortedFiles) {
+        const piecePath = path.join(userOutputDir, file);
+        const imageBuffer = fs.readFileSync(piecePath);
+        const base64 = imageBuffer.toString('base64');
+        const dataUrl = `data:image/png;base64,${base64}`;
+        storyPieces.push(dataUrl);
       }
 
       console.log(`📸 Found ${storyPieces.length} story pieces`);
