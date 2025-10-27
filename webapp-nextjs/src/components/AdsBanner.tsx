@@ -35,13 +35,16 @@ export const AdsBanner: React.FC = () => {
   const [isAdPricingDrawerOpen, setIsAdPricingDrawerOpen] = useState(false);
   const [isGiftsChartDrawerOpen, setIsGiftsChartDrawerOpen] = useState(false);
   const [randomPriceCardUrl, setRandomPriceCardUrl] = useState<string>('/Kissed_Frog_card.png');
+  const [isImageVisible, setIsImageVisible] = useState(true);
+  const [cdnData, setCdnData] = useState<any>(null);
 
   // Load random price card URL on mount
   useEffect(() => {
-    const loadRandomPriceCard = async () => {
+    const loadCdnData = async () => {
       try {
         const response = await fetch('/cdn_links.json');
         const data = await response.json();
+        setCdnData(data);
         
         // Combine gifts and stickers
         const allItems = [...data.gifts, ...data.stickers];
@@ -52,12 +55,40 @@ export const AdsBanner: React.FC = () => {
         
         setRandomPriceCardUrl(randomItem.url);
       } catch (error) {
-        console.error('Failed to load random price card:', error);
+        console.error('Failed to load CDN data:', error);
       }
     };
     
-    loadRandomPriceCard();
+    loadCdnData();
   }, [isGiftsChartDrawerOpen]);
+
+  // Auto-rotate price cards every 2 seconds
+  useEffect(() => {
+    if (!isGiftsChartDrawerOpen || !cdnData) return;
+
+    const interval = setInterval(() => {
+      // Fade out
+      setIsImageVisible(false);
+      
+      // After fade out completes, change the image and fade in
+      setTimeout(() => {
+        if (cdnData) {
+          const allItems = [...cdnData.gifts, ...cdnData.stickers];
+          const randomIndex = Math.floor(Math.random() * allItems.length);
+          const randomItem = allItems[randomIndex];
+          setRandomPriceCardUrl(randomItem.url);
+        }
+        
+        // Fade in after a brief delay
+        setTimeout(() => {
+          setIsImageVisible(true);
+        }, 50);
+      }, 300); // Wait for fade out animation to complete
+      
+    }, 2000); // Change every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [isGiftsChartDrawerOpen, cdnData]);
 
   const ads: Ad[] = [
     {
@@ -575,18 +606,22 @@ export const AdsBanner: React.FC = () => {
 
             {/* Image */}
             <div className="flex justify-center">
-              <Image
-                src={randomPriceCardUrl}
-                alt="Gifts Chart Example"
-                width={350}
-                height={450}
-                className="rounded-lg"
-                priority
-                onError={(e) => {
-                  // Fallback to local image if external URL fails
-                  e.currentTarget.src = '/Kissed_Frog_card.png';
-                }}
-              />
+              <div className="relative">
+                <Image
+                  src={randomPriceCardUrl}
+                  alt="Gifts Chart Example"
+                  width={350}
+                  height={450}
+                  className={`rounded-lg transition-opacity duration-300 ${
+                    isImageVisible ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  priority
+                  onError={(e) => {
+                    // Fallback to local image if external URL fails
+                    e.currentTarget.src = '/Kissed_Frog_card.png';
+                  }}
+                />
+              </div>
             </div>
 
             {/* Description */}
