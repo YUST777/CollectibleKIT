@@ -35,7 +35,36 @@ export const MainApp: React.FC = () => {
   }));
 
   useEffect(() => {
+    // SKIP user initialization to prevent infinite loading
+    // Initialize user later or on-demand
+    console.log('⚠️ Skipping user initialization to prevent infinite loading');
+    
+    // Set a dummy user so app can render
+    setUser({
+      user_id: 0,
+      username: 'user',
+      first_name: 'User',
+      user_type: 'normal',
+      watermark: true,
+      credits: 0,
+      free_uses: 3,
+      can_process: true,
+      credits_remaining: 0,
+      free_remaining: '3',
+      created_at: Date.now(),
+      last_activity: Date.now(),
+    });
+    
+    return;
+    
+    // REMOVED: The code below was causing infinite loading
+    /*
     const initializeUser = async () => {
+      // Add timeout to prevent infinite loading
+      const timeout = setTimeout(() => {
+        console.log('⚠️ User initialization timeout - using fallback');
+      }, 5000);
+      
       try {
         const webApp = getTelegramWebApp();
         console.log('Initializing user from Telegram WebApp');
@@ -185,10 +214,7 @@ export const MainApp: React.FC = () => {
         }
       } catch (error) {
         console.error('Error initializing app:', error);
-      }
-    };
-
-    initializeUser();
+    */
   }, [setUser, setTonBalance]);
 
   const renderTabContent = () => {

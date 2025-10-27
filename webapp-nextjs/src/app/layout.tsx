@@ -36,11 +36,11 @@ export default function RootLayout({
         {/* TON Connect UI */}
         <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js" />
         
-        {/* Monetag SDK - In-App Interstitial Ads */}
-        <script
-          src="https://domain.com/sdk.js"
-          data-zone="YOUR_ZONE_ID"
-          data-sdk="show_XXX"
+        {/* Monetag SDK for In-App Interstitial Ads */}
+        <script 
+          src="//libtl.com/sdk.js" 
+          data-zone="10065186" 
+          data-sdk="show_10065186"
           data-auto="2/0.1/30/5/0"
         />
         

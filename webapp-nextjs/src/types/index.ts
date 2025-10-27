@@ -11,6 +11,18 @@ declare global {
     };
     lottie?: any;
     TonConnectUI?: any;
+    // Monetag SDK - In-App Interstitial (automatic, no manual trigger needed)
+    show_10065186?: (config?: {
+      type?: 'inApp' | 'preload';
+      inAppSettings?: {
+        frequency?: number;
+        capping?: number;
+        interval?: number;
+        timeout?: number;
+        everyPage?: boolean;
+      };
+      ymid?: string;
+    }) => Promise<void>;
   }
 }
 

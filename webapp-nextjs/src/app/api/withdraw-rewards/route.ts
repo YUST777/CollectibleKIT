@@ -178,10 +178,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Deduct TON balance from user
-    const deductSuccess = await db.dbRun(
-      'UPDATE users SET ton_balance = ton_balance - ? WHERE user_id = ?',
-      [amountNum, userIdNum]
-    );
+    const currentUser = await db.getUser(userIdNum);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
+    const newTonBalance = Math.max(0, (currentUser.ton_balance || 0) - amountNum);
+    const deductSuccess = await db.updateUser(userIdNum, { 
+      ton_balance: newTonBalance 
+    });
+    
     if (!deductSuccess) {
       console.error('❌ Failed to deduct TON balance after successful withdrawal');
       // Note: In a real scenario, you might want to handle this differently
@@ -212,7 +221,7 @@ export async function POST(request: NextRequest) {
         env: { ...process.env }
       });
 
-      recordProcess.on('close', (code) => {
+      recordProcess.on('close', (code: number) => {
         if (code === 0) {
           console.log('✅ Daily withdrawal recorded successfully');
         } else {
