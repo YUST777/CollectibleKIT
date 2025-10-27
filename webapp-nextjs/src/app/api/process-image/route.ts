@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     let userId: number;
     try {
       userId = parseInt(userIdStr);
-      if (isNaN(userId) || userId <= 0) {
+      if (isNaN(userId) || userId < 0) {
         throw new Error('Invalid user ID');
       }
     } catch (error) {

@@ -39,6 +39,17 @@ export class UserService {
    */
   static async getUserPermissions(userId: number): Promise<UserPermissions> {
     try {
+      // Special handling for test user (ID 0) - allow unlimited processing
+      if (userId === 0) {
+        return {
+          can_process: true,
+          user_type: 'test',
+          watermark: false,
+          credits_remaining: 'unlimited',
+          free_remaining: 999999
+        };
+      }
+      
       // Get user from database
       let user = await db.getUser(userId);
       
