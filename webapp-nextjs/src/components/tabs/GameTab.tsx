@@ -11,7 +11,7 @@ import { FeedTab } from '@/components/tabs/FeedTab';
 import { CelebrationModal } from '@/components/ui/CelebrationModal';
 import { hapticFeedback } from '@/lib/telegram';
 import { cacheUtils } from '@/lib/cache';
-import { Gift } from 'lucide-react';
+
 import toast from 'react-hot-toast';
 import { FaceSmileIcon, MagnifyingGlassIcon, XMarkIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { GiftModel, FilterOption } from '@/types';
@@ -43,6 +43,13 @@ export const GameTab: React.FC = () => {
   const [currentFilterData, setCurrentFilterData] = useState<FilterOption[]>([]);
   const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Helper function to map gift names to image file names
+  const getGiftImagePath = (giftName: string): string => {
+    // Replace spaces with underscores for filenames
+    const filename = giftName.replace(/\s+/g, '_');
+    return `/assets/gifts/${filename}.png`;
+  };
   
   // Celebration modal state
   const [showCelebration, setShowCelebration] = useState(false);
@@ -878,7 +885,20 @@ export const GameTab: React.FC = () => {
                         {item.type === 'gift' && (
                           <>
                             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
-                              <Gift className="w-6 h-6 text-white" />
+                              <img 
+                                src={getGiftImagePath(item.name)}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback to SVG icon if image fails to load
+                                  const target = e.currentTarget;
+                                  target.style.display = 'none';
+                                  const fallbackSvg = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>';
+                                  if (target.parentElement) {
+                                    target.parentElement.innerHTML = fallbackSvg;
+                                  }
+                                }}
+                              />
                             </div>
                             <div className="flex-1">
                               <div className="font-medium text-white">{item.name}</div>
