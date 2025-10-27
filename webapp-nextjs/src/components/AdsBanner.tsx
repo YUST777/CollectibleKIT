@@ -582,6 +582,10 @@ export const AdsBanner: React.FC = () => {
                 height={450}
                 className="rounded-lg"
                 priority
+                onError={(e) => {
+                  // Fallback to local image if external URL fails
+                  e.currentTarget.src = '/Kissed_Frog_card.png';
+                }}
               />
             </div>
 
