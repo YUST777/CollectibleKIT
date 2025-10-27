@@ -899,11 +899,12 @@ export const GameTab: React.FC = () => {
                                 onError={(e) => {
                                   // Fallback to SVG icon if image fails to load
                                   const target = e.currentTarget;
-                                  target.style.display = 'none';
-                                  const fallbackSvg = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>';
-                                  if (target.parentElement) {
-                                    target.parentElement.innerHTML = fallbackSvg;
-                                    target.parentElement.className = 'w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center';
+                                  const parentElement = target.parentElement;
+                                  if (parentElement) {
+                                    target.style.display = 'none';
+                                    const fallbackSvg = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>';
+                                    parentElement.className = 'w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center';
+                                    parentElement.innerHTML = fallbackSvg;
                                   }
                                 }}
                               />
