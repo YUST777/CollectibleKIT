@@ -225,6 +225,50 @@ export const StoryTab: React.FC = () => {
     }
   };
 
+  const handleDownloadOriginalPhotos = async () => {
+    if (storyPieces.length === 0) {
+      toast.error('No story pieces to download');
+      return;
+    }
+
+    try {
+      // Create JSZip instance (we'll need to add it as a dependency if not available)
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+
+      // Add each story piece to the ZIP
+      for (let i = 0; i < storyPieces.length; i++) {
+        const piece = storyPieces[i];
+        const pieceNumber = 12 - i; // Reverse order numbering
+        
+        // Convert data URL to blob
+        const response = await fetch(piece.imageDataUrl);
+        const blob = await response.blob();
+        
+        // Add to ZIP with numbered filename
+        zip.file(`story-piece-${pieceNumber.toString().padStart(2, '0')}.png`, blob);
+      }
+
+      // Generate and download the ZIP file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `story-pieces-${Date.now()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Original photos downloaded successfully!');
+      hapticFeedback('notification', 'success', webApp);
+    } catch (error) {
+      console.error('Error downloading photos:', error);
+      toast.error('Failed to download photos');
+      hapticFeedback('notification', 'error', webApp);
+    }
+  };
+
   const handleShareStory = async (pieceId: number) => {
     if (!webApp) {
       toast.error('Telegram WebApp not available');
@@ -555,7 +599,13 @@ export const StoryTab: React.FC = () => {
             })}
           </div>
           
-          <div className="flex justify-center gap-3">
+          <div className="flex justify-center gap-3 flex-col">
+            <Button 
+              onClick={handleDownloadOriginalPhotos}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-4 text-base shadow-lg"
+            >
+              📥 Download Original Photos
+            </Button>
             <Button variant="secondary" onClick={resetUpload}>
               Upload New Photo
             </Button>
