@@ -40,6 +40,10 @@ export const CollectionTab: React.FC = () => {
   const [publicCollections, setPublicCollections] = useState<any[]>([]);
   const [ideasLoading, setIdeasLoading] = useState(false);
   const [likingCollections, setLikingCollections] = useState<Set<string>>(new Set());
+  
+  // Profile gifts functionality
+  const [profileGiftsLoading, setProfileGiftsLoading] = useState(false);
+  const [lastLoadTime, setLastLoadTime] = useState<number>(0);
 
   // Filter modal states
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -1561,6 +1565,89 @@ export const CollectionTab: React.FC = () => {
           >
             <Save className="w-4 h-4" />
             <span>Save</span>
+          </button>
+
+          {/* Show Profile Gifts Button */}
+          <button
+            onClick={async () => {
+              // Check if enough time has passed (1 minute = 60000ms)
+              const now = Date.now();
+              const timeSinceLastLoad = now - lastLoadTime;
+              if (timeSinceLastLoad < 60000) {
+                const remainingTime = Math.ceil((60000 - timeSinceLastLoad) / 1000);
+                toast.error(`Please wait ${remainingTime} more seconds before loading profile gifts`);
+                return;
+              }
+
+              setProfileGiftsLoading(true);
+              setLastLoadTime(now);
+              
+              try {
+                const userId = telegramUser?.id;
+                if (!userId) {
+                  toast.error('User ID not found');
+                  return;
+                }
+
+                const response = await fetch(`/api/profile-gifts?user_id=${userId}`);
+                if (!response.ok) {
+                  throw new Error('Failed to fetch profile gifts');
+                }
+
+                const data = await response.json();
+                if (data.success && data.gifts && data.gifts.length > 0) {
+                  // Find open slots and fill them with profile gifts
+                  const openSlots: number[] = [];
+                  for (let i = 1; i <= gridSize; i++) {
+                    if (!userDesigns[i]) {
+                      openSlots.push(i);
+                    }
+                  }
+
+                  // Fill open slots with profile gifts
+                  const newDesigns = { ...userDesigns };
+                  let filledCount = 0;
+                  for (const gift of data.gifts) {
+                    if (filledCount < openSlots.length) {
+                      const slot = openSlots[filledCount];
+                      const giftNum = gift.num || 1;
+                      const slugLower = gift.slug.toLowerCase().replace(/\s+/g, '');
+                      
+                      // Create a real gift design
+                      newDesigns[slot] = {
+                        giftName: gift.slug,
+                        modelNumber: 0,
+                        backdropIndex: 0,
+                        backdropName: '',
+                        ribbonNumber: giftNum,
+                        isRealGift: true,
+                        realGiftDominantColor: `https://nft.fragment.com/gift/${slugLower}-${giftNum}.medium.jpg`
+                      };
+                      filledCount++;
+                    }
+                  }
+
+                  // Update the designs
+                  Object.keys(newDesigns).forEach(slot => {
+                    setGiftDesign(parseInt(slot), newDesigns[parseInt(slot)]);
+                  });
+
+                  toast.success(`Loaded ${filledCount} profile gifts into open slots`);
+                } else {
+                  toast.error('No profile gifts found');
+                }
+              } catch (error) {
+                console.error('Error loading profile gifts:', error);
+                toast.error('Failed to load profile gifts');
+              } finally {
+                setProfileGiftsLoading(false);
+              }
+            }}
+            disabled={profileGiftsLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <SparklesIcon className="w-4 h-4" />
+            <span>Show Profile Gifts</span>
           </button>
         </div>
       </div>
