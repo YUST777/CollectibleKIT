@@ -1142,20 +1142,18 @@ export const CollectionTab: React.FC = () => {
                  
                  {/* Diagonal Ribbon with Number - Telegram style */}
                  {design.ribbonNumber && (
-                   <div className="absolute top-0 right-0 z-40 pointer-events-none overflow-hidden">
-                     <div 
-                       className="ribbon-telegram transform rotate-45 origin-bottom-right shadow-md"
-                       style={{
-                         background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
-                           ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
-                           : '#8B4513',
-                         '--ribbon-color': backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
-                           ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
-                           : '#8B4513'
-                       } as React.CSSProperties}
-                     >
-                       <span className="text-white text-xs font-bold whitespace-nowrap">#{design.ribbonNumber}</span>
-                     </div>
+                   <div 
+                     className="ribbon-telegram absolute top-0 right-0 z-40 pointer-events-none"
+                     style={{
+                       background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
+                         ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
+                         : '#8B4513',
+                       '--ribbon-color': backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
+                         ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
+                         : '#8B4513'
+                     } as React.CSSProperties}
+                   >
+                     <span className="text-white text-xs font-bold whitespace-nowrap">#{design.ribbonNumber}</span>
                    </div>
                  )}
                  
