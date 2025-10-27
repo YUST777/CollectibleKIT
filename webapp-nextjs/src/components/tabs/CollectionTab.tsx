@@ -48,6 +48,7 @@ export const CollectionTab: React.FC = () => {
   const [filterSearchTerm, setFilterSearchTerm] = useState('');
   const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [ribbonNumber, setRibbonNumber] = useState<number>(1);
 
   // Helper function to map gift names to image file names
   const getGiftImagePath = (giftName: string): string => {
@@ -1137,7 +1138,7 @@ export const CollectionTab: React.FC = () => {
                  
                  {/* Delete button - always visible on mobile */}
                  <button
-                   className="delete-button absolute -top-1 -left-1 w-6 h-6 flex items-center justify-center z-30 md:opacity-0 md:hover:opacity-100"
+                   className="delete-button absolute -top-2 -left-25 w-6 h-6 flex items-center justify-center z-30 md:opacity-0 md:hover:opacity-100"
                    onClick={(e) => {
                      e.stopPropagation();
                      handleDeleteBox(slotNumber);
@@ -1478,6 +1479,20 @@ export const CollectionTab: React.FC = () => {
                   <span className="text-gray-400 text-xs">No selection</span>
                 </div>
               )}
+              
+              {/* Diagonal Ribbon with Number */}
+              <div className="absolute -top-2 -right-2 z-30 pointer-events-none">
+                <div className="relative bg-[#8B4513] px-2 py-1 transform rotate-45 origin-center">
+                  <input
+                    type="number"
+                    value={ribbonNumber}
+                    onChange={(e) => setRibbonNumber(parseInt(e.target.value) || 1)}
+                    className="bg-transparent border-none text-white text-xs font-bold w-12 text-center p-0 pointer-events-auto"
+                    min="1"
+                    step="1"
+                  />
+                </div>
+              </div>
             </div>
             
             {/* Slot Number */}
