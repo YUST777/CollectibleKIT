@@ -314,6 +314,10 @@ export const CollectionTab: React.FC = () => {
       setSelectedPatternIndex(null);
     }
     
+    // Set ribbon number from existing design if available
+    const existingDesign = userDesigns[slotNumber];
+    setRibbonNumber(existingDesign?.ribbonNumber || 1);
+    
     // Open the filter drawer directly with "gift" tab selected
     setCurrentFilterType('gift');
     setCurrentFilterData(gifts.map(gift => ({ name: gift.name, type: 'gift' as const })));
@@ -422,7 +426,8 @@ export const CollectionTab: React.FC = () => {
         backdropIndex: selectedBackdropIndex,
         backdropName: backdrops[selectedBackdropIndex]?.name || '',
         patternIndex: selectedPatternIndex || undefined,
-        patternName: selectedPatternIndex !== null ? localPatterns[selectedPatternIndex]?.name : undefined
+        patternName: selectedPatternIndex !== null ? localPatterns[selectedPatternIndex]?.name : undefined,
+        ribbonNumber: ribbonNumber || undefined
       };
       
       console.log('💾 Saving gift design:', {
@@ -1136,6 +1141,22 @@ export const CollectionTab: React.FC = () => {
                    />
                  </div>
                  
+                 {/* Diagonal Ribbon with Number */}
+                 {design.ribbonNumber && (
+                   <div className="absolute top-0 right-0 z-40 pointer-events-none">
+                     <div 
+                       className="px-3 py-1 transform -rotate-45 origin-center"
+                       style={{
+                         background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
+                           ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
+                           : '#8B4513'
+                       }}
+                     >
+                       <span className="text-white text-xs font-bold">#{design.ribbonNumber}</span>
+                     </div>
+                   </div>
+                 )}
+                 
                  {/* Delete button - always visible on mobile */}
                  <button
                    className="delete-button absolute -top-2 -left-25 w-6 h-6 flex items-center justify-center z-30 md:opacity-0 md:hover:opacity-100"
@@ -1480,18 +1501,17 @@ export const CollectionTab: React.FC = () => {
                 </div>
               )}
               
-              {/* Diagonal Ribbon with Number */}
-              <div className="absolute -top-2 -right-2 z-30 pointer-events-none">
-                <div className="relative bg-[#8B4513] px-2 py-1 transform rotate-45 origin-center">
-                  <input
-                    type="number"
-                    value={ribbonNumber}
-                    onChange={(e) => setRibbonNumber(parseInt(e.target.value) || 1)}
-                    className="bg-transparent border-none text-white text-xs font-bold w-12 text-center p-0 pointer-events-auto"
-                    min="1"
-                    step="1"
-                  />
-                </div>
+              {/* Number selector for ribbon */}
+              <div className="absolute top-0 right-0 z-30 p-2">
+                <input
+                  type="number"
+                  value={ribbonNumber}
+                  onChange={(e) => setRibbonNumber(parseInt(e.target.value) || 1)}
+                  className="w-16 bg-gray-800 text-white text-xs font-bold text-center border border-gray-600 rounded px-2 py-1"
+                  min="1"
+                  step="1"
+                  onClick={(e) => e.stopPropagation()}
+                />
               </div>
             </div>
             

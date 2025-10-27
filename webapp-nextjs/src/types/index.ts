@@ -204,6 +204,7 @@ export interface GiftDesign {
   patternIndex?: number;
   patternName?: string;
   previewDataUrl?: string;
+  ribbonNumber?: number;
 }
 
 export interface SavedCollection {
