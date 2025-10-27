@@ -1903,6 +1903,10 @@ def main():
             async def start_backup_scheduler():
                 try:
                     logger.info("Starting backup scheduler...")
+                    # Perform initial backup immediately
+                    logger.info("Performing initial database backup...")
+                    await backup_system.perform_backup()
+                    logger.info("Initial backup completed. Starting hourly backup schedule...")
                     await backup_system.start_hourly_backups()
                 except Exception as e:
                     logger.error(f"Backup scheduler error: {e}")
