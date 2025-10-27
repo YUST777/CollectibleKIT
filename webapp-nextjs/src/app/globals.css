@@ -170,7 +170,7 @@
   .gift-grid {
     display: grid !important;
     row-gap: 12px;
-    column-gap: 4px;
+    column-gap: 2px;
   }
 
   /* Responsive gift slot sizing for larger grids */
