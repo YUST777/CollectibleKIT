@@ -1623,43 +1623,48 @@ export const CollectionTab: React.FC = () => {
 
                 const data = await response.json();
                 if (data.success && data.gifts && data.gifts.length > 0) {
-                  // Find open slots and fill them with profile gifts
-                  const openSlots: number[] = [];
-                  for (let i = 1; i <= gridSize; i++) {
-                    if (!userDesigns[i]) {
-                      openSlots.push(i);
-                    }
+                  // Limit to first 60 gifts
+                  const limitedGifts = data.gifts.slice(0, 60);
+                  
+                  // Calculate how many gifts we can fit
+                  const giftCount = limitedGifts.length;
+                  
+                  // Calculate optimal grid size (round up to nearest perfect square that fits all gifts)
+                  const optimalSize = Math.ceil(Math.sqrt(giftCount));
+                  
+                  // Don't exceed 60 slots
+                  const newGridSize = Math.min(optimalSize, 60);
+                  
+                  // Update grid size if needed
+                  if (newGridSize > gridSize) {
+                    updateGridSize(newGridSize);
+                  }
+                  
+                  // Clear existing designs and fill with profile gifts
+                  const newDesigns: Record<number, GiftDesign> = {};
+                  
+                  for (let i = 0; i < giftCount; i++) {
+                    const gift = limitedGifts[i];
+                    const slot = i + 1;
+                    const giftNum = gift.num || 1;
+                    const slugLower = gift.slug.toLowerCase().replace(/\s+/g, '');
+                    
+                    // Create a real gift design
+                    newDesigns[slot] = {
+                      giftName: gift.slug,
+                      modelNumber: 0,
+                      backdropIndex: 0,
+                      backdropName: '',
+                      ribbonNumber: giftNum,
+                      isRealGift: true,
+                      realGiftDominantColor: `https://nft.fragment.com/gift/${slugLower}-${giftNum}.medium.jpg`
+                    };
                   }
 
-                  // Fill open slots with profile gifts
-                  const newDesigns = { ...userDesigns };
-                  let filledCount = 0;
-                  for (const gift of data.gifts) {
-                    if (filledCount < openSlots.length) {
-                      const slot = openSlots[filledCount];
-                      const giftNum = gift.num || 1;
-                      const slugLower = gift.slug.toLowerCase().replace(/\s+/g, '');
-                      
-                      // Create a real gift design
-                      newDesigns[slot] = {
-                        giftName: gift.slug,
-                        modelNumber: 0,
-                        backdropIndex: 0,
-                        backdropName: '',
-                        ribbonNumber: giftNum,
-                        isRealGift: true,
-                        realGiftDominantColor: `https://nft.fragment.com/gift/${slugLower}-${giftNum}.medium.jpg`
-                      };
-                      filledCount++;
-                    }
-                  }
+                  // Update all designs
+                  setUserDesigns(newDesigns);
 
-                  // Update the designs
-                  Object.keys(newDesigns).forEach(slot => {
-                    setGiftDesign(parseInt(slot), newDesigns[parseInt(slot)]);
-                  });
-
-                  toast.success(`Loaded ${filledCount} profile gifts into open slots`);
+                  toast.success(`Loaded ${giftCount} profile gifts${data.gifts.length > 60 ? ` (showing first 60 of ${data.gifts.length})` : ''}`);
                 } else {
                   toast.error('No profile gifts found');
                 }
