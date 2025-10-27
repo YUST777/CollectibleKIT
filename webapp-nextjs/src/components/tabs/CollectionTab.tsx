@@ -52,52 +52,82 @@ export const CollectionTab: React.FC = () => {
   const [useRealGift, setUseRealGift] = useState(false);
   const [realGiftDominantColor, setRealGiftDominantColor] = useState<string>('#8B4513');
 
-  // Helper function to extract dominant color from image
-  const extractDominantColor = (imageSrc: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
+  // Helper function to extract dominant color from image using a proxy approach
+  const extractDominantColor = async (imageSrc: string): Promise<string> => {
+    try {
+      // Fetch the image as a blob through a proxy
+      const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(imageSrc)}`);
       
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
+      if (!response.ok) {
+        console.log('Fetch failed, using default color');
+        return '#8B4513';
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      return new Promise((resolve) => {
+        const img = new Image();
+        
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              URL.revokeObjectURL(url);
+              resolve('#8B4513');
+              return;
+            }
+            
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            let r = 0, g = 0, b = 0, count = 0;
+            
+            // Sample every 40th pixel for performance
+            for (let i = 0; i < data.length; i += 40) {
+              r += data[i];
+              g += data[i + 1];
+              b += data[i + 2];
+              count++;
+            }
+            
+            if (count > 0) {
+              r = Math.floor(r / count);
+              g = Math.floor(g / count);
+              b = Math.floor(b / count);
+              
+              const hexColor = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+              console.log('Extracted color:', hexColor);
+              URL.revokeObjectURL(url);
+              resolve(hexColor);
+            } else {
+              URL.revokeObjectURL(url);
+              resolve('#8B4513');
+            }
+          } catch (e) {
+            console.log('Error extracting color:', e);
+            URL.revokeObjectURL(url);
             resolve('#8B4513');
-            return;
           }
-          
-          canvas.width = img.width;
-          canvas.height = img.height;
-          ctx.drawImage(img, 0, 0, img.width, img.height);
-          
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const data = imageData.data;
-          
-          let r = 0, g = 0, b = 0, count = 0;
-          
-          // Sample every 10th pixel for performance
-          for (let i = 0; i < data.length; i += 40) {
-            r += data[i];
-            g += data[i + 1];
-            b += data[i + 2];
-            count++;
-          }
-          
-          r = Math.floor(r / count);
-          g = Math.floor(g / count);
-          b = Math.floor(b / count);
-          
-          const hexColor = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-          resolve(hexColor);
-        } catch (e) {
+        };
+        
+        img.onerror = () => {
+          console.log('Image load error');
+          URL.revokeObjectURL(url);
           resolve('#8B4513');
-        }
-      };
-      
-      img.onerror = () => resolve('#8B4513');
-      img.src = imageSrc;
-    });
+        };
+        
+        img.src = url;
+      });
+    } catch (e) {
+      console.log('Error in extractDominantColor:', e);
+      return '#8B4513';
+    }
   };
 
   // Helper function to map gift names to image file names
