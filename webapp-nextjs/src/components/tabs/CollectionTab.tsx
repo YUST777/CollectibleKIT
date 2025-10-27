@@ -49,6 +49,8 @@ export const CollectionTab: React.FC = () => {
   const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [ribbonNumber, setRibbonNumber] = useState<number>(1);
+  const [useRealGift, setUseRealGift] = useState(false);
+  const [realGiftNumber, setRealGiftNumber] = useState<number>(1);
 
   // Helper function to map gift names to image file names
   const getGiftImagePath = (giftName: string): string => {
@@ -1485,7 +1487,19 @@ export const CollectionTab: React.FC = () => {
                 </div>
               )}
               
-              {selectedGiftName && selectedModelNumber !== null && models.find(m => m.number === selectedModelNumber) ? (
+              {useRealGift && selectedGiftName ? (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <img
+                    src={`https://nft.fragment.com/gift/${selectedGiftName.toLowerCase()}-${realGiftNumber}.medium.jpg`}
+                    alt={`Real ${selectedGiftName} #${realGiftNumber}`}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      // Fallback to ModelThumbnail if real gift doesn't exist
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              ) : selectedGiftName && selectedModelNumber !== null && models.find(m => m.number === selectedModelNumber) ? (
                 <div className="absolute inset-3 flex items-center justify-center z-20">
                   <ModelThumbnail
                     collectionName={selectedGiftName}
@@ -1500,6 +1514,37 @@ export const CollectionTab: React.FC = () => {
                   <span className="text-gray-400 text-xs">No selection</span>
                 </div>
               )}
+              
+              {/* Real Gift Toggle and Controls */}
+              <div className="absolute top-0 left-0 z-30 p-2 space-y-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUseRealGift(!useRealGift);
+                  }}
+                  className={`px-3 py-1 rounded text-xs font-bold ${
+                    useRealGift 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {useRealGift ? 'Custom' : 'Real'}
+                </button>
+                
+                {useRealGift && (
+                  <div className="space-y-1">
+                    <input
+                      type="number"
+                      value={realGiftNumber}
+                      onChange={(e) => setRealGiftNumber(parseInt(e.target.value) || 1)}
+                      placeholder="Gift #"
+                      className="w-20 bg-gray-800 text-white text-xs text-center border border-gray-600 rounded px-2 py-1"
+                      min="1"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </div>
               
               {/* Number selector for ribbon */}
               <div className="absolute top-0 right-0 z-30 p-2">
