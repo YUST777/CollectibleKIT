@@ -169,8 +169,8 @@
   /* Ensure grid layout works properly */
   .gift-grid {
     display: grid !important;
-    row-gap: 6px;
-    column-gap: 2px;
+    row-gap: 1px;
+    column-gap: 1px;
   }
 
   /* Responsive gift slot sizing for larger grids */
