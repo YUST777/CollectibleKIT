@@ -7,7 +7,8 @@ import os
 
 # Get the absolute path to the bot directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(current_dir))  # Go up from webapp-nextjs/src/lib to project root
+# Go up from webapp-nextjs/src/lib -> webapp-nextjs/src -> webapp-nextjs -> project root (CollectableKIT)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
 bot_dir = os.path.join(project_root, 'bot')
 
 # Debug: print paths
