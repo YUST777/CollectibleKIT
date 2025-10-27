@@ -51,11 +51,18 @@ export const CollectionTab: React.FC = () => {
 
   // Helper function to map gift names to image file names
   const getGiftImagePath = (giftName: string): string => {
-    // Handle special cases
+    // Handle special cases - map API gift names to file names
     const nameMap: { [key: string]: string } = {
       'Jack in the Box': 'Jack_in_the_Box',
       'B Day Candle': 'B_Day_Candle',
       'B-Day Candle': 'B_Day_Candle',
+      'Westside Sign': 'WestsideSign',
+      'Snoop Dogg': 'SnoopDogg',
+      'Swag Bag': 'SwagBag',
+      'Snoop Cigar': 'SnoopCigar',
+      'Low Rider': 'LowRider',
+      'Durov\'s Cap': 'Durovs_Cap',
+      'Durovs Cap': 'Durovs_Cap',
     };
     
     // Use mapped name if exists, otherwise replace spaces with underscores
