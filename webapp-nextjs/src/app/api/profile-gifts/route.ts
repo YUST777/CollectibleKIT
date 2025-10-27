@@ -13,15 +13,26 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('user_id');
     
     // Run the Python script to fetch profile gifts
-    const pythonScript = path.join(process.cwd(), '..', 'bot', 'get_profile_gifts.py');
+    // webapp-nextjs is one level deep, so go up one level to reach CollectableKIT root
+    const projectRoot = path.join(process.cwd(), '..');
+    const pythonScript = path.join(projectRoot, 'bot', 'get_profile_gifts.py');
     // Use the main venv which has telethon installed
-    const venvPython = path.join(process.cwd(), '..', 'venv', 'bin', 'python');
+    const venvPython = path.join(projectRoot, 'venv', 'bin', 'python');
     
     // Build command arguments
     const args = [pythonScript];
     if (userId) {
       args.push(userId);
     }
+    
+    // Debug: Log paths
+    console.log('🐍 Running profile gifts script:', {
+      python: venvPython,
+      script: pythonScript,
+      userId,
+      cwd: process.cwd(),
+      projectRoot
+    });
     
     return new Promise((resolve, reject) => {
       const python = spawn(venvPython, args);
