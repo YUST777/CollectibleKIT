@@ -32,10 +32,16 @@ def main():
             os.makedirs(output_dir)
         
         # Save each story piece to file
+        # Note: The ZIP will download these numbered files, so we need to save them properly
+        # The bot sends them in reverse order (12, 11, ..., 1), but we save in forward order
         for idx, piece_bytes in enumerate(story_pieces, start=1):
+            # Create filename matching the pattern expected by imageProcessing.ts
             output_path = os.path.join(output_dir, f"{idx}cut.png")
             with open(output_path, 'wb') as f:
+                # piece_bytes is a BytesIO object
+                piece_bytes.seek(0)  # Reset to beginning
                 f.write(piece_bytes.getvalue())
+            piece_bytes.close()  # Close the BytesIO
         
         print(f"✅ Successfully created {len(story_pieces)} story pieces in {output_dir}")
         
