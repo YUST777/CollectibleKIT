@@ -36,6 +36,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'giftschart.01studio.xyz',
+        port: '',
+        pathname: '/**',
+      },
     ],
     // Updated defaults for Next.js 16
     minimumCacheTTL: 14400, // 4 hours (new default)
