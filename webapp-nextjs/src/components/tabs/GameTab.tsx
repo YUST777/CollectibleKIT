@@ -46,8 +46,15 @@ export const GameTab: React.FC = () => {
   
   // Helper function to map gift names to image file names
   const getGiftImagePath = (giftName: string): string => {
-    // Replace spaces with underscores for filenames
-    const filename = giftName.replace(/\s+/g, '_');
+    // Handle special cases
+    const nameMap: { [key: string]: string } = {
+      'Jack in the Box': 'Jack_in_the_Box',
+      'B Day Candle': 'B_Day_Candle',
+      'B-Day Candle': 'B_Day_Candle',
+    };
+    
+    // Use mapped name if exists, otherwise replace spaces with underscores
+    const filename = nameMap[giftName] || giftName.replace(/\s+/g, '_');
     return `/assets/gifts/${filename}.png`;
   };
   
@@ -884,7 +891,7 @@ export const GameTab: React.FC = () => {
                       >
                         {item.type === 'gift' && (
                           <>
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
+                            <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden bg-transparent">
                               <img 
                                 src={getGiftImagePath(item.name)}
                                 alt={item.name}
@@ -896,6 +903,7 @@ export const GameTab: React.FC = () => {
                                   const fallbackSvg = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>';
                                   if (target.parentElement) {
                                     target.parentElement.innerHTML = fallbackSvg;
+                                    target.parentElement.className = 'w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center';
                                   }
                                 }}
                               />

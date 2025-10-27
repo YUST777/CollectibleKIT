@@ -10,7 +10,7 @@ import { useAppActions, useAppStore, useCurrentTab } from '@/store/useAppStore';
 import { Backdrop, GiftModel, GiftDesign, FilterOption, Pattern } from '@/types';
 import { XMarkIcon, ChevronLeftIcon, MagnifyingGlassIcon, HeartIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
-import { Lightbulb, Gift, Coins, FolderOpen, Save } from 'lucide-react';
+import { Lightbulb, Coins, FolderOpen, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { hapticFeedback } from '@/lib/telegram';
 import { useTelegram } from '@/components/providers/TelegramProvider';
@@ -48,6 +48,20 @@ export const CollectionTab: React.FC = () => {
   const [filterSearchTerm, setFilterSearchTerm] = useState('');
   const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper function to map gift names to image file names
+  const getGiftImagePath = (giftName: string): string => {
+    // Handle special cases
+    const nameMap: { [key: string]: string } = {
+      'Jack in the Box': 'Jack_in_the_Box',
+      'B Day Candle': 'B_Day_Candle',
+      'B-Day Candle': 'B_Day_Candle',
+    };
+    
+    // Use mapped name if exists, otherwise replace spaces with underscores
+    const filename = nameMap[giftName] || giftName.replace(/\s+/g, '_');
+    return `/assets/gifts/${filename}.png`;
+  };
 
   // Drag and drop states
   const [draggedSlot, setDraggedSlot] = useState<number | null>(null);
@@ -1599,11 +1613,25 @@ export const CollectionTab: React.FC = () => {
             >
               {item.type === 'gift' && (
                 <>
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
-                    <Gift className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden bg-transparent">
+                    <img 
+                      src={getGiftImagePath(item.name)}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to SVG icon if image fails to load
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const fallbackSvg = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>';
+                        if (target.parentElement) {
+                          target.parentElement.innerHTML = fallbackSvg;
+                          target.parentElement.className = 'w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3 flex items-center justify-center';
+                        }
+                      }}
+                    />
                   </div>
                   <div className="flex-1">
-                        <div className="font-medium text-white">{item.name}</div>
+                    <div className="font-medium text-white">{item.name}</div>
                   </div>
                 </>
               )}
