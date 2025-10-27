@@ -250,9 +250,9 @@
   /* Telegram-style ribbon - full width diagonal */
   .ribbon-telegram {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    padding: 2px 20px;
+    top: 0;
+    right: 0;
+    padding: 3px 24px;
     transform: rotate(45deg);
     transform-origin: top right;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -261,8 +261,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 50px;
-    font-size: 9px;
+    min-width: 60px;
+    font-size: 10px;
   }
 
   /* Create triangular end pieces - smaller */
