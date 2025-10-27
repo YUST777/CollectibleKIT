@@ -161,8 +161,8 @@
   /* Collection Tab Styles */
   .gift-slot {
     @apply aspect-square;
-    min-height: 80px;
-    max-height: 120px;
+    min-height: 120px;
+    max-height: 140px;
     display: block;
   }
 
@@ -176,8 +176,8 @@
   /* Responsive gift slot sizing for larger grids */
   @media (max-width: 768px) {
     .gift-slot {
-      min-height: 70px;
-      max-height: 90px;
+      min-height: 100px;
+      max-height: 120px;
     }
   }
 
