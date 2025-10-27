@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
     // webapp-nextjs is one level deep, so go up one level to reach CollectableKIT root
     const projectRoot = path.join(process.cwd(), '..');
     const pythonScript = path.join(projectRoot, 'bot', 'get_profile_gifts.py');
-    // Use the main venv which has telethon installed
-    const venvPython = path.join(projectRoot, 'venv', 'bin', 'python');
+    // Use the showprofilegifts venv which has the correct session and credentials
+    const venvPython = path.join(projectRoot, 'showprofilegifts', 'venv', 'bin', 'python');
     
     // Build command arguments
     const args = [pythonScript];
