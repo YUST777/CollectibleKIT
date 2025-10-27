@@ -54,13 +54,19 @@ async def get_profile_gifts(user_id=None):
         # If user_id is provided, get that user's gifts, otherwise use current user
         if user_id is not None:
             try:
-                entity = await client.get_entity(int(user_id))
+                # Try to get entity - handle both numeric IDs and usernames
+                if isinstance(user_id, str):
+                    # Username or string ID
+                    entity = await client.get_entity(user_id)
+                else:
+                    # Numeric ID
+                    entity = await client.get_entity(int(user_id))
                 target_user = entity
                 print(f"✅ Fetching gifts for user: {getattr(entity, 'first_name', 'User')} (@{getattr(entity, 'username', 'unknown')})", file=sys.stderr)
             except Exception as e:
                 print(json.dumps({
                     "success": False,
-                    "error": f"Could not find user with ID {user_id}: {str(e)}"
+                    "error": f"Could not find user {user_id}: {str(e)}"
                 }))
                 sys.exit(1)
         else:
@@ -138,14 +144,14 @@ if __name__ == "__main__":
     # Get user_id from command line if provided
     user_id = None
     if len(sys.argv) > 1:
+        # Accept both numeric IDs and @username
+        user_input = sys.argv[1]
         try:
-            user_id = int(sys.argv[1])
+            # Try to parse as integer ID
+            user_id = int(user_input)
         except ValueError:
-            print(json.dumps({
-                "success": False,
-                "error": f"Invalid user_id: {sys.argv[1]}. Must be an integer."
-            }))
-            sys.exit(1)
+            # If not an integer, treat as username/identifier (could be @username or other)
+            user_id = user_input
     
     asyncio.run(get_profile_gifts(user_id))
 

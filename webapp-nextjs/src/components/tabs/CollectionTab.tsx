@@ -1676,20 +1676,12 @@ export const CollectionTab: React.FC = () => {
                 setIsProfileGiftsModalOpen(false);
                 
                 try {
-                  let userId: number;
+                  let userId: string | number;
                   
                   if (useOtherUser) {
-                    // Parse user ID from input
+                    // Use input as-is (can be @username or numeric ID)
                     const input = profileUserIdInput.trim();
-                    if (input.startsWith('@')) {
-                      toast.error('Username lookup not supported. Please use numeric user ID.');
-                      return;
-                    }
-                    userId = parseInt(input);
-                    if (isNaN(userId)) {
-                      toast.error('Invalid user ID');
-                      return;
-                    }
+                    userId = input; // Pass as string, API will handle it
                   } else {
                     // Use current user's ID
                     const currentUserId = telegramUser?.id;
@@ -1697,7 +1689,7 @@ export const CollectionTab: React.FC = () => {
                       toast.error('User ID not found');
                       return;
                     }
-                    userId = currentUserId;
+                    userId = currentUserId.toString();
                   }
 
                   const response = await fetch(`/api/profile-gifts?user_id=${userId}`);
