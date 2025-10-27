@@ -551,7 +551,7 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
         
         <div className="space-y-3">
           <button
-            onClick={() => webApp?.openLink('https://t.me/TWETestBot')}
+            onClick={() => webApp?.openLink('https://t.me/CollectibleKITbot')}
             className="w-full flex items-center gap-3 p-3 bg-box-bg rounded-lg hover:bg-icon-idle/20 transition-colors"
           >
             <svg className="w-5 h-5 text-icon-active" fill="currentColor" viewBox="0 0 24 24">

@@ -78,7 +78,7 @@ export const shareToStory = async (
     tg.shareToStory(publicUrl, {
       text: `Story Piece ${pieceNumber}/12 🎨`,
       widget_link: {
-        url: "https://t.me/TWETestBot",
+        url: "https://t.me/CollectibleKITbot",
         name: "Story Puzzle"
       }
     });

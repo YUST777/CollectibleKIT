@@ -28,7 +28,7 @@ export const ReferralSection: React.FC = () => {
   const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const BOT_LINK = 'https://t.me/snapGobot'; // Correct bot link (Token: 8353864491:AAED87RQDPrvG1O3wXs2C3u345c_UOYrSqQ)
+  const BOT_LINK = 'https://t.me/CollectibleKITbot'; // Correct bot link
 
   useEffect(() => {
     if (user?.user_id) {
