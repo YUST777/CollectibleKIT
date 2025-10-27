@@ -10,6 +10,12 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(os.path.dirname(current_dir))  # Go up from webapp-nextjs/src/lib to project root
 bot_dir = os.path.join(project_root, 'bot')
 
+# Debug: print paths
+print(f"Current dir: {current_dir}", file=sys.stderr)
+print(f"Project root: {project_root}", file=sys.stderr)
+print(f"Bot dir: {bot_dir}", file=sys.stderr)
+print(f"Bot dir exists: {os.path.exists(bot_dir)}", file=sys.stderr)
+
 # Add bot directory to path
 sys.path.insert(0, bot_dir)
 
