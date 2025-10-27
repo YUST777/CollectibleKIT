@@ -204,18 +204,18 @@ class BotDatabase:
                 conn.commit()
                 return dict(user)
             else:
-                # Create new user
+                # Create new user with 20 free credits
                 conn.execute("""
-                    INSERT INTO users (user_id, username, first_name, created_at, last_activity)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (user_id, username, first_name, time.time(), time.time()))
+                    INSERT INTO users (user_id, username, first_name, created_at, last_activity, credits)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (user_id, username, first_name, time.time(), time.time(), 20))
                 conn.commit()
                 return {
                     'user_id': user_id,
                     'username': username,
                     'first_name': first_name,
                     'free_uses': 0,
-                    'credits': 0,
+                    'credits': 20,
                     'created_at': time.time(),
                     'last_activity': time.time()
                 }
