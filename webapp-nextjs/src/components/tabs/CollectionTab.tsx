@@ -50,6 +50,55 @@ export const CollectionTab: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [ribbonNumber, setRibbonNumber] = useState<number>(1);
   const [useRealGift, setUseRealGift] = useState(false);
+  const [realGiftDominantColor, setRealGiftDominantColor] = useState<string>('#8B4513');
+
+  // Helper function to extract dominant color from image
+  const extractDominantColor = (imageSrc: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve('#8B4513');
+            return;
+          }
+          
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+          
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          
+          let r = 0, g = 0, b = 0, count = 0;
+          
+          // Sample every 10th pixel for performance
+          for (let i = 0; i < data.length; i += 40) {
+            r += data[i];
+            g += data[i + 1];
+            b += data[i + 2];
+            count++;
+          }
+          
+          r = Math.floor(r / count);
+          g = Math.floor(g / count);
+          b = Math.floor(b / count);
+          
+          const hexColor = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+          resolve(hexColor);
+        } catch (e) {
+          resolve('#8B4513');
+        }
+      };
+      
+      img.onerror = () => resolve('#8B4513');
+      img.src = imageSrc;
+    });
+  };
 
   // Helper function to map gift names to image file names
   const getGiftImagePath = (giftName: string): string => {
@@ -434,7 +483,8 @@ export const CollectionTab: React.FC = () => {
           backdropIndex: 0, // Not used for real gifts
           backdropName: '', // Not used for real gifts
           ribbonNumber: ribbonNumber,
-          isRealGift: true
+          isRealGift: true,
+          realGiftDominantColor: realGiftDominantColor
         };
         
         console.log('💾 Saving real gift design:', {
@@ -1198,12 +1248,12 @@ export const CollectionTab: React.FC = () => {
                      className="ribbon-telegram absolute top-0 right-0 z-40 pointer-events-none"
                      style={{
                        background: design.isRealGift 
-                         ? '#8B4513' // Default brown for real gifts
+                         ? (design.realGiftDominantColor || '#8B4513') // Use extracted color or default
                          : (backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
                            ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
                            : '#8B4513'),
                        '--ribbon-color': design.isRealGift 
-                         ? '#8B4513' // Default brown for real gifts
+                         ? (design.realGiftDominantColor || '#8B4513') // Use extracted color or default
                          : (backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
                            ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
                            : '#8B4513')
@@ -1560,6 +1610,11 @@ export const CollectionTab: React.FC = () => {
                     src={`https://nft.fragment.com/gift/${selectedGiftName.toLowerCase().replace(/\s+/g, '')}-${ribbonNumber}.medium.jpg`}
                     alt={`Real ${selectedGiftName} #${ribbonNumber}`}
                     className="w-full h-full object-contain"
+                    onLoad={(e) => {
+                      extractDominantColor(e.currentTarget.src).then(color => {
+                        setRealGiftDominantColor(color);
+                      });
+                    }}
                     onError={(e) => {
                       // Fallback to ModelThumbnail if real gift doesn't exist
                       e.currentTarget.style.display = 'none';
@@ -1600,6 +1655,19 @@ export const CollectionTab: React.FC = () => {
                   placeholder={useRealGift ? "Gift #" : "Ribbon #"}
                 />
               </div>
+              
+              {/* Ribbon preview in editor */}
+              {ribbonNumber && (
+                <div 
+                  className="ribbon-telegram absolute top-0 right-0 z-40 pointer-events-none"
+                  style={{
+                    background: useRealGift ? realGiftDominantColor : '#8B4513',
+                    '--ribbon-color': useRealGift ? realGiftDominantColor : '#8B4513'
+                  } as React.CSSProperties}
+                >
+                  <span className="text-white text-[10px] font-bold whitespace-nowrap">#{ribbonNumber}</span>
+                </div>
+              )}
             </div>
             
             {/* Slot Number */}

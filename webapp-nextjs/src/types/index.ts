@@ -206,6 +206,7 @@ export interface GiftDesign {
   previewDataUrl?: string;
   ribbonNumber?: number;
   isRealGift?: boolean;
+  realGiftDominantColor?: string;
 }
 
 export interface SavedCollection {
