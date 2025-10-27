@@ -1193,16 +1193,20 @@ export const CollectionTab: React.FC = () => {
                  )}
                  
                  {/* Diagonal Ribbon with Number - Telegram style */}
-                 {design.ribbonNumber && !design.isRealGift && (
+                 {design.ribbonNumber && (
                    <div 
                      className="ribbon-telegram absolute top-0 right-0 z-40 pointer-events-none"
                      style={{
-                       background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
-                         ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
-                         : '#8B4513',
-                       '--ribbon-color': backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
-                         ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
-                         : '#8B4513'
+                       background: design.isRealGift 
+                         ? '#8B4513' // Default brown for real gifts
+                         : (backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
+                           ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
+                           : '#8B4513'),
+                       '--ribbon-color': design.isRealGift 
+                         ? '#8B4513' // Default brown for real gifts
+                         : (backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex]
+                           ? backdrops[design.backdropIndex].hex?.centerColor || '#8B4513'
+                           : '#8B4513')
                      } as React.CSSProperties}
                    >
                      <span className="text-white text-[10px] font-bold whitespace-nowrap">#{design.ribbonNumber}</span>
