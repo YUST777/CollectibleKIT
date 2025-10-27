@@ -939,18 +939,20 @@ export const CollectionTab: React.FC = () => {
     
     return (
       <div key={index} className="relative w-full h-full aspect-square rounded-lg overflow-hidden border border-black">
-        {/* Background with gradient */}
-        <div 
-          className="absolute inset-0 rounded-lg"
-          style={{
-            background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex] 
-              ? `radial-gradient(circle, ${backdrops[design.backdropIndex].hex?.centerColor || '#667eea'}, ${backdrops[design.backdropIndex].hex?.edgeColor || '#764ba2'})`
-              : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-          }}
-        />
+        {/* Background with gradient - only show for non-real gifts */}
+        {!design.isRealGift && (
+          <div 
+            className="absolute inset-0 rounded-lg"
+            style={{
+              background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex] 
+                ? `radial-gradient(circle, ${backdrops[design.backdropIndex].hex?.centerColor || '#667eea'}, ${backdrops[design.backdropIndex].hex?.edgeColor || '#764ba2'})`
+                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            }}
+          />
+        )}
         
-        {/* Pattern overlay if selected - 8 pattern layout */}
-        {design.patternName && design.patternIndex !== null && design.patternIndex !== undefined && localPatterns && localPatterns[design.patternIndex] && (
+        {/* Pattern overlay if selected - 8 pattern layout - only for non-real gifts */}
+        {!design.isRealGift && design.patternName && design.patternIndex !== null && design.patternIndex !== undefined && localPatterns && localPatterns[design.patternIndex] && (
           <div className="absolute inset-0 z-10 pointer-events-none">
             {/* Top center */}
             <div
@@ -1059,9 +1061,19 @@ export const CollectionTab: React.FC = () => {
           </div>
         )}
         
-        {/* Gift image */}
+        {/* Gift image - handle real gifts */}
         <div className="absolute inset-3 flex items-center justify-center z-20">
-          {giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name ? (
+          {design.isRealGift && design.ribbonNumber ? (
+            // Real gift from Fragment.com
+            <img
+              src={design.realGiftDominantColor || `https://nft.fragment.com/gift/${design.giftName?.toLowerCase().replace(/\s+/g, '')}-${design.ribbonNumber}.medium.jpg`}
+              alt={`Real ${design.giftName} #${design.ribbonNumber}`}
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name ? (
             <ModelThumbnail
               collectionName={design.giftName}
               modelName={giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name || ''}
@@ -1075,6 +1087,19 @@ export const CollectionTab: React.FC = () => {
             </div>
           )}
         </div>
+        
+        {/* Ribbon */}
+        {design.ribbonNumber && (
+          <div 
+            className="ribbon-telegram"
+            style={{
+              background: design.isRealGift ? '#4B5563' : '#8B4513',
+              '--ribbon-color': design.isRealGift ? '#4B5563' : '#8B4513'
+            } as React.CSSProperties}
+          >
+            #{design.ribbonNumber}
+          </div>
+        )}
       </div>
     );
   };
