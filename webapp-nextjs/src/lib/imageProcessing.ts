@@ -14,7 +14,7 @@ export interface ProcessingResult {
 
 export class ImageProcessingService {
   private static readonly TEMP_DIR = path.join(process.cwd(), 'temp_uploads');
-  private static readonly PYTHON_SCRIPT = path.join(__dirname, 'process_image_cli.py');
+  private static readonly PYTHON_SCRIPT = path.join(process.cwd(), 'src', 'lib', 'process_image_cli.py');
 
   /**
    * Process image using Python script
