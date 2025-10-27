@@ -1153,7 +1153,7 @@ export const CollectionTab: React.FC = () => {
                          : '#8B4513'
                      } as React.CSSProperties}
                    >
-                     <span className="text-white text-xs font-bold whitespace-nowrap">#{design.ribbonNumber}</span>
+                     <span className="text-white text-[10px] font-bold whitespace-nowrap">#{design.ribbonNumber}</span>
                    </div>
                  )}
                  
