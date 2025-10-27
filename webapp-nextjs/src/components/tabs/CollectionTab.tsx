@@ -1062,31 +1062,33 @@ export const CollectionTab: React.FC = () => {
         )}
         
         {/* Gift image - handle real gifts */}
-        <div className="absolute inset-3 flex items-center justify-center z-20">
-          {design.isRealGift && design.ribbonNumber ? (
-            // Real gift from Fragment.com
-            <img
-              src={design.realGiftDominantColor || `https://nft.fragment.com/gift/${design.giftName?.toLowerCase().replace(/\s+/g, '')}-${design.ribbonNumber}.medium.jpg`}
-              alt={`Real ${design.giftName} #${design.ribbonNumber}`}
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          ) : giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name ? (
-            <ModelThumbnail
-              collectionName={design.giftName}
-              modelName={giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name || ''}
-              size="large"
-              className="w-full h-full"
-              showFallback={true}
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-500">
-              {design.giftName}
-            </div>
-          )}
-        </div>
+        {design.isRealGift && design.ribbonNumber ? (
+          // Real gift from Fragment.com - fills the container
+          <img
+            src={design.realGiftDominantColor || `https://nft.fragment.com/gift/${design.giftName?.toLowerCase().replace(/\s+/g, '')}-${design.ribbonNumber}.medium.jpg`}
+            alt={`Real ${design.giftName} #${design.ribbonNumber}`}
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div className="absolute inset-3 flex items-center justify-center z-20">
+            {giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name ? (
+              <ModelThumbnail
+                collectionName={design.giftName}
+                modelName={giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name || ''}
+                size="large"
+                className="w-full h-full"
+                showFallback={true}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-500">
+                {design.giftName}
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Ribbon */}
         {design.ribbonNumber && (
