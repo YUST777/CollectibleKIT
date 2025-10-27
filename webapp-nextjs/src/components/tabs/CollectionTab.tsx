@@ -1346,8 +1346,10 @@ export const CollectionTab: React.FC = () => {
       )}
 
       {/* Gift Preview Grid */}
-      <div className="gift-grid grid-cols-3" data-grid-size={gridSize}>
-        {Array.from({ length: gridSize }, (_, i) => renderGiftSlot(i + 1))}
+      <div className="flex justify-center">
+        <div className="gift-grid grid-cols-3" data-grid-size={gridSize}>
+          {Array.from({ length: gridSize }, (_, i) => renderGiftSlot(i + 1))}
+        </div>
       </div>
 
       {/* Combined Control Block - Compact & Minimalistic */}
