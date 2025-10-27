@@ -44,6 +44,10 @@ export const GameTab: React.FC = () => {
   const [drawerSearchTerm, setDrawerSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
+  // Game explanation drawer state
+  const [isGameExplanationOpen, setIsGameExplanationOpen] = useState(false);
+  const [selectedGameForExplanation, setSelectedGameForExplanation] = useState<'emoji' | 'zoom' | null>(null);
+  
   // Helper function to map gift names to image file names
   const getGiftImagePath = (giftName: string): string => {
     // Handle special cases - map API gift names to file names
@@ -608,10 +612,20 @@ export const GameTab: React.FC = () => {
       {/* Content based on sub tab */}
       {currentSubTab === 'emoji' && (
         <div className="bg-box-bg rounded-lg p-4">
-          <div className="text-center mb-4">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <h3 className="text-sm font-medium text-text-idle">
               Which gift model do these emojis describe?
             </h3>
+            <button
+              onClick={() => {
+                setSelectedGameForExplanation('emoji');
+                setIsGameExplanationOpen(true);
+                hapticFeedback('selection', 'light', webApp);
+              }}
+              className="w-5 h-5 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center transition-colors"
+            >
+              <QuestionMarkCircleIcon className="w-4 h-4 text-gray-300" />
+            </button>
           </div>
           {renderEmojiHints()}
         </div>
@@ -619,10 +633,20 @@ export const GameTab: React.FC = () => {
 
       {currentSubTab === 'zoom' && (
         <div className="bg-box-bg rounded-lg p-4">
-          <div className="text-center mb-4">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <h3 className="text-sm font-medium text-text-idle">
               What gift model is this? (Infinite Random Game)
             </h3>
+            <button
+              onClick={() => {
+                setSelectedGameForExplanation('zoom');
+                setIsGameExplanationOpen(true);
+                hapticFeedback('selection', 'light', webApp);
+              }}
+              className="w-5 h-5 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center transition-colors"
+            >
+              <QuestionMarkCircleIcon className="w-4 h-4 text-gray-300" />
+            </button>
           </div>
           {renderZoomGame()}
         </div>
@@ -977,6 +1001,95 @@ export const GameTab: React.FC = () => {
         isFirstWin={isFirstWin}
         onClose={() => setShowCelebration(false)}
       />
+      
+      {/* Game Explanation Drawer */}
+      <Sheet open={isGameExplanationOpen} onOpenChange={setIsGameExplanationOpen}>
+        <SheetContent className="bg-[#1c1c1d]">
+          <SheetHeader>
+            <SheetTitle className="text-white text-center">
+              {selectedGameForExplanation === 'emoji' ? 'Emoji Game' : 'Zoom Game'}
+            </SheetTitle>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-4 overflow-y-auto">
+            {selectedGameForExplanation === 'emoji' && (
+              <>
+                <div className="text-white">
+                  <h3 className="text-lg font-semibold mb-2">How to Play</h3>
+                  <p className="text-gray-300 mb-4">
+                    Guess the gift model based on emoji hints! Each wrong guess reveals another emoji to help you.
+                  </p>
+                  
+                  <div className="space-y-3 mb-4">
+                    <div className="bg-gray-800/50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-200">🎮 <strong>Step 1:</strong> Look at the revealed emojis</p>
+                    </div>
+                    <div className="bg-gray-800/50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-200">🤔 <strong>Step 2:</strong> Guess which gift they represent</p>
+                    </div>
+                    <div className="bg-gray-800/50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-200">📝 <strong>Step 3:</strong> Select the gift from the list</p>
+                    </div>
+                    <div className="bg-gray-800/50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-200">✨ <strong>Step 4:</strong> Each wrong guess shows more emojis</p>
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-lg font-semibold mb-2">Earning Credits</h3>
+                  <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
+                    <p className="text-sm text-gray-200">
+                      <strong className="text-green-400">Win the game</strong> to earn <strong className="text-green-400">credits</strong> that you can use to generate more gifts!
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {selectedGameForExplanation === 'zoom' && (
+              <>
+                <div className="text-white">
+                  <h3 className="text-lg font-semibold mb-2">How to Play</h3>
+                  <p className="text-gray-300 mb-4">
+                    Guess the gift model from a zoomed-in view! The image zooms out with each wrong guess.
+                  </p>
+                  
+                  <div className="space-y-3 mb-4">
+                    <div className="bg-gray-800/50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-200">🔍 <strong>Step 1:</strong> Look at the zoomed-in gift detail</p>
+                    </div>
+                    <div className="bg-gray-800/50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-200">🤔 <strong>Step 2:</strong> Guess which gift model it is</p>
+                    </div>
+                    <div className="bg-gray-800/50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-200">📝 <strong>Step 3:</strong> Select the gift from the list</p>
+                    </div>
+                    <div className="bg-gray-800/50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-200">⬇️ <strong>Step 4:</strong> Each wrong guess zooms out 15%</p>
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-lg font-semibold mb-2">Earning Credits</h3>
+                  <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
+                    <p className="text-sm text-gray-200">
+                      <strong className="text-green-400">Win the game</strong> to earn <strong className="text-green-400">credits</strong> that you can use to generate more gifts!
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
+          {/* Close Button */}
+          <div className="mt-6 pt-4 border-t border-gray-700">
+            <button
+              onClick={() => setIsGameExplanationOpen(false)}
+              className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all"
+            >
+              Got it!
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
