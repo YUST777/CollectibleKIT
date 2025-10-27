@@ -112,7 +112,13 @@ const createFormDataFromUrl = (imageUrl: string, pieceNumber: number): FormData 
 export const showTelegramAlert = (message: string, tg?: TelegramWebApp) => {
   const webApp = tg || getTelegramWebApp();
   if (webApp?.showAlert) {
-    webApp.showAlert(message);
+    try {
+      webApp.showAlert(message);
+    } catch (error) {
+      // Fallback to browser alert if Telegram method is not supported
+      console.warn('Telegram showAlert not supported:', error);
+      alert(message);
+    }
   } else {
     alert(message);
   }
@@ -125,7 +131,14 @@ export const showTelegramConfirm = (
 ) => {
   const webApp = tg || getTelegramWebApp();
   if (webApp?.showConfirm) {
-    webApp.showConfirm(message, callback);
+    try {
+      webApp.showConfirm(message, callback);
+    } catch (error) {
+      // Fallback to browser confirm if Telegram method is not supported
+      console.warn('Telegram showConfirm not supported:', error);
+      const confirmed = confirm(message);
+      callback(confirmed);
+    }
   } else {
     const confirmed = confirm(message);
     callback(confirmed);
