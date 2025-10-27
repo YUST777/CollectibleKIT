@@ -5,8 +5,13 @@ CLI wrapper for processing.py to handle image processing from Next.js API
 import sys
 import os
 
+# Get the absolute path to the bot directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(current_dir))  # Go up from webapp-nextjs/src/lib to project root
+bot_dir = os.path.join(project_root, 'bot')
+
 # Add bot directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bot'))
+sys.path.insert(0, bot_dir)
 
 from processing import cut_into_4x3_and_prepare_story_pieces
 from PIL import Image
