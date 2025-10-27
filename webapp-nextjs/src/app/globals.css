@@ -169,7 +169,7 @@
   /* Ensure grid layout works properly */
   .gift-grid {
     display: grid !important;
-    row-gap: 12px;
+    row-gap: 0px;
     column-gap: 2px;
   }
 
