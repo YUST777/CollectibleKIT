@@ -247,35 +247,56 @@
     transition: opacity 0.2s ease-in-out;
   }
 
-  /* Telegram-style ribbon */
+  /* Telegram-style ribbon - full width diagonal */
   .ribbon-telegram {
-    position: relative;
-    padding: 8px 24px;
-    margin: 10px 0;
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    padding: 4px 32px;
     transform: rotate(45deg);
-    transform-origin: bottom right;
-    text-align: center;
+    transform-origin: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    overflow: visible;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
   }
 
+  /* Create triangular end pieces */
   .ribbon-telegram::before,
   .ribbon-telegram::after {
     content: '';
     position: absolute;
-    bottom: -10px;
-    border: 5px solid transparent;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
   }
 
   .ribbon-telegram::before {
-    left: 0;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
     border-right-color: var(--ribbon-color, #8B4513);
-    border-right-width: 10px;
+    border-right-width: 8px;
+    border-top-width: 8px;
+    border-bottom-width: 8px;
+    border-top-color: var(--ribbon-color, #8B4513);
+    border-bottom-color: var(--ribbon-color, #8B4513);
   }
 
   .ribbon-telegram::after {
-    right: 0;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
     border-left-color: var(--ribbon-color, #8B4513);
-    border-left-width: 10px;
+    border-left-width: 8px;
+    border-top-width: 8px;
+    border-bottom-width: 8px;
+    border-top-color: var(--ribbon-color, #8B4513);
+    border-bottom-color: var(--ribbon-color, #8B4513);
   }
 
   /* Mobile-specific styles */
