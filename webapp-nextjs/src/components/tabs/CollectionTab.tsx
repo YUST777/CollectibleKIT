@@ -1171,7 +1171,7 @@ export const CollectionTab: React.FC = () => {
                  {design.isRealGift ? (
                    <div className="absolute inset-0 flex items-center justify-center z-20">
                      <img
-                       src={`https://nft.fragment.com/gift/${design.giftName.toLowerCase()}-${design.ribbonNumber}.medium.jpg`}
+                       src={`https://nft.fragment.com/gift/${design.giftName.toLowerCase().replace(/\s+/g, '')}-${design.ribbonNumber}.medium.jpg`}
                        alt={`Real ${design.giftName} #${design.ribbonNumber}`}
                        className="w-full h-full object-contain"
                        onError={(e) => {
@@ -1553,7 +1553,7 @@ export const CollectionTab: React.FC = () => {
               {useRealGift && selectedGiftName ? (
                 <div className="absolute inset-0 flex items-center justify-center z-20">
                   <img
-                    src={`https://nft.fragment.com/gift/${selectedGiftName.toLowerCase()}-${ribbonNumber}.medium.jpg`}
+                    src={`https://nft.fragment.com/gift/${selectedGiftName.toLowerCase().replace(/\s+/g, '')}-${ribbonNumber}.medium.jpg`}
                     alt={`Real ${selectedGiftName} #${ribbonNumber}`}
                     className="w-full h-full object-contain"
                     onError={(e) => {
