@@ -1701,12 +1701,17 @@ export const CollectionTab: React.FC = () => {
                   }
 
                   const response = await fetch(`/api/profile-gifts?user_id=${userId}`);
-                  if (!response.ok) {
-                    throw new Error('Failed to fetch profile gifts');
-                  }
-
+                  
                   const data = await response.json();
-                  if (data.success && data.gifts && data.gifts.length > 0) {
+                  
+                  // Check if API call failed
+                  if (!response.ok || !data.success) {
+                    const errorMsg = data.error || 'Failed to fetch profile gifts';
+                    toast.error(errorMsg);
+                    return;
+                  }
+                  
+                  if (data.gifts && data.gifts.length > 0) {
                     // Limit to first 60 gifts
                     const limitedGifts = data.gifts.slice(0, 60);
                     
