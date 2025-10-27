@@ -250,7 +250,7 @@
   /* Telegram-style ribbon - full width diagonal */
   .ribbon-telegram {
     position: absolute;
-    top: 0;
+    top: 10px;
     right: 0;
     padding: 3px 24px;
     transform: rotate(45deg);
