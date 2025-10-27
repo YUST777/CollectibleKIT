@@ -1516,14 +1516,14 @@ export const CollectionTab: React.FC = () => {
 
       {/* Combined Control Block - Compact & Minimalistic */}
       <div className="flex items-center justify-center px-4">
-        <div className="flex items-center gap-2 bg-gray-800/50 rounded-xl px-4 py-2.5 border border-gray-700/50 backdrop-blur-sm">
+        <div className="flex items-center gap-1.5 bg-gray-800/50 rounded-lg px-2.5 py-1.5 border border-gray-700/50 backdrop-blur-sm">
           {/* Grid Size Selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400 font-medium">Grid Size</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-400">Size</span>
             <select
               value={gridSize}
               onChange={(e) => updateGridSize(parseInt(e.target.value))}
-              className="bg-white/10 text-sm text-white rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer hover:bg-white/15 transition-colors"
+              className="bg-white/10 text-xs text-white rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500/50 cursor-pointer hover:bg-white/15 transition-colors"
             >
               <option value={3}>3</option>
               <option value={6}>6</option>
@@ -1542,7 +1542,7 @@ export const CollectionTab: React.FC = () => {
           </div>
 
           {/* Separator */}
-          <div className="w-px h-6 bg-gray-600/50"></div>
+          <div className="w-px h-4 bg-gray-600/50"></div>
 
           {/* Load Button */}
           <button
@@ -1551,9 +1551,9 @@ export const CollectionTab: React.FC = () => {
               setIsLoadModalOpen(true);
             }}
             disabled={savedCollections.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FolderOpen className="w-4 h-4" />
+            <FolderOpen className="w-3.5 h-3.5" />
             <span>Load</span>
           </button>
 
@@ -1561,9 +1561,9 @@ export const CollectionTab: React.FC = () => {
           <button
             onClick={() => setIsSaveModalOpen(true)}
             disabled={Object.keys(userDesigns).length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="w-4 h-4" />
+            <Save className="w-3.5 h-3.5" />
             <span>Save</span>
           </button>
 
@@ -1644,10 +1644,10 @@ export const CollectionTab: React.FC = () => {
               }
             }}
             disabled={profileGiftsLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <SparklesIcon className="w-4 h-4" />
-            <span>Show Profile Gifts</span>
+            <SparklesIcon className="w-3.5 h-3.5" />
+            <span>Profile</span>
           </button>
         </div>
       </div>
