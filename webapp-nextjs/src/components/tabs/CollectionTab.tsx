@@ -420,30 +420,63 @@ export const CollectionTab: React.FC = () => {
   };
 
   const saveGiftDesign = () => {
-    if (currentSlot && selectedGiftName && selectedModelNumber !== null && selectedBackdropIndex !== null) {
-      const newDesign: GiftDesign = {
-        giftName: selectedGiftName,
-        modelNumber: selectedModelNumber,
-        backdropIndex: selectedBackdropIndex,
-        backdropName: backdrops[selectedBackdropIndex]?.name || '',
-        patternIndex: selectedPatternIndex || undefined,
-        patternName: selectedPatternIndex !== null ? localPatterns[selectedPatternIndex]?.name : undefined,
-        ribbonNumber: ribbonNumber || undefined,
-        isRealGift: useRealGift
-      };
-      
-      console.log('💾 Saving gift design:', {
-        slot: currentSlot,
-        design: newDesign,
-        currentDesigns: userDesigns
-      });
-      
-      setGiftDesign(currentSlot, newDesign);
-      closeFilterModal();
-      hapticFeedback('notification');
-      toast.success('Gift saved!');
+    if (currentSlot && selectedGiftName) {
+      // For real gifts, we only need giftName and ribbonNumber
+      if (useRealGift) {
+        if (!ribbonNumber) {
+          toast.error('Please enter a gift number');
+          return;
+        }
+        
+        const newDesign: GiftDesign = {
+          giftName: selectedGiftName,
+          modelNumber: 0, // Not used for real gifts
+          backdropIndex: 0, // Not used for real gifts
+          backdropName: '', // Not used for real gifts
+          ribbonNumber: ribbonNumber,
+          isRealGift: true
+        };
+        
+        console.log('💾 Saving real gift design:', {
+          slot: currentSlot,
+          design: newDesign,
+          currentDesigns: userDesigns
+        });
+        
+        setGiftDesign(currentSlot, newDesign);
+        closeFilterModal();
+        hapticFeedback('notification');
+        toast.success('Real gift saved!');
+      } else {
+        // For custom gifts, we need all fields
+        if (selectedModelNumber !== null && selectedBackdropIndex !== null) {
+          const newDesign: GiftDesign = {
+            giftName: selectedGiftName,
+            modelNumber: selectedModelNumber,
+            backdropIndex: selectedBackdropIndex,
+            backdropName: backdrops[selectedBackdropIndex]?.name || '',
+            patternIndex: selectedPatternIndex || undefined,
+            patternName: selectedPatternIndex !== null ? localPatterns[selectedPatternIndex]?.name : undefined,
+            ribbonNumber: ribbonNumber || undefined,
+            isRealGift: false
+          };
+          
+          console.log('💾 Saving custom gift design:', {
+            slot: currentSlot,
+            design: newDesign,
+            currentDesigns: userDesigns
+          });
+          
+          setGiftDesign(currentSlot, newDesign);
+          closeFilterModal();
+          hapticFeedback('notification');
+          toast.success('Custom gift saved!');
+        } else {
+          toast.error('Please select all required fields');
+        }
+      }
     } else {
-      toast.error('Please select all required fields');
+      toast.error('Please select a gift');
     }
   };
 
@@ -1000,18 +1033,20 @@ export const CollectionTab: React.FC = () => {
             <div className="gift-preview-content">
               {/* Telegram-style gift preview */}
               <div className="relative w-full h-full">
-                {/* Background with gradient */}
-                <div 
-                  className="absolute inset-0 rounded-lg"
-                  style={{
-                    background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex] 
-                      ? `radial-gradient(circle, ${backdrops[design.backdropIndex].hex?.centerColor || '#667eea'}, ${backdrops[design.backdropIndex].hex?.edgeColor || '#764ba2'})`
-                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  }}
-                />
+                {/* Background with gradient - only for custom gifts */}
+                {!design.isRealGift && (
+                  <div 
+                    className="absolute inset-0 rounded-lg"
+                    style={{
+                      background: backdrops && design.backdropIndex !== undefined && backdrops[design.backdropIndex] 
+                        ? `radial-gradient(circle, ${backdrops[design.backdropIndex].hex?.centerColor || '#667eea'}, ${backdrops[design.backdropIndex].hex?.edgeColor || '#764ba2'})`
+                        : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    }}
+                  />
+                )}
                 
-                {/* Pattern overlay */}
-                {design.patternIndex !== undefined && design.patternName && (
+                {/* Pattern overlay - only for custom gifts */}
+                {!design.isRealGift && design.patternIndex !== undefined && design.patternName && (
                   <div className="absolute inset-0 rounded-lg z-10">
                     <div className="w-full h-full relative">
                       {/* Custom 8-pattern layout */}
@@ -1133,15 +1168,29 @@ export const CollectionTab: React.FC = () => {
                 )}
                 
                  {/* Gift image */}
-                 <div className="absolute inset-3 flex items-center justify-center z-20">
-                   <ModelThumbnail
-                     collectionName={design.giftName}
-                     modelName={giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name || ''}
-                     size="large"
-                     className="w-full h-full"
-                     showFallback={true}
-                   />
-                 </div>
+                 {design.isRealGift ? (
+                   <div className="absolute inset-0 flex items-center justify-center z-20">
+                     <img
+                       src={`https://nft.fragment.com/gift/${design.giftName.toLowerCase()}-${design.ribbonNumber}.medium.jpg`}
+                       alt={`Real ${design.giftName} #${design.ribbonNumber}`}
+                       className="w-full h-full object-contain"
+                       onError={(e) => {
+                         // Fallback to ModelThumbnail if real gift doesn't exist
+                         e.currentTarget.style.display = 'none';
+                       }}
+                     />
+                   </div>
+                 ) : (
+                   <div className="absolute inset-3 flex items-center justify-center z-20">
+                     <ModelThumbnail
+                       collectionName={design.giftName}
+                       modelName={giftModels[design.giftName]?.find(m => m.number === design.modelNumber)?.name || ''}
+                       size="large"
+                       className="w-full h-full"
+                       showFallback={true}
+                     />
+                   </div>
+                 )}
                  
                  {/* Diagonal Ribbon with Number - Telegram style */}
                  {design.ribbonNumber && !design.isRealGift && (
@@ -1441,6 +1490,19 @@ export const CollectionTab: React.FC = () => {
             </SheetTitle>
           </SheetHeader>
           
+          {/* Real Gift Checkbox */}
+          <div className="mt-4 mb-2 flex justify-center">
+            <label className="flex items-center space-x-2 text-sm text-white">
+              <input
+                type="checkbox"
+                checked={useRealGift}
+                onChange={(e) => setUseRealGift(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <span>Use Real Telegram Gift</span>
+            </label>
+          </div>
+          
           {/* Gift Preview */}
           <div className="mt-4 mb-4">
             <div className="w-32 h-32 mx-auto rounded-2xl overflow-hidden relative border-2 border-gray-600">
@@ -1515,22 +1577,6 @@ export const CollectionTab: React.FC = () => {
                   <span className="text-gray-400 text-xs">No selection</span>
                 </div>
               )}
-              
-              {/* Real Gift Checkbox */}
-              <div className="absolute top-0 left-0 z-30 p-2">
-                <label className="flex items-center space-x-2 text-xs text-white">
-                  <input
-                    type="checkbox"
-                    checked={useRealGift}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setUseRealGift(e.target.checked);
-                    }}
-                    className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
-                  />
-                  <span>Real</span>
-                </label>
-              </div>
               
               {/* Number selector for ribbon/gift number */}
               <div className="absolute top-0 right-0 z-30 p-2">
