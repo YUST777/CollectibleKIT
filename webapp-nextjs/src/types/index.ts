@@ -205,6 +205,7 @@ export interface GiftDesign {
   patternName?: string;
   previewDataUrl?: string;
   ribbonNumber?: number;
+  isRealGift?: boolean;
 }
 
 export interface SavedCollection {

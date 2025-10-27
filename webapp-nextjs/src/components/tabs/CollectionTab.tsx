@@ -50,7 +50,6 @@ export const CollectionTab: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [ribbonNumber, setRibbonNumber] = useState<number>(1);
   const [useRealGift, setUseRealGift] = useState(false);
-  const [realGiftNumber, setRealGiftNumber] = useState<number>(1);
 
   // Helper function to map gift names to image file names
   const getGiftImagePath = (giftName: string): string => {
@@ -316,8 +315,9 @@ export const CollectionTab: React.FC = () => {
       setSelectedPatternIndex(null);
     }
     
-    // Set ribbon number from existing design if available
+    // Set ribbon number and real gift state from existing design if available
     setRibbonNumber(existingDesign?.ribbonNumber || 1);
+    setUseRealGift(existingDesign?.isRealGift || false);
     
     // Open the filter drawer directly with "gift" tab selected
     setCurrentFilterType('gift');
@@ -428,7 +428,8 @@ export const CollectionTab: React.FC = () => {
         backdropName: backdrops[selectedBackdropIndex]?.name || '',
         patternIndex: selectedPatternIndex || undefined,
         patternName: selectedPatternIndex !== null ? localPatterns[selectedPatternIndex]?.name : undefined,
-        ribbonNumber: ribbonNumber || undefined
+        ribbonNumber: ribbonNumber || undefined,
+        isRealGift: useRealGift
       };
       
       console.log('💾 Saving gift design:', {
@@ -1143,7 +1144,7 @@ export const CollectionTab: React.FC = () => {
                  </div>
                  
                  {/* Diagonal Ribbon with Number - Telegram style */}
-                 {design.ribbonNumber && (
+                 {design.ribbonNumber && !design.isRealGift && (
                    <div 
                      className="ribbon-telegram absolute top-0 right-0 z-40 pointer-events-none"
                      style={{
@@ -1490,8 +1491,8 @@ export const CollectionTab: React.FC = () => {
               {useRealGift && selectedGiftName ? (
                 <div className="absolute inset-0 flex items-center justify-center z-20">
                   <img
-                    src={`https://nft.fragment.com/gift/${selectedGiftName.toLowerCase()}-${realGiftNumber}.medium.jpg`}
-                    alt={`Real ${selectedGiftName} #${realGiftNumber}`}
+                    src={`https://nft.fragment.com/gift/${selectedGiftName.toLowerCase()}-${ribbonNumber}.medium.jpg`}
+                    alt={`Real ${selectedGiftName} #${ribbonNumber}`}
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       // Fallback to ModelThumbnail if real gift doesn't exist
@@ -1515,38 +1516,23 @@ export const CollectionTab: React.FC = () => {
                 </div>
               )}
               
-              {/* Real Gift Toggle and Controls */}
-              <div className="absolute top-0 left-0 z-30 p-2 space-y-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setUseRealGift(!useRealGift);
-                  }}
-                  className={`px-3 py-1 rounded text-xs font-bold ${
-                    useRealGift 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  {useRealGift ? 'Custom' : 'Real'}
-                </button>
-                
-                {useRealGift && (
-                  <div className="space-y-1">
-                    <input
-                      type="number"
-                      value={realGiftNumber}
-                      onChange={(e) => setRealGiftNumber(parseInt(e.target.value) || 1)}
-                      placeholder="Gift #"
-                      className="w-20 bg-gray-800 text-white text-xs text-center border border-gray-600 rounded px-2 py-1"
-                      min="1"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
+              {/* Real Gift Checkbox */}
+              <div className="absolute top-0 left-0 z-30 p-2">
+                <label className="flex items-center space-x-2 text-xs text-white">
+                  <input
+                    type="checkbox"
+                    checked={useRealGift}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setUseRealGift(e.target.checked);
+                    }}
+                    className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <span>Real</span>
+                </label>
               </div>
               
-              {/* Number selector for ribbon */}
+              {/* Number selector for ribbon/gift number */}
               <div className="absolute top-0 right-0 z-30 p-2">
                 <input
                   type="number"
@@ -1556,6 +1542,7 @@ export const CollectionTab: React.FC = () => {
                   min="1"
                   step="1"
                   onClick={(e) => e.stopPropagation()}
+                  placeholder={useRealGift ? "Gift #" : "Ribbon #"}
                 />
               </div>
             </div>
@@ -1597,11 +1584,11 @@ export const CollectionTab: React.FC = () => {
                     toast.error('Please select a gift first');
                   }
                 }}
-                  disabled={!selectedGiftName}
+                disabled={!selectedGiftName || useRealGift}
                 className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
                   currentFilterType === 'model'
                     ? 'bg-[#424242] text-white shadow-sm'
-                    : selectedGiftName 
+                    : selectedGiftName && !useRealGift
                       ? 'text-gray-400 hover:text-white'
                       : 'text-gray-600 cursor-not-allowed'
                 }`}
@@ -1619,10 +1606,13 @@ export const CollectionTab: React.FC = () => {
                   })));
                   setDrawerSearchTerm('');
                 }}
+                disabled={useRealGift}
                 className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
                   currentFilterType === 'backdrop'
                     ? 'bg-[#424242] text-white shadow-sm'
-                    : 'text-gray-400 hover:text-white'
+                    : useRealGift
+                      ? 'text-gray-600 cursor-not-allowed'
+                      : 'text-gray-400 hover:text-white'
                 }`}
               >
                 Background
@@ -1642,11 +1632,11 @@ export const CollectionTab: React.FC = () => {
                     toast.error('Please select a gift first');
                   }
                 }}
-                  disabled={!selectedGiftName}
+                disabled={!selectedGiftName || useRealGift}
                 className={`py-2.5 px-2 rounded-lg text-sm font-medium transition-all ${
                   currentFilterType === 'pattern'
                     ? 'bg-[#424242] text-white shadow-sm'
-                    : selectedGiftName 
+                    : selectedGiftName && !useRealGift
                       ? 'text-gray-400 hover:text-white'
                       : 'text-gray-600 cursor-not-allowed'
                 }`}
