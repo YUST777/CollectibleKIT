@@ -44,6 +44,9 @@ export const CollectionTab: React.FC = () => {
   // Profile gifts functionality
   const [profileGiftsLoading, setProfileGiftsLoading] = useState(false);
   const [lastLoadTime, setLastLoadTime] = useState<number>(0);
+  const [isProfileGiftsModalOpen, setIsProfileGiftsModalOpen] = useState(false);
+  const [profileUserIdInput, setProfileUserIdInput] = useState('');
+  const [useOtherUser, setUseOtherUser] = useState(false);
 
   // Filter modal states
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -1596,85 +1599,7 @@ export const CollectionTab: React.FC = () => {
 
           {/* Show Profile Gifts Button */}
           <button
-            onClick={async () => {
-              // Check if enough time has passed (1 minute = 60000ms)
-              const now = Date.now();
-              const timeSinceLastLoad = now - lastLoadTime;
-              if (timeSinceLastLoad < 60000) {
-                const remainingTime = Math.ceil((60000 - timeSinceLastLoad) / 1000);
-                toast.error(`Please wait ${remainingTime} more seconds before loading profile gifts`);
-                return;
-              }
-
-              setProfileGiftsLoading(true);
-              setLastLoadTime(now);
-              
-              try {
-                const userId = telegramUser?.id;
-                if (!userId) {
-                  toast.error('User ID not found');
-                  return;
-                }
-
-                const response = await fetch(`/api/profile-gifts?user_id=${userId}`);
-                if (!response.ok) {
-                  throw new Error('Failed to fetch profile gifts');
-                }
-
-                const data = await response.json();
-                if (data.success && data.gifts && data.gifts.length > 0) {
-                  // Limit to first 60 gifts
-                  const limitedGifts = data.gifts.slice(0, 60);
-                  
-                  // Calculate how many gifts we can fit
-                  const giftCount = limitedGifts.length;
-                  
-                  // Calculate optimal grid size (round up to nearest perfect square that fits all gifts)
-                  const optimalSize = Math.ceil(Math.sqrt(giftCount));
-                  
-                  // Don't exceed 60 slots
-                  const newGridSize = Math.min(optimalSize, 60);
-                  
-                  // Update grid size if needed
-                  if (newGridSize > gridSize) {
-                    updateGridSize(newGridSize);
-                  }
-                  
-                  // Clear existing designs and fill with profile gifts
-                  const newDesigns: Record<number, GiftDesign> = {};
-                  
-                  for (let i = 0; i < giftCount; i++) {
-                    const gift = limitedGifts[i];
-                    const slot = i + 1;
-                    const giftNum = gift.num || 1;
-                    const slugLower = gift.slug.toLowerCase().replace(/\s+/g, '');
-                    
-                    // Create a real gift design
-                    newDesigns[slot] = {
-                      giftName: gift.slug,
-                      modelNumber: 0,
-                      backdropIndex: 0,
-                      backdropName: '',
-                      ribbonNumber: giftNum,
-                      isRealGift: true,
-                      realGiftDominantColor: `https://nft.fragment.com/gift/${slugLower}-${giftNum}.medium.jpg`
-                    };
-                  }
-
-                  // Update all designs
-                  setUserDesigns(newDesigns);
-
-                  toast.success(`Loaded ${giftCount} profile gifts${data.gifts.length > 60 ? ` (showing first 60 of ${data.gifts.length})` : ''}`);
-                } else {
-                  toast.error('No profile gifts found');
-                }
-              } catch (error) {
-                console.error('Error loading profile gifts:', error);
-                toast.error('Failed to load profile gifts');
-              } finally {
-                setProfileGiftsLoading(false);
-              }
-            }}
+            onClick={() => setIsProfileGiftsModalOpen(true)}
             disabled={profileGiftsLoading}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
           >
@@ -1683,6 +1608,167 @@ export const CollectionTab: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Profile Gifts Modal */}
+      <Modal
+        isOpen={isProfileGiftsModalOpen}
+        onClose={() => setIsProfileGiftsModalOpen(false)}
+        title="Load Profile Gifts"
+      >
+        <div className="space-y-4">
+          {/* Radio buttons for choosing user */}
+          <div className="space-y-2">
+            <label className="flex items-center space-x-2 text-white cursor-pointer">
+              <input
+                type="radio"
+                name="profile-user"
+                checked={!useOtherUser}
+                onChange={() => setUseOtherUser(false)}
+                className="w-4 h-4 text-purple-600"
+              />
+              <span>Show My Gifts</span>
+            </label>
+            <label className="flex items-center space-x-2 text-white cursor-pointer">
+              <input
+                type="radio"
+                name="profile-user"
+                checked={useOtherUser}
+                onChange={() => setUseOtherUser(true)}
+                className="w-4 h-4 text-purple-600"
+              />
+              <span>Show Another User's Gifts</span>
+            </label>
+          </div>
+
+          {/* User ID input (only show if other user is selected) */}
+          {useOtherUser && (
+            <input
+              type="text"
+              value={profileUserIdInput}
+              onChange={(e) => setProfileUserIdInput(e.target.value)}
+              placeholder="@username or user ID"
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsProfileGiftsModalOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                // Check if enough time has passed (1 minute = 60000ms)
+                const now = Date.now();
+                const timeSinceLastLoad = now - lastLoadTime;
+                if (timeSinceLastLoad < 60000) {
+                  const remainingTime = Math.ceil((60000 - timeSinceLastLoad) / 1000);
+                  toast.error(`Please wait ${remainingTime} more seconds before loading profile gifts`);
+                  return;
+                }
+
+                setProfileGiftsLoading(true);
+                setLastLoadTime(now);
+                setIsProfileGiftsModalOpen(false);
+                
+                try {
+                  let userId: number;
+                  
+                  if (useOtherUser) {
+                    // Parse user ID from input
+                    const input = profileUserIdInput.trim();
+                    if (input.startsWith('@')) {
+                      toast.error('Username lookup not supported. Please use numeric user ID.');
+                      return;
+                    }
+                    userId = parseInt(input);
+                    if (isNaN(userId)) {
+                      toast.error('Invalid user ID');
+                      return;
+                    }
+                  } else {
+                    // Use current user's ID
+                    const currentUserId = telegramUser?.id;
+                    if (!currentUserId) {
+                      toast.error('User ID not found');
+                      return;
+                    }
+                    userId = currentUserId;
+                  }
+
+                  const response = await fetch(`/api/profile-gifts?user_id=${userId}`);
+                  if (!response.ok) {
+                    throw new Error('Failed to fetch profile gifts');
+                  }
+
+                  const data = await response.json();
+                  if (data.success && data.gifts && data.gifts.length > 0) {
+                    // Limit to first 60 gifts
+                    const limitedGifts = data.gifts.slice(0, 60);
+                    
+                    // Calculate how many gifts we can fit
+                    const giftCount = limitedGifts.length;
+                    
+                    // Calculate optimal grid size (round up to nearest perfect square that fits all gifts)
+                    const optimalSize = Math.ceil(Math.sqrt(giftCount));
+                    
+                    // Don't exceed 60 slots
+                    const newGridSize = Math.min(optimalSize, 60);
+                    
+                    // Update grid size if needed
+                    if (newGridSize > gridSize) {
+                      updateGridSize(newGridSize);
+                    }
+                    
+                    // Clear existing designs and fill with profile gifts
+                    const newDesigns: Record<number, GiftDesign> = {};
+                    
+                    for (let i = 0; i < giftCount; i++) {
+                      const gift = limitedGifts[i];
+                      const slot = i + 1;
+                      const giftNum = gift.num || 1;
+                      const slugLower = gift.slug.toLowerCase().replace(/\s+/g, '');
+                      
+                      // Create a real gift design
+                      newDesigns[slot] = {
+                        giftName: gift.slug,
+                        modelNumber: 0,
+                        backdropIndex: 0,
+                        backdropName: '',
+                        ribbonNumber: giftNum,
+                        isRealGift: true,
+                        realGiftDominantColor: `https://nft.fragment.com/gift/${slugLower}-${giftNum}.medium.jpg`
+                      };
+                    }
+
+                    // Update all designs
+                    setUserDesigns(newDesigns);
+
+                    toast.success(`Loaded ${giftCount} profile gifts${data.gifts.length > 60 ? ` (showing first 60 of ${data.gifts.length})` : ''}`);
+                  } else {
+                    toast.error('No profile gifts found');
+                  }
+                } catch (error) {
+                  console.error('Error loading profile gifts:', error);
+                  toast.error('Failed to load profile gifts');
+                } finally {
+                  setProfileGiftsLoading(false);
+                  setProfileUserIdInput('');
+                  setUseOtherUser(false);
+                }
+              }}
+              disabled={profileGiftsLoading || (useOtherUser && !profileUserIdInput.trim())}
+              className="flex-1"
+            >
+              {profileGiftsLoading ? 'Loading...' : 'OK'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Filter Selection Drawer */}
       <Sheet open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
