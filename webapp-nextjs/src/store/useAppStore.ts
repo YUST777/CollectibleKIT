@@ -211,9 +211,17 @@ export const useAppStore = create<AppStore>()(
         // Saved collections actions
         saveCollection: async (name, designs, isPublic = false) => {
           try {
+            // Get Telegram init data for authentication
+            const initData = (window as any).Telegram?.WebApp?.initData;
+            
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (initData) {
+              headers['X-Telegram-Init-Data'] = initData;
+            }
+            
             const response = await fetch('/api/collection/save', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify({ name, designs, isPublic })
             });
             
@@ -248,7 +256,15 @@ export const useAppStore = create<AppStore>()(
 
         loadCollections: async () => {
           try {
-            const response = await fetch('/api/collection/load');
+            // Get Telegram init data for authentication
+            const initData = (window as any).Telegram?.WebApp?.initData;
+            
+            const headers: Record<string, string> = {};
+            if (initData) {
+              headers['X-Telegram-Init-Data'] = initData;
+            }
+            
+            const response = await fetch('/api/collection/load', { headers });
             if (response.ok) {
               const data = await response.json();
               set({ savedCollections: data.collections });

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Lottie from 'lottie-react';
 
 interface OnboardingTrailerProps {
   onComplete: () => void;
@@ -10,6 +11,8 @@ interface OnboardingTrailerProps {
 const OnboardingTrailer: React.FC<OnboardingTrailerProps> = ({ onComplete }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [tonLottieData, setTonLottieData] = useState<any | null>(null);
+  const [tonLottieLoaded, setTonLottieLoaded] = useState(false);
 
   const slides = [
     {
@@ -23,7 +26,7 @@ const OnboardingTrailer: React.FC<OnboardingTrailerProps> = ({ onComplete }) => 
       description: 'Play daily games to earn credits and unlock rewards'
     },
     {
-      image: '/assets/ton trailer.json', // We'll handle this Lottie animation
+      image: '/assets/ton-trailer.json', // We'll handle this Lottie animation
       title: 'TON Rewards',
       description: 'Convert credits to TON and withdraw to your wallet'
     }
@@ -45,6 +48,70 @@ const OnboardingTrailer: React.FC<OnboardingTrailerProps> = ({ onComplete }) => 
 
     return () => clearTimeout(timer);
   }, [currentSlide, slides.length, onComplete]);
+
+  // Eagerly preload TON Lottie JSON on mount so it appears in network tab
+  useEffect(() => {
+    let cancelled = false;
+    const primaryUrl = '/assets/ton-trailer.json';
+    const fallbackUrl = '/assets/ton%20trailer.json';
+    const load = (url: string) => fetch(url).then((res) => res.json());
+    load(primaryUrl)
+      .then((data) => {
+        if (!cancelled) {
+          setTonLottieData(data);
+          setTonLottieLoaded(true);
+          // eslint-disable-next-line no-console
+          console.log('✅ TON Lottie loaded:', primaryUrl);
+        }
+      })
+      .catch((err) => {
+        load(fallbackUrl)
+          .then((data) => {
+            if (!cancelled) {
+              setTonLottieData(data);
+              setTonLottieLoaded(true);
+              // eslint-disable-next-line no-console
+              console.log('✅ TON Lottie loaded via fallback:', fallbackUrl);
+            }
+          })
+          .catch((err2) => {
+            // eslint-disable-next-line no-console
+            console.error('❌ Failed to load TON Lottie JSON (both paths):', err, err2);
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Also ensure it loads if user jumps directly to slide 3 somehow
+  useEffect(() => {
+    if (currentSlide === 2 && !tonLottieLoaded) {
+      const primaryUrl = '/assets/ton-trailer.json';
+      const fallbackUrl = '/assets/ton%20trailer.json';
+      const load = (url: string) => fetch(url).then((res) => res.json());
+      load(primaryUrl)
+        .then((data) => {
+          setTonLottieData(data);
+          setTonLottieLoaded(true);
+          // eslint-disable-next-line no-console
+          console.log('✅ TON Lottie loaded on slide 3:', primaryUrl);
+        })
+        .catch((err) => {
+          load(fallbackUrl)
+            .then((data) => {
+              setTonLottieData(data);
+              setTonLottieLoaded(true);
+              // eslint-disable-next-line no-console
+              console.log('✅ TON Lottie loaded on slide 3 via fallback:', fallbackUrl);
+            })
+            .catch((err2) => {
+              // eslint-disable-next-line no-console
+              console.error('❌ Failed to load TON Lottie JSON on slide 3 (both paths):', err, err2);
+            });
+        });
+    }
+  }, [currentSlide, tonLottieLoaded]);
 
   // Handle swipe gestures
   const handleSwipe = (direction: 'left' | 'right') => {
@@ -72,15 +139,20 @@ const OnboardingTrailer: React.FC<OnboardingTrailerProps> = ({ onComplete }) => 
         {/* Main content - image or video */}
         <div className="w-full h-full flex items-center justify-center">
           {currentSlide === 2 ? (
-            // Lottie animation for TON trailer
-            <div className="w-full h-full">
-              {/* We'll load Lottie JSON here */}
-              <div className="w-full h-full bg-gradient-to-br from-yellow-600/20 to-orange-600/20 flex items-center justify-center">
-                <div className="text-center px-8">
-                  <h1 className="text-4xl font-bold text-yellow-400 mb-4">TON Rewards</h1>
-                  <p className="text-white text-lg">{slides[currentSlide].description}</p>
+            // Fullscreen Lottie animation for TON trailer
+            <div className={`w-full h-full ${isTransitioning ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
+              {tonLottieData ? (
+                <div className="absolute inset-0">
+                  <Lottie
+                    animationData={tonLottieData}
+                    loop
+                    autoplay
+                    style={{ width: '100%', height: '100%' }}
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-yellow-600/20 to-orange-600/20" />
+              )}
             </div>
           ) : (
             <div className={`w-full h-full transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>

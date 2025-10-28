@@ -609,9 +609,17 @@ export const CollectionTab: React.FC = () => {
 
   const handleDeleteCollection = async (collectionId: string) => {
     try {
+      // Get Telegram init data for authentication
+      const initData = (window as any).Telegram?.WebApp?.initData;
+      
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (initData) {
+        headers['X-Telegram-Init-Data'] = initData;
+      }
+      
       const response = await fetch('/api/collection/delete', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ collectionId })
       });
       
@@ -647,7 +655,15 @@ export const CollectionTab: React.FC = () => {
         console.log('🎨 Backdrops already loaded for Community Ideas:', Object.keys(backdrops).length);
       }
       
-      const response = await fetch('/api/collections/public');
+      // Get Telegram init data for authentication
+      const initData = (window as any).Telegram?.WebApp?.initData;
+      
+      const headers: Record<string, string> = {};
+      if (initData) {
+        headers['X-Telegram-Init-Data'] = initData;
+      }
+      
+      const response = await fetch('/api/collections/public', { headers });
       if (response.ok) {
         const data = await response.json();
         const collections = data.collections || [];
@@ -691,9 +707,17 @@ export const CollectionTab: React.FC = () => {
       setLikingCollections(prev => new Set(prev).add(collectionId));
         hapticFeedback('selection');
       
+      // Get Telegram init data for authentication
+      const initData = (window as any).Telegram?.WebApp?.initData;
+      
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (initData) {
+        headers['X-Telegram-Init-Data'] = initData;
+      }
+      
       const response = await fetch('/api/collections/like', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ collectionId })
       });
       
@@ -1323,7 +1347,7 @@ export const CollectionTab: React.FC = () => {
                            : '#8B4513')
                      } as React.CSSProperties}
                    >
-                     <span className="text-white text-[10px] font-bold whitespace-nowrap">#{design.ribbonNumber}</span>
+                     <span className="text-white text-[7px] font-bold whitespace-nowrap">#{design.ribbonNumber}</span>
                    </div>
                  )}
                  
@@ -1872,19 +1896,38 @@ export const CollectionTab: React.FC = () => {
               {/* Number selector for ribbon/gift number */}
               <div className="absolute top-0 right-0 z-30 p-2">
                 <input
-                  type="number"
+                  type="text"
                   value={ribbonNumber}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    if (!isNaN(val)) {
-                      setRibbonNumber(val);
+                    const inputValue = e.target.value;
+                    // Allow empty input for editing
+                    if (inputValue === '') {
+                      setRibbonNumber(0);
+                      return;
+                    }
+                    
+                    // Parse the input - handle both numbers and "k" suffix
+                    let val = 0;
+                    if (inputValue.toLowerCase().endsWith('k')) {
+                      const numPart = inputValue.slice(0, -1);
+                      val = parseFloat(numPart) * 1000;
+                    } else {
+                      val = parseInt(inputValue);
+                    }
+                    
+                    if (!isNaN(val) && val >= 0) {
+                      setRibbonNumber(Math.floor(val));
                     }
                   }}
-                  className="w-20 bg-gray-800 text-white text-xs font-bold text-center border border-gray-600 rounded px-2 py-1"
-                  min="0"
-                  step="1"
+                  onBlur={(e) => {
+                    // Ensure we have a valid number on blur
+                    if (ribbonNumber <= 0) {
+                      setRibbonNumber(1);
+                    }
+                  }}
+                  className="w-24 bg-gray-800 text-white text-xs font-bold text-center border border-gray-600 rounded px-2 py-1"
                   onClick={(e) => e.stopPropagation()}
-                  placeholder={useRealGift ? "Gift #" : "Ribbon #"}
+                  placeholder={useRealGift ? "200k" : "Ribbon #"}
                 />
               </div>
               
@@ -1897,7 +1940,7 @@ export const CollectionTab: React.FC = () => {
                     '--ribbon-color': useRealGift ? '#4B5563' : '#8B4513'
                   } as React.CSSProperties}
                 >
-                  <span className="text-white text-[10px] font-bold whitespace-nowrap">#{ribbonNumber}</span>
+                  <span className="text-white text-[7px] font-bold whitespace-nowrap">#{ribbonNumber}</span>
                 </div>
               )}
             </div>

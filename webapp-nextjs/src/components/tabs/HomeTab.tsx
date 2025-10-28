@@ -144,7 +144,7 @@ export const HomeTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 py-4 animate-fade-in">
+    <div className="space-y-4 py-4 pt-12 animate-fade-in">
 
       {/* Greeting / status */}
       <div className="px-4">

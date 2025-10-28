@@ -203,10 +203,21 @@ export const MainApp: React.FC = () => {
     initializeUser();
   }, [setUser, setTonBalance]);
 
-  // Check if user has seen the trailer on first visit
+  // Check if user should see the trailer
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    const params = new URLSearchParams(search);
+    const forceTrailer = hash.includes('showTrailer') || params.has('showTrailer');
+
+    if (forceTrailer) {
+      setShowTrailer(true);
+      return;
+    }
+
     const hasSeenTrailer = localStorage.getItem('hasSeenOnboardingTrailer');
-    if (!hasSeenTrailer && typeof window !== 'undefined') {
+    if (!hasSeenTrailer) {
       setShowTrailer(true);
     }
   }, []);
@@ -255,7 +266,7 @@ export const MainApp: React.FC = () => {
       <Header />
       
       {/* Main Content */}
-      <main className="pb-20">
+      <main className="pb-28">
         <div className="max-w-md mx-auto px-4">
           <div className="transition-all duration-300 ease-in-out">
             {renderTabContent()}

@@ -73,10 +73,8 @@ export async function POST(request: NextRequest) {
     // Save image file
     await writeFile(filePath, imageBuffer);
 
-    // Generate public URL - use ngrok URL if available
-    const host = request.headers.get('host') || 'localhost:3000';
-    const protocol = request.headers.get('x-forwarded-proto') || 'https';
-    const publicUrl = `${protocol}://${host}/uploads/${filename}`;
+    // Generate public URL - use the API route to serve the file
+    const publicUrl = `https://collectablekit.01studio.xyz/api/uploads/${filename}`;
 
     console.log('✅ Story piece uploaded:', {
       filename,

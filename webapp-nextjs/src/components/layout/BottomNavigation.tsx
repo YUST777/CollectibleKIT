@@ -2,13 +2,6 @@
 
 import React from 'react';
 import { NavButton } from '@/components/ui/NavButton';
-import {
-  HomeIcon,
-  ClipboardDocumentListIcon,
-  LightBulbIcon,
-  GiftIcon,
-  UserIcon,
-} from '@heroicons/react/24/outline';
 
 interface BottomNavigationProps {
   currentTab: string;
@@ -23,27 +16,43 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     {
       id: 'story',
       label: 'Story',
-      icon: <HomeIcon className="w-6 h-6" />,
+      icon: (
+        <div className="w-6 h-6 flex items-center justify-center">
+          <div className="text-red-500 font-bold text-xs">🏠</div>
+        </div>
+      ),
     },
     {
       id: 'tasks',
       label: 'Tasks',
-      icon: <ClipboardDocumentListIcon className="w-6 h-6" />,
+      icon: null, // No icon for tasks - it's an inner tab
     },
     {
       id: 'game',
       label: 'Game',
-      icon: <LightBulbIcon className="w-6 h-6" />,
+      icon: (
+        <div className="w-6 h-6 flex items-center justify-center">
+          <div className="text-red-500 font-bold text-xs">🎮</div>
+        </div>
+      ),
     },
     {
       id: 'collection',
       label: 'Collection',
-      icon: <GiftIcon className="w-6 h-6" />,
+      icon: (
+        <div className="w-6 h-6 flex items-center justify-center">
+          <div className="text-red-500 font-bold text-xs">📦</div>
+        </div>
+      ),
     },
     {
       id: 'profile',
       label: 'Profile',
-      icon: <UserIcon className="w-6 h-6" />,
+      icon: (
+        <div className="w-6 h-6 flex items-center justify-center">
+          <div className="text-red-500 font-bold text-xs">👤</div>
+        </div>
+      ),
     },
   ];
 

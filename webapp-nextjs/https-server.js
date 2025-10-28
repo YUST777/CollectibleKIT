@@ -16,8 +16,8 @@ app.prepare().then(() => {
     return handle(req, res);
   });
 
-  const certPath = '/etc/letsencrypt/live/collectablekit.01studio.xyz-0001/fullchain.pem';
-  const keyPath = '/etc/letsencrypt/live/collectablekit.01studio.xyz-0001/privkey.pem';
+  const certPath = '/etc/letsencrypt/live/collectablekit.01studio.xyz/fullchain.pem';
+  const keyPath = '/etc/letsencrypt/live/collectablekit.01studio.xyz/privkey.pem';
 
   if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
     const options = {
@@ -25,9 +25,9 @@ app.prepare().then(() => {
       key: fs.readFileSync(keyPath)
     };
 
-    https.createServer(options, server).listen(443, '0.0.0.0', () => {
-      console.log('✅ HTTPS server running on https://CollectibleKIT.01studio.xyz');
-      console.log('Server ready at: https://CollectibleKIT.01studio.xyz');
+    https.createServer(options, server).listen(3000, '0.0.0.0', () => {
+      console.log('✅ HTTPS server running on https://CollectibleKIT.01studio.xyz:3000');
+      console.log('Server ready at: https://CollectibleKIT.01studio.xyz:3000');
     });
   } else {
     console.log('Certificate not found, starting HTTP server on port 3000');

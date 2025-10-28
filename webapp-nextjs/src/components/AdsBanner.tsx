@@ -103,6 +103,29 @@ export const AdsBanner: React.FC<AdsBannerProps> = ({ onOpenPremiumDrawer, exter
     return () => clearInterval(interval);
   }, [isGiftsChartDrawerOpen, cdnData]);
 
+  // Auto-advance ads every 5 seconds (pause while dragging)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const totalAds = ads.length;
+
+    const intervalId = setInterval(() => {
+      if (isDragging) return;
+      setCurrentIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % totalAds;
+        requestAnimationFrame(() => {
+          const el = scrollContainerRef.current;
+          if (!el) return;
+          const width = el.offsetWidth || 0;
+          el.scrollTo({ left: nextIndex * width, behavior: 'smooth' });
+        });
+        return nextIndex;
+      });
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [isDragging]);
+
   const ads: Ad[] = [
     {
       id: 1,

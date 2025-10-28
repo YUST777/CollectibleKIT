@@ -231,7 +231,39 @@ export const StoryTab: React.FC = () => {
     }
 
     try {
-      // Create JSZip instance (we'll need to add it as a dependency if not available)
+      // Check if we're in Telegram Mini App (mobile)
+      const isTelegramMiniApp = webApp && webApp.platform !== 'unknown' && webApp.platform !== 'web';
+      
+      if (isTelegramMiniApp && telegramUser?.id) {
+        // Send ZIP via Telegram bot for mobile users
+        console.log('Sending ZIP via Telegram bot for mobile user');
+        
+        const response = await fetch('/api/send-originals-zip', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: telegramUser.id,
+            story_pieces: storyPieces
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to send ZIP file');
+        }
+
+        const result = await response.json();
+        toast.success(result.message || 'ZIP file sent to your Telegram chat!');
+        hapticFeedback('notification', 'success', webApp);
+        return;
+      }
+
+      // Desktop/web fallback - download directly
+      console.log('Downloading ZIP directly for desktop/web user');
+      
+      // Create JSZip instance
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
 
@@ -269,35 +301,29 @@ export const StoryTab: React.FC = () => {
   };
 
   const handleShareStory = async (pieceId: number) => {
+    console.log('=== STORY SHARE DEBUG START ===');
+    console.log(`Piece ID: ${pieceId}`);
+    console.log('WebApp available:', Boolean(webApp));
+    console.log('Telegram user:', telegramUser);
+    console.log('Story pieces count:', storyPieces.length);
+    
     if (!webApp) {
+      console.log('❌ No WebApp available');
       toast.error('Telegram WebApp not available');
       return;
     }
 
     const piece = storyPieces.find(p => p.id === pieceId);
-    if (!piece) return;
+    if (!piece) {
+      console.log('❌ Piece not found:', pieceId);
+      return;
+    }
+
+    console.log('✅ Piece found:', piece);
 
     try {
-      console.log('=== STORY SHARE DEBUG ===');
-      console.log(`Attempting to share story piece ${pieceId}`);
-      console.log('Telegram WebApp available:', Boolean(webApp));
-      console.log('Telegram version:', webApp.version);
-      console.log('Telegram platform:', webApp.platform);
-      console.log('shareToStory method available:', Boolean(webApp.shareToStory));
-
-      // Check if Telegram version supports shareToStory
-      if ((webApp as any).isVersionAtLeast && !(webApp as any).isVersionAtLeast('7.8')) {
-        showTelegramAlert('Your Telegram app does not support sharing to stories. Please update Telegram to version 7.8+', webApp);
-        return;
-      }
-
-      // Check if shareToStory method is available
-      if (!webApp.shareToStory) {
-        showTelegramAlert(`shareToStory method not available. Platform: ${webApp.platform}`, webApp);
-        return;
-      }
-
-      console.log('All checks passed, proceeding with share...');
+      console.log('=== USING NATIVE STORY SHARING ===');
+      console.log(`Sharing story piece ${pieceId} directly to user's story`);
 
       hapticFeedback('impact', 'medium', webApp);
 
@@ -318,40 +344,55 @@ export const StoryTab: React.FC = () => {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error('Failed to upload image');
+        throw new Error('Failed to upload image to server');
       }
 
       const { url: publicUrl } = await uploadResponse.json();
       console.log('Public URL:', publicUrl);
 
-      // Share to story without widget link
-      webApp.shareToStory(publicUrl, {
-        text: "Made using"
-      });
-
-      // Mark as sent
-      markStoryPieceAsSent(pieceId);
-      
-      // Complete "Create Your First Story" task
-      try {
-        await fetch('/api/tasks/complete', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ taskId: 'daily_create_story' }),
-        });
-      } catch (error) {
-        console.log('Task completion failed (non-critical):', error);
+      // Validate that we have a proper HTTPS URL
+      if (!publicUrl || !publicUrl.startsWith('https://')) {
+        throw new Error('Invalid public URL received from server');
       }
+
+      // Use Telegram WebApp native story sharing
+      console.log('Calling Telegram WebApp shareToStory method...');
       
-      toast.success(`Story piece ${pieceId} shared successfully!`);
-      hapticFeedback('notification', 'success', webApp);
+      // Check if shareToStory method is available
+      if (typeof webApp.shareToStory === 'function') {
+        console.log('✅ shareToStory method available, calling it...');
+        
+        // Call the native Telegram WebApp story sharing method
+        webApp.shareToStory(publicUrl);
+        
+        // Mark as sent
+        markStoryPieceAsSent(pieceId);
+        
+        // Complete "Create Your First Story" task
+        try {
+          await fetch('/api/tasks/complete', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ taskId: 'daily_create_story' }),
+          });
+        } catch (error) {
+          console.log('Task completion failed (non-critical):', error);
+        }
+        
+        toast.success(`Story piece ${12 - (pieceId - 1)} shared! Opening story composer...`);
+        hapticFeedback('notification', 'success', webApp);
+        
+      } else {
+        console.log('❌ shareToStory method not available');
+        throw new Error('Story sharing not supported in this Telegram version');
+      }
+
     } catch (error) {
       console.error('Error sharing story:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Failed to share: ${errorMsg}`);
-      showTelegramAlert(`Failed to share: ${errorMsg}`, webApp);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to share story: ${errorMsg}`);
       hapticFeedback('notification', 'error', webApp);
     }
   };
@@ -555,7 +596,7 @@ export const StoryTab: React.FC = () => {
         <div className="space-y-4">
           <div className="text-center">
             <h3 className="text-lg font-semibold mb-2">Your Story Pieces</h3>
-            <p className="text-text-active">Tap a piece to share it to your story</p>
+            <p className="text-text-active">Tap a piece to share it directly to your story</p>
             <p className="text-xs text-icon-idle mt-2">
               Share in order: Start with piece 12, then 11, 10, and so on...
             </p>
@@ -572,7 +613,10 @@ export const StoryTab: React.FC = () => {
                   className={`relative aspect-[9/16] rounded-lg overflow-hidden bg-box-bg cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg ${
                     piece.isSent ? 'opacity-50 border-2 border-icon-active' : 'border-2 border-icon-idle/30'
                   }`}
-                  onClick={() => handleShareStory(piece.id)}
+                  onClick={() => {
+                    console.log('🖱️ Story piece clicked:', piece.id, displayNumber);
+                    handleShareStory(piece.id);
+                  }}
                 >
                   <img
                     src={piece.imageDataUrl}
@@ -614,9 +658,10 @@ export const StoryTab: React.FC = () => {
           <div className="tg-card text-sm">
             <h4 className="font-semibold mb-2 text-text-idle">📝 How to share:</h4>
             <ol className="list-decimal list-inside space-y-1 text-text-active">
-              <li>Tap on piece <strong>12</strong> to share it first</li>
+              <li>Tap on piece <strong>12</strong> to share it directly to your story first</li>
               <li>Then share piece <strong>11</strong>, then <strong>10</strong>, and so on...</li>
-              <li>Share all pieces in order for the complete puzzle effect</li>
+              <li>Telegram will open the story composer automatically</li>
+              <li>Just press Send to post each piece to your story</li>
               <li>Your followers will see them assemble into a complete image!</li>
             </ol>
           </div>

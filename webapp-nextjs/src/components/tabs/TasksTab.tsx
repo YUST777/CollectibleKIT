@@ -40,7 +40,16 @@ export const TasksContent: React.FC = () => {
     console.log('loadTasks called');
     try {
       setLoading(true);
-      const response = await fetch('/api/tasks');
+      
+      // Get Telegram init data for authentication
+      const initData = (window as any).Telegram?.WebApp?.initData;
+      
+      const headers: Record<string, string> = {};
+      if (initData) {
+        headers['X-Telegram-Init-Data'] = initData;
+      }
+      
+      const response = await fetch('/api/tasks', { headers });
       if (response.ok) {
         const data = await response.json();
         console.log('Tasks loaded:', data.tasks?.length);
@@ -385,7 +394,15 @@ export const TasksTab: React.FC = () => {
 
   const loadPremiumStatus = async () => {
     try {
-      const response = await fetch('/api/premium/status');
+      // Get Telegram init data for authentication
+      const initData = (window as any).Telegram?.WebApp?.initData;
+      
+      const headers: Record<string, string> = {};
+      if (initData) {
+        headers['X-Telegram-Init-Data'] = initData;
+      }
+      
+      const response = await fetch('/api/premium/status', { headers });
       if (response.ok) {
         const data = await response.json();
         setPremiumStatus({

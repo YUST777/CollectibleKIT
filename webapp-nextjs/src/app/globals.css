@@ -55,16 +55,16 @@
   }
 
   .tg-nav-button {
-    @apply flex-1 flex flex-col items-center justify-center p-2 bg-transparent border-none text-icon-idle cursor-pointer transition-all duration-300 relative;
+    @apply flex-1 flex flex-col items-center justify-center p-2 bg-transparent border-none cursor-pointer transition-all duration-300 relative;
+    color: #7e7c7d; /* inactive icon & label color */
   }
 
   .tg-nav-button.active {
-    @apply text-icon-active;
+    color: #fffafa;
   }
 
-  .tg-nav-button.active::before {
-    @apply content-[''] absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-icon-active rounded-none;
-  }
+  /* Remove the top indicator bar for active nav buttons */
+  .tg-nav-button.active::before { content: none; }
 
   .loading-spinner {
     @apply w-10 h-10 border-2 border-icon-idle/30 border-t-icon-active rounded-full animate-spin mx-auto mb-4;
@@ -262,7 +262,8 @@
     align-items: center;
     justify-content: center;
     min-width: 90px;
-    font-size: 8px;
+    font-size: 7px;
+    font-weight: bold;
   }
 
   /* Create triangular end pieces - smaller */
