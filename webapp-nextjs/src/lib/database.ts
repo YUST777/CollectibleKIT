@@ -12,7 +12,7 @@ export interface User {
   credits: number;
   created_at: number;
   last_activity: number;
-  user_type?: 'vip' | 'premium' | 'normal' | 'test';
+  user_type?: 'vip' | 'premium' | 'normal' | 'test' | string;
   watermark?: boolean;
   can_process?: boolean;
   credits_remaining?: number;
@@ -25,6 +25,7 @@ export interface User {
   last_streak_click?: string;
   streak_completed?: boolean;
   wallet_address?: string;
+  premium_expires_at?: number;
 }
 
 export interface Payment {
@@ -151,7 +152,7 @@ class DatabaseService {
 
   constructor() {
     // Use the same database as the bot
-    this.dbPath = path.join(process.cwd(), '..', 'bot', 'bot_data.db');
+    this.dbPath = '/root/01studio/CollectibleKIT/bot/bot_data.db';
     console.log('Database path:', this.dbPath);
     console.log('Current working directory:', process.cwd());
     
@@ -207,12 +208,43 @@ class DatabaseService {
           first_name TEXT,
           free_uses INTEGER DEFAULT 0,
           credits INTEGER DEFAULT 0,
+          ton_balance REAL DEFAULT 0,
           created_at REAL DEFAULT 0,
           last_activity REAL DEFAULT 0,
           user_type TEXT DEFAULT 'normal',
-          watermark BOOLEAN DEFAULT 0
+          watermark BOOLEAN DEFAULT 0,
+          premium_expires_at INTEGER DEFAULT NULL,
+          first_win_claimed INTEGER DEFAULT 0,
+          daily_wins_count INTEGER DEFAULT 0,
+          last_win_date TEXT,
+          streak_days INTEGER DEFAULT 0,
+          last_streak_click TEXT,
+          streak_completed INTEGER DEFAULT 0,
+          wallet_address TEXT
         )
       `);
+
+      // Migration: Add new columns if they don't exist
+      const newColumns = [
+        { name: 'premium_expires_at', type: 'INTEGER DEFAULT NULL' },
+        { name: 'ton_balance', type: 'REAL DEFAULT 0' },
+        { name: 'first_win_claimed', type: 'INTEGER DEFAULT 0' },
+        { name: 'daily_wins_count', type: 'INTEGER DEFAULT 0' },
+        { name: 'last_win_date', type: 'TEXT' },
+        { name: 'streak_days', type: 'INTEGER DEFAULT 0' },
+        { name: 'last_streak_click', type: 'TEXT' },
+        { name: 'streak_completed', type: 'INTEGER DEFAULT 0' },
+        { name: 'wallet_address', type: 'TEXT' }
+      ];
+
+      for (const column of newColumns) {
+        try {
+          await this.dbRun(`ALTER TABLE users ADD COLUMN ${column.name} ${column.type}`);
+          console.log(`✅ Added column: ${column.name}`);
+        } catch (err) {
+          // Column already exists, ignore error
+        }
+      }
 
       // Payments table
       await this.dbRun(`
@@ -354,7 +386,7 @@ class DatabaseService {
           credits_earned INTEGER NOT NULL,
           FOREIGN KEY (user_id) REFERENCES users (user_id),
           FOREIGN KEY (task_id) REFERENCES tasks (task_id),
-          UNIQUE(user_id, task_id, DATE(completed_at, 'unixepoch'))
+          UNIQUE(user_id, task_id, completed_at)
         )
       `);
 
@@ -413,19 +445,37 @@ class DatabaseService {
       const existingUser = await this.dbGet(`SELECT * FROM users WHERE user_id = ?`, [userId]);
       
       if (existingUser) {
-        // User exists, just update basic info and last_activity
+        // User exists - migrate to new system if needed
+        const currentCredits = (existingUser as any).credits;
+        const currentFreeUses = (existingUser as any).free_uses || 0;
+        
+        // Migration: If user has old "free_uses" system, convert to credits (10 credits per free use)
+        let newCredits = currentCredits || 0;
+        if (currentFreeUses > 0) {
+          // Give 10 credits for each remaining free use as migration bonus
+          newCredits = currentCredits + (currentFreeUses * 10);
+          console.log(`🔄 Migrating user ${userId}: ${currentFreeUses} free uses → ${currentFreeUses * 10} credits`);
+        }
+        
+        // If user has 0 credits and 0 free uses, give them starting 20 credits
+        if (newCredits === 0 && currentFreeUses === 0) {
+          newCredits = 20;
+          console.log(`🎁 New user migration: giving 20 starting credits`);
+        }
+        
+        // Update user with migrated credits
         await this.dbRun(
-          `UPDATE users SET username = ?, first_name = ?, last_activity = ? WHERE user_id = ?`,
-          [username, firstName, Date.now(), userId]
+          `UPDATE users SET username = ?, first_name = ?, last_activity = ?, credits = ? WHERE user_id = ?`,
+          [username, firstName, Date.now(), newCredits, userId]
         );
-        console.log('✅ Updated existing user:', { userId, user_type: (existingUser as any).user_type, credits: (existingUser as any).credits });
+        console.log('✅ Updated existing user:', { userId, user_type: (existingUser as any).user_type, credits: newCredits });
       } else {
-        // New user, create with default values
+        // New user, create with default values - START WITH 20 CREDITS
         await this.dbRun(
           `INSERT INTO users (user_id, username, first_name, created_at, last_activity, user_type, credits) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [userId, username, firstName, Date.now(), Date.now(), 'normal', 0]
+          [userId, username, firstName, Date.now(), Date.now(), 'normal', 20]
         );
-        console.log('✅ Created new user:', { userId, user_type: 'normal', credits: 0 });
+        console.log('✅ Created new user with 20 starting credits:', { userId, user_type: 'normal', credits: 20 });
       }
       return true;
     } catch (error) {

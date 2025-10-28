@@ -7,7 +7,8 @@ import { useTelegram } from '@/components/providers/TelegramProvider';
 import { hapticFeedback } from '@/lib/telegram';
 import { AdsBanner } from '@/components/AdsBanner';
 import toast from 'react-hot-toast';
-import { CheckCircle, ArrowRight, Users, Gift, Share2, Gamepad2, Sparkles, Trophy } from 'lucide-react';
+import { CheckCircle, ArrowRight, Users, Gift, Share2, Gamepad2, Sparkles, Trophy, Crown } from 'lucide-react';
+import { AdPricingDrawer } from '@/components/ui/AdPricingDrawer';
 
 interface Task {
   id: number;
@@ -347,6 +348,60 @@ export const TasksTab: React.FC = () => {
   const user = useUser();
   const { webApp, user: telegramUser } = useTelegram();
   const { setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab } = useAppActions();
+  const [premiumStatus, setPremiumStatus] = useState<{
+    isPremium: boolean;
+    expiresAt: number | null;
+  }>({ isPremium: false, expiresAt: null });
+  const [isPremiumDrawerOpen, setIsPremiumDrawerOpen] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+
+  useEffect(() => {
+    loadPremiumStatus();
+  }, []);
+
+  useEffect(() => {
+    if (premiumStatus.expiresAt && premiumStatus.isPremium) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const diff = premiumStatus.expiresAt! - now;
+
+        if (diff <= 0) {
+          setTimeRemaining('Expired');
+          setPremiumStatus({ isPremium: false, expiresAt: null });
+          clearInterval(interval);
+          return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        setTimeRemaining(`${days}d:${hours}h:${minutes}m`);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [premiumStatus]);
+
+  const loadPremiumStatus = async () => {
+    try {
+      const response = await fetch('/api/premium/status');
+      if (response.ok) {
+        const data = await response.json();
+        setPremiumStatus({
+          isPremium: data.isPremium,
+          expiresAt: data.expiresAt,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading premium status:', error);
+    }
+  };
+
+  const handleBuyPremiumClick = () => {
+    setIsPremiumDrawerOpen(true);
+    hapticFeedback('selection', 'medium', webApp);
+  };
 
   return (
     <div className="space-y-6 py-2 animate-fade-in">
@@ -395,6 +450,63 @@ export const TasksTab: React.FC = () => {
 
       {/* Tasks Content */}
       <TasksContent />
+
+      {/* Premium Box */}
+      {!premiumStatus.isPremium ? (
+        <div className="px-4 pb-4">
+          <div className="bg-gradient-to-br from-purple-600/20 via-pink-600/20 to-orange-600/20 rounded-xl p-4 border border-purple-500/30 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                  <Crown className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-white font-semibold text-sm mb-1">Unlock Premium</h3>
+                <p className="text-gray-300 text-xs mb-2">
+                  Get unlimited everything for just 1 TON/month
+                </p>
+                <Button
+                  onClick={handleBuyPremiumClick}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2 text-xs"
+                >
+                  Buy Premium
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="px-4 pb-4">
+          <div className="bg-gradient-to-br from-yellow-600/20 to-orange-600/20 rounded-xl p-4 border border-yellow-500/30 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                  <Crown className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-white font-semibold text-sm mb-1">Premium Active</h3>
+                <p className="text-yellow-300 text-lg font-bold mb-2">
+                  {timeRemaining || 'Loading...'}
+                </p>
+                <p className="text-gray-300 text-xs">
+                  Enjoy unlimited everything!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Drawer */}
+      <AdPricingDrawer 
+        isOpen={isPremiumDrawerOpen} 
+        onClose={() => {
+          setIsPremiumDrawerOpen(false);
+          loadPremiumStatus(); // Refresh status after closing
+        }} 
+      />
     </div>
   );
 };
@@ -420,7 +532,12 @@ const StreakMissionSection: React.FC = () => {
 
   const loadStreakData = async () => {
     try {
-      const response = await fetch('/api/tasks/streak');
+      const initData = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData || '';
+      const response = await fetch('/api/tasks/streak', {
+        headers: {
+          'X-Telegram-Init-Data': initData,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setStreakData({
@@ -440,9 +557,13 @@ const StreakMissionSection: React.FC = () => {
 
     setIsCheckingIn(true);
     try {
+      const initData = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData || '';
       const response = await fetch('/api/tasks/streak', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': initData,
+        }
       });
 
       const result = await response.json();

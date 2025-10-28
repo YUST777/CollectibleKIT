@@ -26,7 +26,7 @@ logger = logging.getLogger("collectiblekit-bot")
 
 # Bot Configuration
 BOT_TOKEN = "8151264433:AAG92vbSyL6TKyP1kBxfG6WQfYoz0Jy9df0"
-MINI_APP_URL = os.getenv("MINI_APP_URL", "https://your-domain.com")
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://collectablekit.01studio.xyz")
 
 # Constants
 FREE_LIMIT = 3
@@ -245,7 +245,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     # Add the two inline buttons
     inline_keyboard = [
-        [InlineKeyboardButton("Start", url="https://t.me/CollectibleKITbot/CollectableKIT")],
+        [InlineKeyboardButton("Start", web_app=WebAppInfo(url="https://collectablekit.01studio.xyz"))],
         [InlineKeyboardButton("Join our community", url="https://t.me/The01Studio")],
     ]
     

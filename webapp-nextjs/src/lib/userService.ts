@@ -70,49 +70,76 @@ export class UserService {
         };
       }
 
-      // Check user type
+      // Check user type - NEW SYSTEM: Credits only, no free uses
       let userType: 'vip' | 'premium' | 'normal' | 'test' = 'normal';
       let canProcess = false;
       let watermark = true;
       let creditsRemaining: number | 'unlimited' = user.credits;
-      let freeRemaining = user.free_uses;
 
-      // Special case: Ad testing user - force to normal user to see ads
+      // Special case: Ad testing user - check their premium status first
       if (userId === AD_TEST_USER_ID) {
-        userType = 'normal';
-        canProcess = true;
-        watermark = true;
-        creditsRemaining = 0;
-        freeRemaining = user.free_uses || 10; // Give free uses for testing
-        console.log(`🎬 AD TEST USER detected: ${userId} - Will see ads`);
-      } else if (VIP_USERS.has(userId)) {
+        console.log(`🎬 AD TEST USER detected: ${userId} - Checking actual premium status in DB`);
+        // Check if they are premium in DB despite being ad test user
+        if (user.user_type === 'premium' || user.user_type === 'vip') {
+          const isExpired = user.premium_expires_at && Date.now() > user.premium_expires_at;
+          if (!isExpired) {
+            userType = 'premium';
+            canProcess = true;
+            watermark = false;
+            creditsRemaining = 'unlimited';
+            console.log(`✅ AD TEST USER is premium: no watermark, unlimited access`);
+          } else {
+            userType = 'normal';
+            canProcess = true;
+            watermark = true;
+            creditsRemaining = user.credits;
+            console.log(`⚠️ AD TEST USER premium expired: using normal mode`);
+          }
+        } else {
+          userType = 'normal';
+          canProcess = true;
+          watermark = true;
+          creditsRemaining = user.credits;
+          console.log(`🎬 AD TEST USER is normal: will see ads`);
+        }
+      } else if (VIP_USERS.has(userId) || user.user_type === 'vip') {
         userType = 'vip';
         canProcess = true;
         watermark = false;
         creditsRemaining = 'unlimited';
-        freeRemaining = 999999; // Effectively unlimited
-      } else if (TEST_USERS.has(userId)) {
+      } else if (TEST_USERS.has(userId) || user.user_type === 'test') {
         userType = 'test';
         canProcess = true;
         watermark = false;
         creditsRemaining = 'unlimited';
-        freeRemaining = 999999;
+      } else if (user.user_type === 'premium' || user.user_type === 'vip') {
+        // Check if premium has expired
+        const isExpired = user.premium_expires_at && Date.now() > user.premium_expires_at;
+        
+        if (!isExpired) {
+          userType = 'premium';
+          canProcess = true;
+          watermark = false;
+          creditsRemaining = 'unlimited'; // Premium has unlimited tool usage
+        } else {
+          // Premium expired, treat as normal - must have credits
+          userType = 'normal';
+          canProcess = user.credits > 0;
+          watermark = true;
+          creditsRemaining = user.credits;
+        }
       } else if (user.credits > 0) {
-        userType = 'premium';
-        canProcess = true;
-        watermark = false;
-        creditsRemaining = user.credits;
-      } else if (user.free_uses > 0) {
+        // Free user with credits - pays credit per tool use
         userType = 'normal';
         canProcess = true;
         watermark = true;
-        freeRemaining = user.free_uses;
+        creditsRemaining = user.credits;
       } else {
+        // No credits, no premium - cannot use tools
         userType = 'normal';
         canProcess = false;
         watermark = true;
         creditsRemaining = 0;
-        freeRemaining = 0;
       }
 
       return {
@@ -120,8 +147,8 @@ export class UserService {
         user_type: userType,
         watermark: watermark,
         credits_remaining: creditsRemaining,
-        free_remaining: freeRemaining,
-        message: canProcess ? undefined : 'No credits or free uses remaining'
+        free_remaining: userType === 'premium' || userType === 'vip' || userType === 'test' ? 999999 : user.credits,
+        message: canProcess ? undefined : 'No credits remaining'
       };
 
     } catch (error) {
@@ -187,23 +214,38 @@ export class UserService {
         // Continue processing even if request record fails
       }
 
-      // Update user credits/uses based on user type
+      // Check if user has enough credits BEFORE processing
       let updatedUser: User | null = null;
       
-      if (permissions.user_type === 'vip' || permissions.user_type === 'test') {
-        // VIP/Test users: no credits consumed
+      // Debug: Check what user_type permissions returned
+      console.log(`🔍 Processing request for userId: ${userId}, user_type from permissions: ${permissions.user_type}`);
+      
+      if (permissions.user_type === 'vip' || permissions.user_type === 'test' || permissions.user_type === 'premium') {
+        // VIP/Test/Premium users: NO credits consumed (unlimited tool usage)
+        console.log(`✅ ${permissions.user_type} user: No credits required (unlimited access)`);
         updatedUser = await db.getUser(userId);
-      } else if (permissions.user_type === 'premium') {
-        // Premium users: consume 1 credit
-        const success = await db.decrementCredits(userId, 1);
-        if (success) {
-          updatedUser = await db.getUser(userId);
-        }
       } else {
-        // Normal users: consume 1 free use
-        const success = await db.decrementFreeUses(userId);
-        if (success) {
-          updatedUser = await db.getUser(userId);
+        // Free users: check if they have at least 1 credit
+        const user = await db.getUser(userId);
+        console.log(`💰 Checking credits for user: ${user?.credits} credits, user_type in DB: ${user?.user_type}`);
+        if (user && user.credits >= 1) {
+          console.log(`💰 Free user: Deducting 1 credit from ${user.credits}`);
+          const success = await db.updateUserCredits(userId, -1); // Deduct 1 credit
+          if (success) {
+            updatedUser = await db.getUser(userId);
+            console.log(`✅ Credit deducted. New balance: ${updatedUser?.credits}`);
+          } else {
+            throw new Error('Failed to deduct credit');
+          }
+        } else {
+          // No credits - return error
+          console.log(`❌ Free user has no credits (${user?.credits || 0} credits available)`);
+          return {
+            success: false,
+            user_type: permissions.user_type,
+            credits_remaining: user?.credits || 0,
+            error: 'Insufficient credits. Play games to earn credits!'
+          };
         }
       }
 

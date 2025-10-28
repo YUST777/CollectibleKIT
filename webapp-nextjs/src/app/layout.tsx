@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { TelegramProvider } from '@/components/providers/TelegramProvider';
-// MonetagSDK completely removed - SDK loads dynamically only when needed
+import { TonConnectProvider } from '@/components/providers/TonConnectProvider';
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -32,9 +32,6 @@ export default function RootLayout({
         
         {/* Lottie Player Web Component */}
         <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js" />
-        
-        {/* TON Connect UI */}
-        <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js" />
         
         {/* Monetag SDK - Rewarded Interstitial Ads */}
         <script
@@ -79,22 +76,24 @@ export default function RootLayout({
         */}
       </head>
       <body className={inter.className}>
-        <TelegramProvider>
-          <div className="min-h-screen bg-bg-main text-text-idle">
-            {children}
-          </div>
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: 'var(--tg-theme-secondary-bg-color)',
-                color: 'var(--tg-theme-text-color)',
-                border: '1px solid var(--tg-theme-hint-color)',
-              },
-            }}
-          />
-        </TelegramProvider>
+        <TonConnectProvider>
+          <TelegramProvider>
+            <div className="min-h-screen bg-bg-main text-text-idle">
+              {children}
+            </div>
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                duration: 3000,
+                style: {
+                  background: 'var(--tg-theme-secondary-bg-color)',
+                  color: 'var(--tg-theme-text-color)',
+                  border: '1px solid var(--tg-theme-hint-color)',
+                },
+              }}
+            />
+          </TelegramProvider>
+        </TonConnectProvider>
       </body>
     </html>
   );

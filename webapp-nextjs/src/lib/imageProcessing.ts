@@ -13,8 +13,8 @@ export interface ProcessingResult {
 }
 
 export class ImageProcessingService {
-  private static readonly TEMP_DIR = path.join(process.cwd(), 'temp_uploads');
-  private static readonly PYTHON_SCRIPT = path.join(process.cwd(), 'src', 'lib', 'process_image_cli.py');
+  private static readonly TEMP_DIR = '/root/01studio/CollectibleKIT/webapp-nextjs/temp_uploads';
+  private static readonly PYTHON_SCRIPT = '/root/01studio/CollectibleKIT/webapp-nextjs/src/lib/process_image_cli.py';
 
   /**
    * Process image using Python script
@@ -56,9 +56,12 @@ export class ImageProcessingService {
       }
 
       // Run Python script
+      console.log('Running Python script with args:', pythonArgs);
+      console.log('Working directory:', process.cwd());
       const result = await this.runPythonScript(pythonArgs);
       
       if (!result.success) {
+        console.error('❌ Python script failed:', result.error);
         return {
           success: false,
           error: result.error || 'Image processing failed'

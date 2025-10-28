@@ -298,17 +298,8 @@ export class DailyGameService {
         };
       }
 
-      // For random games, we don't track "first solver" since it's infinite
-      // Just give a standard reward
-      const reward = 0.1;
-
-      // Add credits to user
-      const user = await db.getUser(userId);
-      if (user) {
-        await db.updateUser(userId, {
-          credits: user.credits + reward
-        });
-      }
+      // Don't add rewards here - let recordGameWin handle it
+      // This prevents double crediting
 
       // Record game completion for task tracking
       if (userId > 0) {
@@ -320,13 +311,13 @@ export class DailyGameService {
       // Increment global solve counter
       await db.incrementTotalGameSolves();
 
-      console.log(`✅ Answer submitted successfully. Correct: ${isCorrect}, Reward: ${reward}`);
+      console.log(`✅ Answer submitted successfully. Correct: ${isCorrect}`);
 
       return {
         success: true,
         correct: true,
         is_first_solver: false, // Random games don't have first solver concept
-        reward: reward
+        reward: 1 // 1 credit per win
       };
 
     } catch (error) {

@@ -144,14 +144,14 @@ export const StoryTab: React.FC = () => {
       console.log('Response data:', result);
 
       if (result.success) {
-        // Update user info if provided
-        if (result.user_type) {
+        // Only update user info for premium/vip users to preserve their status
+        // For normal users, keep the existing user state to preserve premium status
+        if (result.user_type && (result.user_type === 'premium' || result.user_type === 'vip' || result.user_type === 'test')) {
           setUser({
             ...user,
             user_type: result.user_type,
             watermark: result.watermark,
             credits_remaining: result.credits_remaining,
-            free_uses: parseInt(result.free_remaining) || 0,
           });
         }
 
@@ -171,9 +171,9 @@ export const StoryTab: React.FC = () => {
         if (result.user_type === 'vip' || result.user_type === 'test') {
           statusMessage = 'VIP processing complete!';
         } else if (result.user_type === 'premium') {
-          statusMessage = `Premium processing complete! ${result.credits_remaining} credits remaining.`;
+          statusMessage = 'Premium processing complete!';
         } else {
-          statusMessage = `Free processing complete! ${result.free_remaining} free uses remaining.`;
+          statusMessage = `Processing complete! ${result.credits_remaining} credits remaining.`;
         }
 
         if (result.watermark) {
@@ -193,7 +193,6 @@ export const StoryTab: React.FC = () => {
             ...user,
             user_type: result.user_type,
             credits_remaining: result.credits_remaining,
-            free_uses: parseInt(result.free_remaining) || 0,
           });
         }
 

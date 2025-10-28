@@ -235,6 +235,14 @@ export const GameTab: React.FC = () => {
       
       if (result.success) {
         if (result.correct) {
+          // Check if user reached daily limit
+          if (result.reached_daily_limit) {
+            setGameMessage('You reached your daily win limit! Come back tomorrow for more wins.');
+            hapticFeedback('notification', 'warning', webApp);
+            setIsAnswerCorrect(false); // Don't show NEXT button
+            return; // Don't proceed with celebration
+          }
+          
           setGameMessage('Correct! Well done!');
           hapticFeedback('notification', 'success', webApp);
           

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { TonConnectButton, useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import { useUser, useTonBalance, useAppActions, useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/Button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
@@ -20,6 +21,8 @@ import {
   ClockIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
+import { Crown } from 'lucide-react';
+import { AdPricingDrawer } from '@/components/ui/AdPricingDrawer';
 import toast from 'react-hot-toast';
 
 export const ProfileTab: React.FC = () => {
@@ -27,46 +30,46 @@ export const ProfileTab: React.FC = () => {
   const tonBalance = useTonBalance();
   const { setTonBalance, setCurrentTab } = useAppActions();
   const { webApp, user: telegramUser } = useTelegram();
+  const [adsBannerPremiumDrawerOpen, setAdsBannerPremiumDrawerOpen] = useState(false);
   
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [currentInnerTab, setCurrentInnerTab] = useState<'tasks' | 'referral' | 'earn' | 'ton'>('ton');
+  
+  // Use TON Connect React hooks
+  const wallet = useTonWallet();
+  const [tonConnectUI] = useTonConnectUI();
 
   useEffect(() => {
-    // Initialize TON Connect when component mounts
-    if (typeof window !== 'undefined' && window.TonConnectUI) {
-      const tonConnectUI = new window.TonConnectUI({
-        manifestUrl: '/tonconnect-manifest.json',
-        buttonRootId: 'ton-connect-button',
+    if (wallet) {
+      console.log('✅ TON Wallet connected:', wallet);
+      setTonBalance({
+        balance: 0, // This would be fetched from API
+        rewards: 0,
+        walletConnected: true,
+        walletAddress: wallet.account.address,
       });
-
-      // Set up event listeners
-      tonConnectUI.onStatusChange((wallet: any) => {
-        if (wallet) {
-          setTonBalance({
-            balance: 0, // This would be fetched from API
-            rewards: 0,
-            walletConnected: true,
-            walletAddress: wallet.account.address,
-          });
-          toast.success('Wallet connected successfully!');
-          hapticFeedback('notification', 'success', webApp);
-        } else {
-          setTonBalance({
-            balance: 0,
-            rewards: 0,
-            walletConnected: false,
-          });
-        }
+      toast.success('Wallet connected successfully!');
+      hapticFeedback('notification', 'success', webApp);
+    } else {
+      setTonBalance({
+        balance: 0,
+        rewards: 0,
+        walletConnected: false,
       });
     }
-  }, [setTonBalance, webApp]);
+  }, [wallet, setTonBalance, webApp]);
 
   const connectWallet = async () => {
     setIsConnectingWallet(true);
     try {
-      // TON Connect will handle the connection flow
-      // The actual connection happens in the useEffect above
+      if (!tonConnectUI) {
+        toast.error('TON Connect is not initialized');
+        return;
+      }
+      
+      // Open the wallet connection modal
+      tonConnectUI.openModal();
     } catch (error) {
       console.error('Error connecting wallet:', error);
       toast.error('Failed to connect wallet');
@@ -163,7 +166,12 @@ export const ProfileTab: React.FC = () => {
       </div>
 
       {/* Ads Banner */}
-      <AdsBanner />
+      <AdsBanner 
+        onOpenPremiumDrawer={() => setAdsBannerPremiumDrawerOpen(true)}
+        externalPremiumDrawerOpen={adsBannerPremiumDrawerOpen}
+        onExternalPremiumDrawerChange={setAdsBannerPremiumDrawerOpen}
+        user={user}
+      />
 
       {/* Inner Tabs Navigation */}
       <div className="flex px-4">
@@ -240,7 +248,13 @@ export const ProfileTab: React.FC = () => {
       )}
 
       {currentInnerTab === 'earn' && (
-        <EarnTabContent user={user} tonBalance={tonBalance} setTonBalance={setTonBalance} webApp={webApp} />
+        <EarnTabContent 
+          user={user} 
+          tonBalance={tonBalance} 
+          setTonBalance={setTonBalance} 
+          webApp={webApp}
+          onOpenPremiumDrawer={() => setAdsBannerPremiumDrawerOpen(true)}
+        />
       )}
 
       {currentInnerTab === 'ton' && (
@@ -282,20 +296,13 @@ export const ProfileTab: React.FC = () => {
               <div className="flex justify-between items-center">
                 <span className="text-text-idle font-medium">Credits</span>
                 <span className="text-icon-active font-bold">
-                  {typeof user?.credits_remaining === 'number' 
-                    ? user.credits_remaining 
-                    : '∞'}
+                  {user?.user_type === 'premium' || user?.user_type === 'vip' || user?.user_type === 'test'
+                    ? '∞' 
+                    : typeof user?.credits_remaining === 'number' 
+                      ? user.credits_remaining 
+                      : user?.credits || 0}
                 </span>
               </div>
-              
-              {user?.free_remaining && (
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-text-idle font-medium">Free Uses</span>
-                  <span className="text-text-active">
-                    {user.free_remaining}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -384,28 +391,73 @@ interface EarnTabContentProps {
   tonBalance: any;
   setTonBalance: (balance: any) => void;
   webApp: any;
+  onOpenPremiumDrawer?: () => void;
 }
 
-const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTonBalance, webApp }) => {
+const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTonBalance, webApp, onOpenPremiumDrawer }) => {
   const [isConverting, setIsConverting] = useState(false);
   const [conversions, setConversions] = useState<any[]>([]);
   const [userCredits, setUserCredits] = useState(0);
   const [userTonBalance, setUserTonBalance] = useState(0);
   const [isEarningInfoOpen, setIsEarningInfoOpen] = useState(false);
+  const [premiumStatus, setPremiumStatus] = useState<{
+    isPremium: boolean;
+    expiresAt: number | null;
+  }>({ isPremium: false, expiresAt: null });
+  const [isPremiumDrawerOpen, setIsPremiumDrawerOpen] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
 
   useEffect(() => {
     // Load user data and conversions
     loadUserData();
     loadConversions();
+    loadPremiumStatus();
   }, []);
+
+  // Reload user data when user prop changes to reflect premium status
+  useEffect(() => {
+    if (user?.user_type) {
+      loadUserData();
+    }
+  }, [user?.user_type, user]);
+
+  useEffect(() => {
+    if (premiumStatus.expiresAt && premiumStatus.isPremium) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const diff = premiumStatus.expiresAt! - now;
+
+        if (diff <= 0) {
+          setTimeRemaining('Expired');
+          setPremiumStatus({ isPremium: false, expiresAt: null });
+          clearInterval(interval);
+          return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60)) / (1000 * 60));
+
+        setTimeRemaining(`${days}d:${hours}h:${minutes}m`);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [premiumStatus]);
 
   const loadUserData = async () => {
     try {
-      const response = await fetch('/api/user/info');
+      const initData = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData || '';
+      const response = await fetch('/api/user/info', {
+        headers: {
+          'X-Telegram-Init-Data': initData,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setUserCredits(data.credits || 0);
         setUserTonBalance(data.ton_balance || 0);
+        // Don't reload - the user object from parent will update naturally
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -414,7 +466,12 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
 
   const loadConversions = async () => {
     try {
-      const response = await fetch('/api/credits/conversions');
+      const initData = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData || '';
+      const response = await fetch('/api/credits/conversions', {
+        headers: {
+          'X-Telegram-Init-Data': initData,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setConversions(data.conversions || []);
@@ -422,6 +479,35 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
     } catch (error) {
       console.error('Error loading conversions:', error);
     }
+  };
+
+  const loadPremiumStatus = async () => {
+    try {
+      const initData = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData || '';
+      const response = await fetch('/api/premium/status', {
+        headers: {
+          'X-Telegram-Init-Data': initData,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPremiumStatus({
+          isPremium: data.isPremium,
+          expiresAt: data.expiresAt,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading premium status:', error);
+    }
+  };
+
+  const handleBuyPremiumClick = () => {
+    if (onOpenPremiumDrawer) {
+      onOpenPremiumDrawer();
+    } else {
+      setIsPremiumDrawerOpen(true);
+    }
+    hapticFeedback('selection', 'medium', webApp);
   };
 
   const handleConvertCredits = async () => {
@@ -467,6 +553,9 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
   const isPremium = user?.user_type === 'premium' || user?.user_type === 'vip';
   const requiredCredits = isPremium ? 50 : 100;
   const canConvert = userCredits >= requiredCredits;
+  
+  // Debug logging
+  console.log('🎯 EarnTabContent - user_type:', user?.user_type, 'isPremium:', isPremium, 'requiredCredits:', requiredCredits);
 
   return (
     <div className="space-y-6 px-4">
@@ -538,6 +627,50 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Premium Box */}
+      {!premiumStatus.isPremium ? (
+        <div className="bg-gradient-to-br from-purple-600/20 via-pink-600/20 to-orange-600/20 rounded-xl p-4 border border-purple-500/30 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                <Crown className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-white font-semibold text-sm mb-1">Unlock Premium</h3>
+              <p className="text-gray-300 text-xs mb-2">
+                Get unlimited everything for just 1 TON/month
+              </p>
+              <Button
+                onClick={handleBuyPremiumClick}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2 text-xs"
+              >
+                Buy Premium
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-br from-yellow-600/20 to-orange-600/20 rounded-xl p-4 border border-yellow-500/30 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                <Crown className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-white font-semibold text-sm mb-1">Premium Active</h3>
+              <p className="text-yellow-300 text-lg font-bold mb-2">
+                {timeRemaining || 'Loading...'}
+              </p>
+              <p className="text-gray-300 text-xs">
+                Enjoy unlimited everything!
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -727,6 +860,8 @@ const EarnTabContent: React.FC<EarnTabContentProps> = ({ user, tonBalance, setTo
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Note: Premium drawer is handled by AdsBanner component now */}
     </div>
   );
 };

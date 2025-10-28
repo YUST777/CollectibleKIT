@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       const { spawn } = require('child_process');
       const path = require('path');
       
-      const pythonScript = path.join(process.cwd(), '..', 'bot', 'ton_wallet_cli.py');
+      const pythonScript = '/root/01studio/CollectibleKIT/bot/ton_wallet_cli.py';
       
       // ✅ SECURITY FIX: Use sanitized wallet address
       const checkProcess = spawn('python3', [
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
       const { spawn } = require('child_process');
       const path = require('path');
       
-      const pythonScript = path.join(process.cwd(), '..', 'bot', 'ton_wallet_cli.py');
+      const pythonScript = '/root/01studio/CollectibleKIT/bot/ton_wallet_cli.py';
       
       // Record the withdrawal in daily tracker
       const recordProcess = spawn('python3', [

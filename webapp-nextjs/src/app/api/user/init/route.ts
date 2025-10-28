@@ -114,23 +114,27 @@ export async function POST(request: NextRequest) {
       };
     }
 
+    // Use user.user_type from database (includes premium status)
+    const actualUserType = user.user_type || 'normal';
+    
     console.log('✅ User initialized successfully:', {
       user_id,
-      user_type: permissions.user_type,
+      user_type: actualUserType,
+      db_user_type: user.user_type,
+      permissions_user_type: permissions.user_type,
       credits: user.credits,
-      free_uses: user.free_uses,
+      ton_balance: user.ton_balance,
       watermark: permissions.watermark
     });
 
     return NextResponse.json({
       success: true,
       user_id: user.user_id,
-      user_type: permissions.user_type,
+      user_type: actualUserType,
       watermark: permissions.watermark,
       credits: user.credits,
-      free_uses: user.free_uses,
+      ton_balance: user.ton_balance || 0,
       credits_remaining: permissions.credits_remaining === 'unlimited' ? 999999 : permissions.credits_remaining as number,
-      free_remaining: permissions.free_remaining.toString(),
       created_at: user.created_at,
       last_activity: user.last_activity
     });

@@ -136,12 +136,10 @@ export interface User {
   username?: string;
   first_name?: string;
   credits: number;
-  free_uses: number;
   user_type: 'vip' | 'test' | 'premium' | 'normal';
   can_process: boolean;
   watermark: boolean;
   credits_remaining: number | 'unlimited';
-  free_remaining: string;
   created_at?: number;
   last_activity?: number;
   ton_balance?: number;
@@ -166,7 +164,6 @@ export interface ProcessingResult {
   user_type?: string;
   watermark?: boolean;
   credits_remaining?: number | 'unlimited';
-  free_remaining?: string;
   credits_used?: number;
   error?: string;
 }

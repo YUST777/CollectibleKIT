@@ -13,11 +13,9 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('user_id');
     
     // Run the Python script to fetch profile gifts
-    // webapp-nextjs is one level deep, so go up one level to reach CollectableKIT root
-    const projectRoot = path.join(process.cwd(), '..');
+    const projectRoot = '/root/01studio/CollectibleKIT';
     const pythonScript = path.join(projectRoot, 'bot', 'get_profile_gifts.py');
-    // Use the showprofilegifts venv which has the correct session and credentials
-    const venvPython = path.join(projectRoot, 'showprofilegifts', 'venv', 'bin', 'python');
+    const venvPython = '/usr/bin/python3';
     
     // Build command arguments
     const args = [pythonScript];
@@ -34,7 +32,7 @@ export async function GET(request: NextRequest) {
       projectRoot
     });
     
-    return new Promise((resolve, reject) => {
+    return new Promise<NextResponse>((resolve, reject) => {
       const python = spawn(venvPython, args);
       let output = '';
       let error = '';

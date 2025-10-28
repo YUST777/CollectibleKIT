@@ -26,7 +26,7 @@ class EmojiGameService {
 
   constructor() {
     // Use the emoji database in the project root
-    this.dbPath = path.join(process.cwd(), '..', 'emoji_database.db');
+    this.dbPath = '/root/01studio/CollectibleKIT/emoji_database.db';
     console.log('🎮 Emoji game database path:', this.dbPath);
     
     // Use global storage to persist across hot reloads
@@ -73,11 +73,11 @@ class EmojiGameService {
       console.log('🎲 Getting random emoji question');
 
       // Get total count first
-      const countResult = await this.dbGet('SELECT COUNT(*) as count FROM gift_models');
+      const countResult = await this.dbGet('SELECT COUNT(*) as count FROM emoji_questions');
       const totalCount = countResult.count;
 
       if (!totalCount || totalCount === 0) {
-        console.error('❌ No gift models in emoji database');
+        console.error('❌ No emoji questions in database');
         return null;
       }
 
@@ -86,7 +86,7 @@ class EmojiGameService {
 
       // Get random gift model
       const giftModel = await this.dbGet(
-        'SELECT * FROM gift_models LIMIT 1 OFFSET ?',
+        'SELECT * FROM emoji_questions LIMIT 1 OFFSET ?',
         [randomOffset]
       );
 
@@ -95,12 +95,25 @@ class EmojiGameService {
         return null;
       }
 
+      // Parse emoji string into array
+      const emojiString = giftModel.emoji || '';
+      const emojis = emojiString.split(' ').filter((e: string) => e.trim());
+
+      // Extract model name from image_url if not present
+      let modelName = giftModel.model_name || '';
+      if (!modelName && giftModel.image_url) {
+        // Try to extract from image_url
+        const urlParts = giftModel.image_url.split('/');
+        const filename = urlParts[urlParts.length - 1];
+        modelName = filename.replace('.png', '').replace(/_/g, ' ');
+      }
+
       const question: EmojiQuestion = {
         id: giftModel.id,
-        gift_name: giftModel.gift_name,
-        model_name: giftModel.model_name,
-        emojis: [giftModel.emoji1, giftModel.emoji2, giftModel.emoji3, giftModel.emoji4],
-        filename: giftModel.filename
+        gift_name: giftModel.gift_name || '',
+        model_name: modelName || '',
+        emojis: emojis.length > 0 ? emojis : ['❓', '❓', '❓', '❓'],
+        filename: giftModel.filename || giftModel.image_url || ''
       };
 
       // Store the question for this user (use userId or default key)
@@ -178,16 +191,17 @@ class EmojiGameService {
   async getEmojisForModel(giftName: string, modelName: string): Promise<string[] | null> {
     try {
       const giftModel = await this.dbGet(
-        'SELECT emoji1, emoji2, emoji3, emoji4 FROM gift_models WHERE gift_name = ? AND model_name = ?',
-        [giftName, modelName]
+        'SELECT emoji FROM emoji_questions WHERE gift_name = ? LIMIT 1',
+        [giftName]
       );
 
-      if (!giftModel) {
-        console.error(`❌ No emojis found for ${giftName} - ${modelName}`);
+      if (!giftModel || !giftModel.emoji) {
+        console.error(`❌ No emojis found for ${giftName}`);
         return null;
       }
 
-      return [giftModel.emoji1, giftModel.emoji2, giftModel.emoji3, giftModel.emoji4];
+      const emojiString = giftModel.emoji;
+      return emojiString.split(' ').filter((e: string) => e.trim());
 
     } catch (error) {
       console.error('❌ Error getting emojis for model:', error);
@@ -201,18 +215,21 @@ class EmojiGameService {
   async searchByEmoji(emoji: string): Promise<EmojiQuestion[]> {
     try {
       const results = await this.dbAll(
-        `SELECT * FROM gift_models 
-         WHERE emoji1 = ? OR emoji2 = ? OR emoji3 = ? OR emoji4 = ?`,
-        [emoji, emoji, emoji, emoji]
+        `SELECT * FROM emoji_questions WHERE emoji LIKE ?`,
+        [`%${emoji}%`]
       );
 
-      return results.map((row: any) => ({
-        id: row.id,
-        gift_name: row.gift_name,
-        model_name: row.model_name,
-        emojis: [row.emoji1, row.emoji2, row.emoji3, row.emoji4],
-        filename: row.filename
-      }));
+      return results.map((row: any) => {
+        const emojiString = row.emoji || '';
+        const emojis = emojiString.split(' ').filter((e: string) => e.trim());
+        return {
+          id: row.id,
+          gift_name: row.gift_name || '',
+          model_name: '',
+          emojis: emojis.length > 0 ? emojis : ['❓'],
+          filename: row.filename || row.image_url || ''
+        };
+      });
 
     } catch (error) {
       console.error('❌ Error searching by emoji:', error);
@@ -226,17 +243,21 @@ class EmojiGameService {
   async getModelsForGift(giftName: string): Promise<EmojiQuestion[]> {
     try {
       const results = await this.dbAll(
-        'SELECT * FROM gift_models WHERE gift_name = ?',
+        'SELECT * FROM emoji_questions WHERE gift_name = ?',
         [giftName]
       );
 
-      return results.map((row: any) => ({
-        id: row.id,
-        gift_name: row.gift_name,
-        model_name: row.model_name,
-        emojis: [row.emoji1, row.emoji2, row.emoji3, row.emoji4],
-        filename: row.filename
-      }));
+      return results.map((row: any) => {
+        const emojiString = row.emoji || '';
+        const emojis = emojiString.split(' ').filter((e: string) => e.trim());
+        return {
+          id: row.id,
+          gift_name: row.gift_name || '',
+          model_name: '',
+          emojis: emojis.length > 0 ? emojis : ['❓'],
+          filename: row.filename || row.image_url || ''
+        };
+      });
 
     } catch (error) {
       console.error('❌ Error getting models for gift:', error);
@@ -250,7 +271,7 @@ class EmojiGameService {
   async getAllGifts(): Promise<string[]> {
     try {
       const results = await this.dbAll(
-        'SELECT DISTINCT gift_name FROM gift_models ORDER BY gift_name'
+        'SELECT DISTINCT gift_name FROM emoji_questions ORDER BY gift_name'
       );
 
       return results.map((row: any) => row.gift_name);

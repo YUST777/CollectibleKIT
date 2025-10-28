@@ -180,6 +180,27 @@ export const trackTelegramAnalytics = (event: string, data?: any) => {
 // Helper function for API routes to get user from Telegram WebApp data
 export async function getUserFromTelegram(request: Request): Promise<{ id: number; first_name?: string; last_name?: string; username?: string; is_premium?: boolean } | null> {
   try {
+    // Check for init data in headers (for client-side fetch calls)
+    const initDataHeader = (request as any).headers?.get?.('X-Telegram-Init-Data') || 
+                            (request as any).headers?.get?.('x-telegram-init-data');
+    
+    if (initDataHeader) {
+      console.log('📱 Got init data from header');
+      const params = new URLSearchParams(initDataHeader);
+      const userParam = params.get('user');
+      if (userParam) {
+        const userData = JSON.parse(decodeURIComponent(userParam));
+        console.log('📱 Extracted user from header:', userData);
+        return {
+          id: userData.id,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          username: userData.username,
+          is_premium: userData.is_premium
+        };
+      }
+    }
+    
     // Extract user data from the request URL or headers
     const url = new URL(request.url);
     const tgWebAppData = url.searchParams.get('tgWebAppData');

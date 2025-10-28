@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Users, Zap, Star, MessageCircle, TrendingUp, Eye, Heart } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface AdPricingDrawerProps {
   isOpen: boolean;

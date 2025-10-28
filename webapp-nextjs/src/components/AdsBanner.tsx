@@ -3,10 +3,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { CheckCircle, Zap, Star, Gift, Sparkles, Crown, Gem, PartyPopper } from 'lucide-react';
 import { AdPricingDrawer } from '@/components/ui/AdPricingDrawer';
+import { useAppActions } from '@/store/useAppStore';
+import toast from 'react-hot-toast';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
@@ -21,7 +24,17 @@ interface Ad {
   link?: string;
 }
 
-export const AdsBanner: React.FC = () => {
+interface AdsBannerProps {
+  onOpenPremiumDrawer?: () => void;
+  externalPremiumDrawerOpen?: boolean;
+  onExternalPremiumDrawerChange?: (open: boolean) => void;
+  user?: any;
+}
+
+export const AdsBanner: React.FC<AdsBannerProps> = ({ onOpenPremiumDrawer, externalPremiumDrawerOpen, onExternalPremiumDrawerChange, user }) => {
+  const wallet = useTonWallet();
+  const [tonConnectUI] = useTonConnectUI();
+  const { setUser } = useAppActions();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -150,11 +163,89 @@ export const AdsBanner: React.FC = () => {
     }
   };
 
-  const handleBuyPremium = () => {
-    // TODO: Integrate with payment system
-    console.log('Buy Premium clicked');
-    // You can add payment logic here
-    setIsPremiumDrawerOpen(false);
+  const handleBuyPremium = async () => {
+    console.log('=== AdsBanner: Buy Premium clicked ===');
+    console.log('Wallet:', wallet);
+    
+    if (!wallet) {
+      console.log('No wallet - opening TON Connect modal...');
+      try {
+        if (!tonConnectUI) {
+          toast.error('TON Connect not initialized. Please refresh the page.');
+          return;
+        }
+        await tonConnectUI.openModal();
+      } catch (error) {
+        console.error('Error opening wallet modal:', error);
+        toast.error('Failed to connect wallet. Please try again.');
+      }
+      return;
+    }
+
+    console.log('Wallet connected! Sending 1 TON transaction...');
+    try {
+      const transaction = {
+        messages: [
+          {
+            address: 'UQCFRqB2vZnGZRh3ZoZAItNidk8zpkN0uRHlhzrnwweU3mos',
+            amount: '1000000000',
+          }
+        ],
+        validUntil: Math.floor(Date.now() / 1000) + 60,
+      };
+
+      const result = await tonConnectUI?.sendTransaction(transaction);
+      
+      if (result) {
+          // Upgrade user to premium
+          try {
+            // Get Telegram WebApp data
+            const initData = window.Telegram?.WebApp?.initData || '';
+            
+            const upgradeResponse = await fetch('/api/premium/upgrade', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': initData,
+              },
+            });
+          
+          const upgradeData = await upgradeResponse.json();
+          
+          if (upgradeData.success) {
+            toast.success('Payment successful! Premium activated! 🎉');
+            console.log('✅ User upgraded to premium');
+            setIsPremiumDrawerOpen(false);
+            
+            // Refresh user data to reflect premium status
+            try {
+              const initData = window.Telegram?.WebApp?.initData || '';
+              const userResponse = await fetch('/api/user/info', {
+                headers: {
+                  'X-Telegram-Init-Data': initData,
+                },
+              });
+              if (userResponse.ok) {
+                const userData = await userResponse.json();
+                setUser(userData);
+                console.log('✅ User data refreshed with premium status');
+              }
+            } catch (err) {
+              console.error('Error refreshing user data:', err);
+            }
+          } else {
+            toast.error('Payment received but failed to activate premium. Please contact support.');
+            console.error('Failed to upgrade user:', upgradeData);
+          }
+        } catch (error) {
+          console.error('Error upgrading user to premium:', error);
+          toast.error('Payment received but activation failed. Please contact support.');
+        }
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error('Payment failed. Please try again.');
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -418,7 +509,13 @@ export const AdsBanner: React.FC = () => {
       </div>
 
       {/* Premium Features Drawer */}
-      <Sheet open={isPremiumDrawerOpen} onOpenChange={setIsPremiumDrawerOpen}>
+      <Sheet open={externalPremiumDrawerOpen !== undefined ? externalPremiumDrawerOpen : isPremiumDrawerOpen} onOpenChange={(open) => {
+        if (onExternalPremiumDrawerChange) {
+          onExternalPremiumDrawerChange(open);
+        } else {
+          setIsPremiumDrawerOpen(open);
+        }
+      }}>
         <SheetContent className="bg-[#1c1c1d] flex flex-col">
           <SheetHeader>
             <SheetTitle className="text-white text-center flex items-center justify-center gap-2">
@@ -552,27 +649,36 @@ export const AdsBanner: React.FC = () => {
 
           {/* Fixed Buy Button at Bottom */}
           <div className="mt-auto border-t border-white/10 p-4 bg-[#1c1c1d]">
-            <Button
-              onClick={handleBuyPremium}
-              className="w-full bg-gradient-to-r from-[#0098EA] to-[#0088CC] hover:from-[#0088CC] hover:to-[#0078BB] text-white font-bold py-4 text-lg flex items-center justify-center gap-2 shadow-lg"
-            >
-              <span>Subscribe for 1 TON/month</span>
-              {lottieData['/tonlogo.json'] ? (
-                <div className="w-7 h-7">
-                  <Lottie
-                    animationData={lottieData['/tonlogo.json']}
-                    loop={true}
-                    autoplay={true}
-                    style={{ width: 28, height: 28 }}
-                  />
+            {(user?.user_type === 'premium' || user?.user_type === 'vip') ? (
+              <div className="bg-yellow-600/20 border border-yellow-500/30 rounded-lg p-4 text-center">
+                <p className="text-yellow-300 font-semibold">You already have Premium!</p>
+                <p className="text-yellow-200/70 text-sm mt-1">Enjoy unlimited access</p>
+              </div>
+            ) : (
+              <>
+                <Button
+                  onClick={handleBuyPremium}
+                  className="w-full bg-gradient-to-r from-[#0098EA] to-[#0088CC] hover:from-[#0088CC] hover:to-[#0078BB] text-white font-bold py-4 text-lg flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <span>Subscribe for 1 TON/month</span>
+                  {lottieData['/tonlogo.json'] ? (
+                    <div className="w-7 h-7">
+                      <Lottie
+                        animationData={lottieData['/tonlogo.json']}
+                        loop={true}
+                        autoplay={true}
+                        style={{ width: 28, height: 28 }}
+                      />
+                    </div>
+                  ) : (
+                    <Gem className="w-7 h-7" />
+                  )}
+                </Button>
+                <div className="text-center text-gray-400 text-xs mt-2">
+                  Renews monthly • Secure payment via TON blockchain
                 </div>
-              ) : (
-                <Gem className="w-7 h-7" />
-              )}
-            </Button>
-            <div className="text-center text-gray-400 text-xs mt-2">
-              Renews monthly • Secure payment via TON blockchain
-            </div>
+              </>
+            )}
           </div>
         </SheetContent>
       </Sheet>

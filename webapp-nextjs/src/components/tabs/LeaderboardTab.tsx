@@ -33,7 +33,12 @@ export const LeaderboardTab: React.FC = () => {
   const loadLeaderboard = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/leaderboard');
+      const initData = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData || '';
+      const response = await fetch('/api/leaderboard', {
+        headers: {
+          'X-Telegram-Init-Data': initData,
+        },
+      });
       const data = await response.json();
       
       if (data.success) {

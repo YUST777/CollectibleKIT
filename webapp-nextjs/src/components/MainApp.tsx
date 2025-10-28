@@ -35,31 +35,16 @@ export const MainApp: React.FC = () => {
   }));
 
   useEffect(() => {
-    // SKIP user initialization to prevent infinite loading
-    // Initialize user later or on-demand
-    console.log('⚠️ Skipping user initialization to prevent infinite loading');
+    let isInitialized = false;
     
-    // Set a dummy user so app can render
-    setUser({
-      user_id: 0,
-      username: 'user',
-      first_name: 'User',
-      user_type: 'normal',
-      watermark: true,
-      credits: 0,
-      free_uses: 3,
-      can_process: true,
-      credits_remaining: 0,
-      free_remaining: '3',
-      created_at: Date.now(),
-      last_activity: Date.now(),
-    });
-    
-    return;
-    
-    // REMOVED: The code below was causing infinite loading
-    /*
     const initializeUser = async () => {
+      // Prevent multiple initializations
+      if (isInitialized) {
+        console.log('⚠️ User initialization already in progress, skipping');
+        return;
+      }
+      isInitialized = true;
+      
       // Add timeout to prevent infinite loading
       const timeout = setTimeout(() => {
         console.log('⚠️ User initialization timeout - using fallback');
@@ -100,7 +85,7 @@ export const MainApp: React.FC = () => {
 
               if (response.ok) {
                 const userData = await response.json();
-                console.log('User initialized in database:', userData);
+                console.log('✅ User initialized in database:', userData);
                 
                 // Set user in app store
                 setUser({
@@ -110,12 +95,10 @@ export const MainApp: React.FC = () => {
                   user_type: userData.user_type || 'normal',
                   watermark: userData.watermark || false,
                   credits: userData.credits || 0,
-                  free_uses: userData.free_uses || 0,
                   created_at: userData.created_at || Date.now(),
                   last_activity: userData.last_activity || Date.now(),
                   can_process: userData.can_process !== undefined ? userData.can_process : true,
                   credits_remaining: userData.credits_remaining || 0,
-                  free_remaining: userData.free_remaining || '0',
                 });
 
                 // Set TON balance
@@ -134,10 +117,8 @@ export const MainApp: React.FC = () => {
                   user_type: 'normal',
                   watermark: true,
                   credits: 0,
-                  free_uses: 3,
                   can_process: true,
                   credits_remaining: 0,
-                  free_remaining: '3',
                   created_at: Date.now(),
                   last_activity: Date.now(),
                 });
@@ -152,10 +133,8 @@ export const MainApp: React.FC = () => {
                 user_type: 'normal',
                 watermark: true,
                 credits: 0,
-                free_uses: 3,
                 can_process: true,
                 credits_remaining: 0,
-                free_remaining: '3',
                 created_at: Date.now(),
                 last_activity: Date.now(),
               });
@@ -197,10 +176,8 @@ export const MainApp: React.FC = () => {
             user_type: 'test',
             watermark: false,
             credits: 100,
-            free_uses: 999,
             can_process: true,
             credits_remaining: 100,
-            free_remaining: '999',
             created_at: Date.now(),
             last_activity: Date.now(),
           });
@@ -212,9 +189,16 @@ export const MainApp: React.FC = () => {
             walletConnected: false,
           });
         }
+        
+        clearTimeout(timeout);
       } catch (error) {
         console.error('Error initializing app:', error);
-    */
+        clearTimeout(timeout);
+      }
+    };
+    
+    // Run initialization
+    initializeUser();
   }, [setUser, setTonBalance]);
 
   const renderTabContent = () => {

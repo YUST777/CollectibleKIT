@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    const uploadsDir = '/root/01studio/CollectibleKIT/webapp-nextjs/public/uploads';
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
