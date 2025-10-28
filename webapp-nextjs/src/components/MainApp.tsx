@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   useCurrentTab, 
   useAppActions, 
@@ -20,8 +20,10 @@ import { HomeTab } from './tabs/HomeTab';
 import { Modal } from './ui/Modal';
 import { Drawer } from './ui/Drawer';
 import { getTelegramWebApp } from '@/lib/telegram';
+import OnboardingTrailer from './OnboardingTrailer';
 
 export const MainApp: React.FC = () => {
+  const [showTrailer, setShowTrailer] = useState(false);
   const currentTab = useCurrentTab();
   const navigationLevel = useNavigationLevel();
   const currentSubTab = useCurrentSubTab();
@@ -201,6 +203,14 @@ export const MainApp: React.FC = () => {
     initializeUser();
   }, [setUser, setTonBalance]);
 
+  // Check if user has seen the trailer on first visit
+  useEffect(() => {
+    const hasSeenTrailer = localStorage.getItem('hasSeenOnboardingTrailer');
+    if (!hasSeenTrailer && typeof window !== 'undefined') {
+      setShowTrailer(true);
+    }
+  }, []);
+
   const renderTabContent = () => {
     // If we're at main level, show either Home or Profile based on currentSubTab
     if (navigationLevel === 'main') {
@@ -228,6 +238,16 @@ export const MainApp: React.FC = () => {
     // Default fallback
     return <ProfileTab />;
   };
+
+  const handleTrailerComplete = () => {
+    localStorage.setItem('hasSeenOnboardingTrailer', 'true');
+    setShowTrailer(false);
+  };
+
+  // Show trailer if needed
+  if (showTrailer) {
+    return <OnboardingTrailer onComplete={handleTrailerComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-bg-main text-text-idle safe-area-top">
