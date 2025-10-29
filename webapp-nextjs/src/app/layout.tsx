@@ -27,8 +27,62 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Telegram WebApp SDK */}
-        <script src="https://telegram.org/js/telegram-web-app.js" />
+        {/* Suppress noisy CloudStorage warnings in dev (outside Telegram) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                var originalError = console.error;
+                console.error = function(){
+                  try {
+                    var msg = arguments && arguments[0];
+                    if (typeof msg === 'string' && msg.indexOf('CloudStorage is not supported') !== -1) {
+                      return; // ignore this noisy warning in dev
+                    }
+                  } catch(e){}
+                  return originalError.apply(console, arguments);
+                };
+              })();
+            `,
+          }}
+        />
+        {/* Telegram WebApp SDK: load only when running inside Telegram */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                var ua = (navigator && navigator.userAgent) || '';
+                if (/Telegram/i.test(ua)) {
+                  var s = document.createElement('script');
+                  s.src = 'https://telegram.org/js/telegram-web-app.js';
+                  document.head.appendChild(s);
+                }
+              })();
+            `,
+          }}
+        />
+        {/* Dev: Polyfill missing CloudStorage to suppress console errors when running outside Telegram */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                try {
+                  var tg = window.Telegram && window.Telegram.WebApp;
+                  if (tg && !tg.CloudStorage) {
+                    tg.CloudStorage = {
+                      getItem: function(key, cb){ cb && cb(null); },
+                      setItem: function(key, value, cb){ cb && cb(true); },
+                      getItems: function(keys, cb){ cb && cb(null); },
+                      removeItem: function(key, cb){ cb && cb(true); },
+                      getKeys: function(cb){ cb && cb([]); }
+                    };
+                    console.warn('[Dev] Telegram.WebApp.CloudStorage polyfilled');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
         
         {/* Lottie Player Web Component */}
         <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js" />

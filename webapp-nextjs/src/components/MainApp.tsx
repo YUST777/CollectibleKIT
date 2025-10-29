@@ -12,6 +12,9 @@ import {
 } from '@/store/useAppStore';
 import { Header } from './layout/Header';
 import { DynamicNavigation } from './DynamicNavigation';
+import ToolDrawer from './navigation/ToolDrawer';
+import GameDrawer from './navigation/GameDrawer';
+import DrawerHandle from './navigation/DrawerHandle';
 import { StoryTab } from './tabs/StoryTab';
 import { GameTab } from './tabs/GameTab';
 import { CollectionTab } from './tabs/CollectionTab';
@@ -264,6 +267,7 @@ export const MainApp: React.FC = () => {
     <div className="min-h-screen bg-bg-main text-text-idle safe-area-top">
       {/* Header */}
       <Header />
+      <DrawerHandle />
       
       {/* Main Content */}
       <main className="pb-28">
@@ -291,6 +295,10 @@ export const MainApp: React.FC = () => {
         isOpen={isDrawerOpen}
         onClose={closeDrawer}
       />
+
+      {/* Side Drawers */}
+      <ToolDrawer />
+      <GameDrawer />
     </div>
   );
 };

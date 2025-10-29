@@ -88,6 +88,10 @@ const initialState: AppState = {
   isModalOpen: false,
   modalContent: null,
   isDrawerOpen: false,
+  // Side drawer defaults
+  isSideDrawerOpen: false,
+  drawerType: null,
+  lastUsedDrawer: null,
   
   // Collection initial state
   gifts: [],
@@ -131,6 +135,10 @@ export const useAppStore = create<AppStore>()(
         closeModal: () => set({ isModalOpen: false, modalContent: null }),
         openDrawer: () => set({ isDrawerOpen: true }),
         closeDrawer: () => set({ isDrawerOpen: false }),
+        // Side drawer actions
+        openSideDrawer: (type) => set({ isSideDrawerOpen: true, drawerType: type, lastUsedDrawer: type }),
+        closeSideDrawer: () => set({ isSideDrawerOpen: false }),
+        setLastUsedDrawer: (type) => set({ lastUsedDrawer: type }),
 
         // Additional actions
         setLoading: (isLoading) => set({ isLoading }),
@@ -337,6 +345,8 @@ export const useAppActions = () => useAppStore((state) => ({
   closeModal: state.closeModal,
   openDrawer: state.openDrawer,
   closeDrawer: state.closeDrawer,
+  openSideDrawer: state.openSideDrawer,
+  closeSideDrawer: state.closeSideDrawer,
   setLoading: state.setLoading,
   setError: state.setError,
   reset: state.reset,
@@ -350,6 +360,7 @@ export const useAppActions = () => useAppStore((state) => ({
   setCurrentSubTab: state.setCurrentSubTab,
   setCurrentTertiaryTab: state.setCurrentTertiaryTab,
   navigateBack: state.navigateBack,
+  setLastUsedDrawer: state.setLastUsedDrawer,
   setGifts: state.setGifts,
   setBackdrops: state.setBackdrops,
   setGiftModels: state.setGiftModels,

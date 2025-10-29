@@ -335,6 +335,10 @@ export interface AppState {
   isModalOpen: boolean;
   modalContent: React.ReactNode | null;
   isDrawerOpen: boolean;
+  // New side drawer navigation state
+  isSideDrawerOpen?: boolean;
+  drawerType?: 'tools' | 'games' | null;
+  lastUsedDrawer?: 'tools' | 'games' | null;
   
   // Collection state
   gifts: Gift[];
@@ -359,6 +363,10 @@ export interface AppActions {
   closeModal: () => void;
   openDrawer: () => void;
   closeDrawer: () => void;
+  // Side drawer actions
+  openSideDrawer: (type: 'tools' | 'games') => void;
+  closeSideDrawer: () => void;
+  setLastUsedDrawer: (type: 'tools' | 'games' | null) => void;
   
   // Collection actions
   setGifts: (gifts: Gift[]) => void;
