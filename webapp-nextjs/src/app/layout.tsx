@@ -89,7 +89,7 @@ export default function RootLayout({
         
         {/* Monetag SDK - Rewarded Interstitial Ads */}
         <script
-          src="//libtl.com/sdk.js"
+          src="https://libtl.com/sdk.js"
           data-zone="10065186"
           data-sdk="show_10065186"
         />

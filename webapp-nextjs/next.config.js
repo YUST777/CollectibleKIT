@@ -68,7 +68,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors *;",
+            value: "frame-ancestors *; default-src 'self' https: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://unpkg.com https://libtl.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https: wss:;",
           },
           // Removed nosniff to allow proper script loading
         ],
