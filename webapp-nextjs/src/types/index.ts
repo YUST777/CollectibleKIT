@@ -38,6 +38,15 @@ export interface TelegramWebApp {
   version: string;
   platform: string;
   colorScheme: 'light' | 'dark';
+  viewportWidth?: number;
+  viewportStableHeight?: number;
+  safeAreaInsets?: {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+  };
+  setBottomBarColor?: (color: string) => void;
   themeParams: {
     bg_color?: string;
     text_color?: string;
@@ -55,7 +64,6 @@ export interface TelegramWebApp {
   };
   isExpanded: boolean;
   viewportHeight: number;
-  viewportStableHeight: number;
   headerColor: string;
   backgroundColor: string;
   isClosingConfirmationEnabled: boolean;
