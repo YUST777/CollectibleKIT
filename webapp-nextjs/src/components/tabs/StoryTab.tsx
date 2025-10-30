@@ -316,8 +316,8 @@ export const StoryTab: React.FC = () => {
     const piece = storyPieces.find(p => p.id === pieceId);
     if (!piece) {
       console.log('❌ Piece not found:', pieceId);
-      return;
-    }
+        return;
+      }
 
     console.log('✅ Piece found:', piece);
 
@@ -364,25 +364,25 @@ export const StoryTab: React.FC = () => {
         
         // Call the native Telegram WebApp story sharing method
         webApp.shareToStory(publicUrl);
-        
-        // Mark as sent
-        markStoryPieceAsSent(pieceId);
-        
-        // Complete "Create Your First Story" task
-        try {
-          await fetch('/api/tasks/complete', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ taskId: 'daily_create_story' }),
-          });
-        } catch (error) {
-          console.log('Task completion failed (non-critical):', error);
-        }
-        
+
+      // Mark as sent
+      markStoryPieceAsSent(pieceId);
+      
+      // Complete "Create Your First Story" task
+      try {
+        await fetch('/api/tasks/complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ taskId: 'daily_create_story' }),
+        });
+      } catch (error) {
+        console.log('Task completion failed (non-critical):', error);
+      }
+      
         toast.success(`Story piece ${12 - (pieceId - 1)} shared! Opening story composer...`);
-        hapticFeedback('notification', 'success', webApp);
+      hapticFeedback('notification', 'success', webApp);
         
       } else {
         console.log('❌ shareToStory method not available');

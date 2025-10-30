@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
+/* Base styles - Responsive for all Telegram Mini App sizes */
 @layer base {
   body {
     @apply bg-bg-main text-text-idle font-sans;
@@ -13,6 +13,49 @@
   html {
     height: 100%;
     height: var(--tg-viewport-height, 100vh);
+  }
+
+  /* Use Telegram stable height for proper mobile layouts */
+  body {
+    min-height: var(--tg-viewport-stable-height, 100vh);
+  }
+
+  /* iOS safe area padding for notches and home bar */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Responsive font sizes based on Telegram viewport widths */
+  html {
+    font-size: 16px; /* base */
+  }
+
+  @media (max-width: 340px) { 
+    html { font-size: 12px; } 
+  } /* iPhone 15 narrow */
+
+  @media (min-width: 340px) and (max-width: 350px) { 
+    html { font-size: 13px; } 
+  }
+
+  @media (min-width: 350px) and (max-width: 375px) { 
+    html { font-size: 14px; } 
+  }
+
+  @media (min-width: 375px) and (max-width: 390px) { 
+    html { font-size: 15px; } 
+  }
+
+  @media (min-width: 390px) and (max-width: 430px) { 
+    html { font-size: 16px; } 
+  }
+
+  /* Desktop/Web Telegram - larger font for better readability */
+  @media (min-width: 431px) { 
+    html { font-size: 18px; } 
   }
 }
 

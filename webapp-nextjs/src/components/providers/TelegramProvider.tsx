@@ -49,12 +49,46 @@ export const TelegramProvider: React.FC<TelegramProviderProps> = ({ children }) 
           user_id: tg.initDataUnsafe?.user?.id,
         });
         
-        // Set up event listeners
-        tg.onEvent('viewportChanged', () => {
-          // Handle viewport changes
+        // Platform-specific responsive adjustments
+        const platform = tg.platform || 'unknown';
+        
+        if (platform === 'ios') {
+          // iOS safe area insets
+          if (tg.safeAreaInsets) {
+            const insets = tg.safeAreaInsets;
+            document.documentElement.style.setProperty('--safe-area-inset-top', `${insets.top}px`);
+            document.documentElement.style.setProperty('--safe-area-inset-bottom', `${insets.bottom}px`);
+            document.documentElement.style.setProperty('--safe-area-inset-left', `${insets.left}px`);
+            document.documentElement.style.setProperty('--safe-area-inset-right', `${insets.right}px`);
+          }
+        } else if (platform === 'android') {
+          // Android bottom bar color
+          try {
+            tg.setBottomBarColor?.(tg.themeParams?.secondary_bg_color || '#ffffff');
+          } catch (e) {
+            console.log('Bottom bar color setting not available');
+          }
+        }
+        
+        // Set up viewport CSS variables
+        const updateViewport = () => {
+          if (tg.viewportWidth) {
+            document.documentElement.style.setProperty('--tg-viewport-width', `${tg.viewportWidth}px`);
+          }
           if (tg.viewportHeight) {
             document.documentElement.style.setProperty('--tg-viewport-height', `${tg.viewportHeight}px`);
           }
+          if (tg.viewportStableHeight) {
+            document.documentElement.style.setProperty('--tg-viewport-stable-height', `${tg.viewportStableHeight}px`);
+          }
+        };
+        
+        // Initial viewport setup
+        updateViewport();
+        
+        // Set up event listeners
+        tg.onEvent('viewportChanged', () => {
+          updateViewport();
         });
         
         tg.onEvent('themeChanged', () => {
@@ -69,7 +103,7 @@ export const TelegramProvider: React.FC<TelegramProviderProps> = ({ children }) 
           }
         });
         
-        console.log('✅ Telegram WebApp provider initialized');
+        console.log(`✅ Telegram WebApp initialized on ${platform}`);
       } else {
         // Fallback for development
         console.log('🔄 Telegram WebApp not available, using fallback mode');
