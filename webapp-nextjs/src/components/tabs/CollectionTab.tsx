@@ -1389,7 +1389,7 @@ export const CollectionTab: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 py-4 animate-fade-in">
+    <div className="space-y-6 py-4 lg:py-0 animate-fade-in">
       {/* Header with Profile Picture */}
       <div className="flex items-center justify-between px-4 mb-4">
         {/* Profile Picture */}
