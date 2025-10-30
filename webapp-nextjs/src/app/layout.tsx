@@ -87,12 +87,15 @@ export default function RootLayout({
         {/* Lottie Player Web Component */}
         <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js" />
         
-        {/* Monetag SDK - Rewarded Interstitial Ads */}
+        {/* Monetag SDK - Disabled due to fleraprt.com errors */}
+        {/* The SDK loads stattag.js which tries to connect to fleraprt.com causing errors */}
+        {/*
         <script
           src="https://libtl.com/sdk.js"
           data-zone="10065186"
           data-sdk="show_10065186"
         />
+        */}
         
         {/* Telegram Analytics SDK - Disabled due to initialization timing issues */}
         {/* The SDK tries to access Telegram WebApp before it's fully loaded, causing errors */}
