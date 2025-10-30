@@ -94,7 +94,9 @@ export default function RootLayout({
           data-sdk="show_10065186"
         />
         
-        {/* Telegram Analytics SDK */}
+        {/* Telegram Analytics SDK - Disabled due to initialization timing issues */}
+        {/* The SDK tries to access Telegram WebApp before it's fully loaded, causing errors */}
+        {/*
         <script
           async
           src="https://tganalytics.xyz/index.js"
@@ -107,7 +109,7 @@ export default function RootLayout({
               function initTelegramAnalytics() {
                 if (window.telegramAnalytics && typeof window.telegramAnalytics.init === 'function') {
                   window.telegramAnalytics.init({
-                    token: 'eyJhcHBfbmFtZSI6ImNvbGxlY3RpYmxla2l0IiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9Db2xsZWN0aWJsZUtJVGJvdCIsImFwcF9kb21haW4iOiJodHRwczovL2NvbGxlY3RhYmxla2l0LjAxc3R1ZGlvLnh5ei8ifQ==!aODcv1DuHmG28etfMO7o0WiKyjdobSR8WcKrZuWKBBc=',
+                    token: 'YOUR_TOKEN_HERE',
                     appName: 'collectiblekit',
                   });
                   console.log('✅ Telegram Analytics initialized');
@@ -125,6 +127,7 @@ export default function RootLayout({
             `,
           }}
         />
+        */}
       </head>
       <body className={inter.className}>
         <TonConnectProvider>
