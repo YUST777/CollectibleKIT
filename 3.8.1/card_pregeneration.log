@@ -1,8 +1,0 @@
-nohup: ignoring input
-2025-07-13 18:26:33,091 - pregeneration_scheduler - INFO - Added virtual environment to path: /home/yousefmsm1/Desktop/last 3.4/venv/lib/python3.12/site-packages
-2025-07-13 18:26:33,091 - pregeneration_scheduler - INFO - Card pre-generation scheduler started
-2025-07-13 18:26:33,091 - pregeneration_scheduler - INFO - Will generate cards every 32 minutes
-2025-07-13 18:26:33,091 - pregeneration_scheduler - WARNING - Detected potentially incorrect system clock - year 2025
-2025-07-13 18:26:33,091 - pregeneration_scheduler - WARNING - System clock may be incorrect - will continue but timestamps may be wrong
-2025-07-13 18:26:33,091 - pregeneration_scheduler - INFO - Running initial card generation...
-2025-07-13 18:26:33,091 - pregeneration_scheduler - INFO - Running pregeneration with: /home/yousefmsm1/Desktop/last 3.4/venv/bin/python
