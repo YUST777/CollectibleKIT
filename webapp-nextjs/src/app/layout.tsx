@@ -87,15 +87,32 @@ export default function RootLayout({
         {/* Lottie Player Web Component */}
         <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js" />
         
-        {/* Monetag SDK - Disabled due to fleraprt.com errors */}
-        {/* The SDK loads stattag.js which tries to connect to fleraprt.com causing errors */}
-        {/*
+        {/* Monetag SDK - Rewarded Interstitial Ads */}
         <script
           src="https://libtl.com/sdk.js"
           data-zone="10065186"
           data-sdk="show_10065186"
         />
-        */}
+        
+        {/* Suppress Monetag/stat tag console errors */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                var originalError = console.error;
+                console.error = function(){
+                  try {
+                    var msg = arguments && arguments[0];
+                    if (typeof msg === 'string' && (msg.indexOf('fleraprt.com') !== -1 || msg.indexOf('stattag.js') !== -1)) {
+                      return; // ignore Monetag/stat tag errors
+                    }
+                  } catch(e){}
+                  return originalError.apply(console, arguments);
+                };
+              })();
+            `,
+          }}
+        />
         
         {/* Telegram Analytics SDK - Disabled due to initialization timing issues */}
         {/* The SDK tries to access Telegram WebApp before it's fully loaded, causing errors */}
