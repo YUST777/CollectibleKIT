@@ -94,9 +94,7 @@ export default function RootLayout({
           data-sdk="show_10065186"
         />
         
-        {/* Telegram Analytics SDK - Disabled until token is configured */}
-        {/* Uncomment and add your token from https://t.me/TonBuilders_bot */}
-        {/*
+        {/* Telegram Analytics SDK */}
         <script
           async
           src="https://tganalytics.xyz/index.js"
@@ -109,7 +107,7 @@ export default function RootLayout({
               function initTelegramAnalytics() {
                 if (window.telegramAnalytics && typeof window.telegramAnalytics.init === 'function') {
                   window.telegramAnalytics.init({
-                    token: 'YOUR_TOKEN_FROM_TON_BUILDERS',
+                    token: 'eyJhcHBfbmFtZSI6ImNvbGxlY3RpYmxla2l0IiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9Db2xsZWN0aWJsZUtJVGJvdCIsImFwcF9kb21haW4iOiJodHRwczovL2NvbGxlY3RhYmxla2l0LjAxc3R1ZGlvLnh5ei8ifQ==!aODcv1DuHmG28etfMO7o0WiKyjdobSR8WcKrZuWKBBc=',
                     appName: 'collectiblekit',
                   });
                   console.log('✅ Telegram Analytics initialized');
@@ -127,7 +125,6 @@ export default function RootLayout({
             `,
           }}
         />
-        */}
       </head>
       <body className={inter.className}>
         <TonConnectProvider>
