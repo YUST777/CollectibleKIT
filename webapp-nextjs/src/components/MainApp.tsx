@@ -271,7 +271,7 @@ export const MainApp: React.FC = () => {
       
       {/* Main Content */}
       <main className="pb-28 lg:pb-6">
-        <div className="max-w-md mx-auto px-4 lg:max-w-4xl lg:px-6">
+        <div className="max-w-md mx-auto px-4 lg:max-w-full lg:mx-0 lg:px-6">
           <div className="transition-all duration-300 ease-in-out">
             {renderTabContent()}
           </div>
