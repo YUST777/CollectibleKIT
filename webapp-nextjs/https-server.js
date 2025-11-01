@@ -16,8 +16,8 @@ app.prepare().then(() => {
     return handle(req, res);
   });
 
-  const certPath = '/etc/letsencrypt/live/collectablekit.01studio.xyz/fullchain.pem';
-  const keyPath = '/etc/letsencrypt/live/collectablekit.01studio.xyz/privkey.pem';
+  const certPath = '/etc/letsencrypt/live/collectablekit.01studio.xyz-0001/fullchain.pem';
+  const keyPath = '/etc/letsencrypt/live/collectablekit.01studio.xyz-0001/privkey.pem';
 
   if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
     const options = {
