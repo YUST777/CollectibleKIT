@@ -1,0 +1,255 @@
+from telethon import TelegramClient, types
+from telethon.tl.functions.payments import GetSavedStarGiftsRequest
+from telethon.errors import UsernameNotOccupiedError, PeerIdInvalidError, UsernameInvalidError
+import asyncio
+import logging
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import Message
+from aiogram.filters import CommandStart
+from aiogram.client.default import DefaultBotProperties
+from aportalsmp import search as search_gifts
+from aportalsmp import update_auth
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Telegram Bot configuration
+BOT_TOKEN = "7367269425:AAElkm0afRKClK1TRrm7Z1G7O6-YAbXeado"
+
+# Telethon configuration
+API_ID = 22307634
+API_HASH = '7ab906fc6d065a2047a84411c1697593'
+
+# Initialize clients
+telethon_client = TelegramClient('gifts_session', API_ID, API_HASH)
+aiogram_bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
+dp = Dispatcher()
+
+# Portal Market auth
+portal_auth_data = None
+
+async def fetch_all_gifts(peer):
+    """Fetch all Star Gifts for a peer (pinned and unpinned)."""
+    all_gifts = []
+    offset = ''
+    while True:
+        result = await telethon_client(GetSavedStarGiftsRequest(
+            peer=peer,
+            offset=offset,
+            limit=100,
+            exclude_unsaved=False,
+            exclude_saved=False,
+            sort_by_value=False
+        ))
+        all_gifts.extend(result.gifts)
+        offset = result.next_offset
+        if not offset or len(all_gifts) >= result.count:
+            break
+    return all_gifts, result.count
+
+async def get_portal_market_price(slug, backdrop_name=None, model_name=None, symbol_name=None):
+    """Fetch portal market floor price for a gift slug with optional attribute filters."""
+    try:
+        if not portal_auth_data:
+            logging.warning("No portal_auth_data available")
+            return None
+        
+        # Parse slug to get collection name (e.g., "IceCream-15452" -> "IceCream")
+        collection_name = slug.split('-')[0] if '-' in slug else slug
+        
+        # Try with collection + backdrop + model first for most accurate pricing
+        logging.info(f"Searching Portal Market for: gift_name={collection_name}, backdrop={backdrop_name}, model={model_name}")
+        results = await search_gifts(
+            sort="price_asc",
+            limit=1,
+            gift_name=collection_name,
+            backdrop=backdrop_name,
+            model=model_name,
+            authData=portal_auth_data
+        )
+        
+        # If no results with model, fallback to backdrop only
+        if not results and backdrop_name:
+            logging.info(f"No results with model filter, trying backdrop only...")
+            results = await search_gifts(
+                sort="price_asc",
+                limit=1,
+                gift_name=collection_name,
+                backdrop=backdrop_name,
+                authData=portal_auth_data
+            )
+        
+        if results and len(results) > 0:
+            price = float(results[0].price)
+            logging.info(f"Found price for {slug}: {price} TON")
+            return price
+        else:
+            logging.info(f"No results found for {slug}")
+    except Exception as e:
+        logging.error(f"Error fetching portal market price for {slug}: {e}", exc_info=True)
+    return None
+
+async def format_gifts_response(user, gifts, total_count):
+    """Format the gifts response for Telegram."""
+    fetched_count = len(gifts)
+    pinned_count = sum(1 for g in gifts if getattr(g, 'pinned_to_top', False))
+    unpinned_count = fetched_count - pinned_count
+    nft_count = sum(1 for g in gifts if isinstance(g.gift, types.StarGiftUnique))
+    
+    if not gifts:
+        return "🎁 No Star Gifts found on this profile (may be private or empty)."
+    
+    display_name = f"{user.first_name or user.username or user.id}"
+    username = f"@{user.username}" if user.username else f"ID:{user.id}"
+    
+    lines = [f"🎁 <b>{display_name}</b> ({username}) - ALL Gifts:"]
+    lines.append(f"Total: {total_count} | Pinned: {pinned_count} | Unpinned: {unpinned_count} | Upgraded NFTs: {nft_count}\n")
+    
+    for i, sg in enumerate(gifts, 1):
+        gift = sg.gift
+        pinned = getattr(sg, 'pinned_to_top', False)
+        is_upgraded = isinstance(gift, types.StarGiftUnique)
+        
+        status = "✅ PINNED" if pinned else "❌ Not pinned"
+        lines.append(f"<b>{i}. {status}</b>")
+        
+        if is_upgraded:
+            slug = getattr(gift, 'slug', 'N/A')
+            nft_link = f"https://t.me/nft/{slug}" if slug != 'N/A' else 'N/A'
+            attributes = getattr(gift, 'attributes', [])
+            
+            # Extract display strings for traits
+            model_display = 'N/A'
+            backdrop_display = 'N/A'
+            symbol_display = 'N/A'
+            
+            # Extract raw names for Portal Market filtering
+            model_name = None
+            backdrop_name = None
+            symbol_name = None
+            
+            for attr in attributes:
+                if isinstance(attr, types.StarGiftAttributeModel):
+                    model_display = f"{attr.name} {attr.rarity_permille / 10}%"
+                    model_name = attr.name
+                elif isinstance(attr, types.StarGiftAttributeBackdrop):
+                    backdrop_display = f"{attr.name} {attr.rarity_permille / 10}%"
+                    backdrop_name = attr.name
+                elif isinstance(attr, types.StarGiftAttributePattern):
+                    symbol_display = f"{attr.name} {attr.rarity_permille / 10}%"
+                    symbol_name = attr.name
+            
+            lines.append("   🎨 Collectible")
+            if nft_link != 'N/A':
+                lines.append(f"   🔗 {nft_link}")
+            lines.append(f"   Trait: [{model_display}, {backdrop_display}, {symbol_display}]")
+            lines.append(f"   Gift ID: {gift.gift_id}")
+            lines.append(f"   Title: {gift.title}")
+            lines.append(f"   Total Supply: {gift.availability_issued}/{gift.availability_total}")
+            
+            # Fetch Portal Market floor price with specific attributes
+            if slug != 'N/A':
+                logging.info(f"Looking up price for slug: {slug}, backdrop={backdrop_name}, model={model_name}, symbol={symbol_name}")
+                price = await get_portal_market_price(slug, backdrop_name=backdrop_name, model_name=model_name, symbol_name=symbol_name)
+                if price:
+                    lines.append(f"   💰 Floor: {price} TON")
+                else:
+                    logging.warning(f"No price returned for slug: {slug}")
+        else:
+            lines.append("   ⚠️ Not Upgraded (No NFT)")
+            lines.append(f"   Gift ID: {gift.id}")
+            lines.append(f"   Title: {gift.title or 'N/A'}")
+            lines.append(f"   Total Supply: {gift.availability_remains or 'N/A'}/{gift.availability_total or 'N/A'}")
+        
+        lines.append("")
+    
+    return "\n".join(lines)
+
+@dp.message(CommandStart())
+async def start_handler(message: Message):
+    """Handle /start command."""
+    await message.answer(
+        "👋 Welcome! Send me a @username or user ID to fetch all Star Gifts with full NFT details.",
+        disable_web_page_preview=True
+    )
+
+@dp.message(F.text & F.chat.type == "private")
+async def handle_message(message: Message):
+    """Handle text messages with user ID or username."""
+    user_input = message.text.strip()
+    
+    try:
+        # Send processing message
+        processing_msg = await message.answer("⏳ Checking all gifts for the user...")
+        
+        # Initialize telethon client if needed
+        if not telethon_client.is_connected():
+            await telethon_client.connect()
+            if not await telethon_client.is_user_authorized():
+                await processing_msg.edit_text("❌ Telethon session not authorized. Please configure credentials.")
+                return
+        
+        # Resolve user entity
+        if user_input.startswith('@'):
+            entity = await telethon_client.get_entity(user_input)
+        else:
+            try:
+                user_id = int(user_input)
+                entity = await telethon_client.get_entity(user_id)
+            except ValueError:
+                await processing_msg.edit_text("Invalid input: Use integer ID or @username.")
+                return
+        
+        # Fetch gifts
+        gifts, total_count = await fetch_all_gifts(entity)
+        
+        # Format and send response
+        response = await format_gifts_response(entity, gifts, total_count)
+        
+        # Delete processing message and send result
+        await processing_msg.delete()
+        await message.answer(response, disable_web_page_preview=False)
+        
+    except (UsernameNotOccupiedError, UsernameInvalidError):
+        await message.answer("⚠️ Username not found or invalid.")
+    except PeerIdInvalidError:
+        await message.answer("⚠️ User ID invalid, private, or blocked.")
+    except Exception as e:
+        error_msg = f"❌ Failed to fetch gifts: {str(e)}"
+        logging.error(f"Exception occurred: {e}", exc_info=True)
+        await message.answer(error_msg)
+
+async def main():
+    """Main function to start the bot."""
+    global portal_auth_data
+    logging.info("Starting gifts bot...")
+    
+    # Start telethon client
+    await telethon_client.connect()
+    if not await telethon_client.is_user_authorized():
+        logging.error("Telethon session not authorized!")
+        return
+    
+    # Initialize Portal Market auth (optional, fails gracefully if not available)
+    try:
+        portal_auth_data = await update_auth(api_id=API_ID, api_hash=API_HASH, session_name="portals_session", session_path="/home/yousefmsm1/Desktop/gifts")
+        logging.info("Portal Market authentication successful!")
+    except Exception as e:
+        logging.warning(f"Portal Market not available: {e}")
+        portal_auth_data = None
+    
+    # Start polling
+    logging.info("Bot is running. Waiting for messages...")
+    try:
+        await dp.start_polling(aiogram_bot)
+    finally:
+        # Clean up
+        if telethon_client.is_connected():
+            await telethon_client.disconnect()
+        await aiogram_bot.session.close()
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info("Bot stopped by user")

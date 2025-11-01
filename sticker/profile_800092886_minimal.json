@@ -1,0 +1,30 @@
+{
+  "user": {
+    "id": 800092886,
+    "name": "yousef"
+  },
+  "owned_stickers": [
+    {
+      "collection": "DOGS OG",
+      "character": "Cyclist",
+      "token_id": "DOGS0647592",
+      "sticker_ids": [
+        678,
+        679,
+        680,
+        681,
+        682,
+        683,
+        684,
+        685,
+        686,
+        687,
+        688,
+        689
+      ],
+      "sticker_count": 12
+    }
+  ],
+  "total_nfts": 1,
+  "total_stickers": 12
+}

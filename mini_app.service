@@ -1,0 +1,21 @@
+[Unit]
+Description=Telegram Story Puzzle Bot with Mini App
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cut-it-0.1
+ExecStart=/home/ubuntu/cut-it-0.1/.venv/bin/python start_mini_app.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONPATH=/home/ubuntu/cut-it-0.1
+Environment=MINI_APP_URL=https://your-domain.com
+
+[Install]
+WantedBy=multi-user.target
+
+
+
