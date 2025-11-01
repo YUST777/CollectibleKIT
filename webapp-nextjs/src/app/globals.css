@@ -1,0 +1,337 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+@layer base {
+  body {
+    @apply bg-bg-main text-text-idle font-sans;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  html {
+    height: 100%;
+    height: var(--tg-viewport-height, 100vh);
+  }
+}
+
+/* Component styles */
+@layer components {
+  .tg-button {
+    @apply px-6 py-3 rounded-lg font-medium cursor-pointer transition-all duration-200 min-h-[44px] inline-flex items-center justify-center no-underline;
+  }
+
+  .tg-button-primary {
+    @apply bg-icon-active text-icon-white hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .tg-button-secondary {
+    @apply bg-box-bg text-text-idle border border-icon-idle hover:bg-icon-idle/20;
+  }
+
+  .tg-button-danger {
+    @apply bg-red-600 text-icon-white;
+  }
+
+  .tg-card {
+    @apply bg-box-bg rounded-xl p-4 border border-icon-idle/30;
+  }
+
+  .tg-input {
+    @apply w-full px-4 py-3 bg-box-bg border border-icon-idle/50 rounded-lg text-text-idle text-base transition-colors duration-300 focus:outline-none focus:border-icon-active;
+  }
+
+  .tg-input::placeholder {
+    @apply text-icon-idle opacity-60;
+  }
+
+  .tg-modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/70;
+  }
+
+  .tg-modal-content {
+    @apply bg-box-bg rounded-2xl p-6 max-w-md w-[90%] max-h-[90vh] overflow-y-auto relative animate-slide-up;
+  }
+
+  .tg-nav-button {
+    @apply flex-1 flex flex-col items-center justify-center p-2 bg-transparent border-none cursor-pointer transition-all duration-300 relative;
+    color: #7e7c7d; /* inactive icon & label color */
+  }
+
+  .tg-nav-button.active {
+    color: #fffafa;
+  }
+
+  /* Remove the top indicator bar for active nav buttons */
+  .tg-nav-button.active::before { content: none; }
+
+  .loading-spinner {
+    @apply w-10 h-10 border-2 border-icon-idle/30 border-t-icon-active rounded-full animate-spin mx-auto mb-4;
+  }
+
+  .fade-in {
+    @apply animate-fade-in;
+  }
+
+  .slide-up {
+    @apply animate-slide-up;
+  }
+
+  .slide-down {
+    @apply animate-slide-down;
+  }
+}
+
+/* Utility styles */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Smooth mobile scrolling */
+  .touch-pan-x {
+    touch-action: pan-x;
+  }
+  
+  /* Momentum scrolling for iOS */
+  .momentum-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceGentle {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-10px); }
+}
+
+/* Telegram WebApp specific */
+.tg-viewport {
+  height: 100vh;
+  height: var(--tg-viewport-height, 100vh);
+}
+
+/* Safe area support */
+.safe-area-top {
+  padding-top: max(60px, env(safe-area-inset-top, 60px));
+}
+
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+
+  /* Collection Tab Styles */
+  .gift-slot {
+    @apply aspect-square;
+    min-height: 120px;
+    max-height: 140px;
+    display: block;
+  }
+
+  /* Ensure grid layout works properly */
+  .gift-grid {
+    display: grid !important;
+    row-gap: 6px;
+    column-gap: 6px;
+  }
+
+  /* Responsive gift slot sizing for larger grids */
+  @media (max-width: 768px) {
+    .gift-slot {
+      min-height: 100px;
+      max-height: 120px;
+    }
+  }
+
+  .gift-preview-card {
+    @apply w-full h-full bg-box-bg rounded-lg border border-icon-idle/20 overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-icon-active/20;
+  }
+
+  .gift-preview-placeholder {
+    @apply w-full h-full flex flex-col items-center justify-center text-icon-idle/60 space-y-2;
+  }
+
+  .gift-preview-content {
+    @apply w-full h-full relative;
+  }
+
+  .gift-canvas {
+    @apply w-full h-full object-cover;
+  }
+
+  .gift-info {
+    @apply absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent text-white p-3 text-xs space-y-1;
+  }
+
+  .gift-name {
+    @apply font-semibold block truncate text-sm;
+  }
+
+  .gift-backdrop {
+    @apply text-xs opacity-80 block;
+  }
+
+  /* Telegram-style gift card effects */
+  .gift-preview-card:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(24, 144, 255, 0.2);
+  }
+
+  .gift-preview-card:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* Drag and drop styles */
+  .gift-slot[draggable="true"] {
+    cursor: grab;
+  }
+
+  .gift-slot[draggable="true"]:active {
+    cursor: grabbing;
+  }
+
+  .gift-slot.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+
+  .gift-slot.drag-over {
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+  }
+
+  /* Delete button styles */
+  .gift-preview-card:hover .delete-button {
+    opacity: 1;
+  }
+
+  .delete-button {
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  /* Telegram-style ribbon - full width diagonal */
+  .ribbon-telegram {
+    position: absolute;
+    top: 40px;
+    right: -20px;
+    padding: 0.5px 12px;
+    transform: rotate(45deg);
+    transform-origin: top right;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    overflow: visible;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+    font-size: 7px;
+    font-weight: bold;
+  }
+
+  /* Create triangular end pieces - smaller */
+  .ribbon-telegram::before,
+  .ribbon-telegram::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
+  }
+
+  .ribbon-telegram::before {
+    left: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-right-color: var(--ribbon-color, #8B4513);
+    border-right-width: 1px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-top-color: var(--ribbon-color, #8B4513);
+    border-bottom-color: var(--ribbon-color, #8B4513);
+  }
+
+  .ribbon-telegram::after {
+    right: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left-color: var(--ribbon-color, #8B4513);
+    border-left-width: 1px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-top-color: var(--ribbon-color, #8B4513);
+    border-bottom-color: var(--ribbon-color, #8B4513);
+  }
+
+  /* Mobile-specific styles */
+  @media (max-width: 768px) {
+    .delete-button {
+      opacity: 1 !important;
+      width: 24px !important;
+      height: 24px !important;
+    }
+    
+    .gift-slot {
+      touch-action: manipulation;
+    }
+    
+    .gift-preview-card {
+      touch-action: manipulation;
+    }
+    
+    /* Better touch targets for mobile */
+    .delete-button {
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  /* Filter Modal Styles */
+  .filter-option-item {
+    @apply flex items-center p-3 rounded-lg border border-icon-idle/30 hover:bg-box-bg/50 cursor-pointer transition-colors;
+  }
+
+  .filter-option-item.selected {
+    @apply bg-icon-active/10 border-icon-active;
+  }

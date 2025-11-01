@@ -1,0 +1,1346 @@
+{
+  "gifts": [
+    {
+      "name": "Artisan Brick",
+      "filename": "Artisan_Brick_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Artisan_Brick_card.png"
+    },
+    {
+      "name": "Astral Shard",
+      "filename": "Astral_Shard_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Astral_Shard_card.png"
+    },
+    {
+      "name": "Berry Box",
+      "filename": "Berry_Box_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Berry_Box_card.png"
+    },
+    {
+      "name": "Big Year",
+      "filename": "Big_Year_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Big_Year_card.png"
+    },
+    {
+      "name": "Bonded Ring",
+      "filename": "Bonded_Ring_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Bonded_Ring_card.png"
+    },
+    {
+      "name": "Bow Tie",
+      "filename": "Bow_Tie_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Bow_Tie_card.png"
+    },
+    {
+      "name": "Bunny Muffin",
+      "filename": "Bunny_Muffin_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Bunny_Muffin_card.png"
+    },
+    {
+      "name": "Candy Cane",
+      "filename": "Candy_Cane_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Candy_Cane_card.png"
+    },
+    {
+      "name": "Clover Pin",
+      "filename": "Clover_Pin_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Clover_Pin_card.png"
+    },
+    {
+      "name": "Cookie Heart",
+      "filename": "Cookie_Heart_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Cookie_Heart_card.png"
+    },
+    {
+      "name": "Crystal Ball",
+      "filename": "Crystal_Ball_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Crystal_Ball_card.png"
+    },
+    {
+      "name": "Cupid Charm",
+      "filename": "Cupid_Charm_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Cupid_Charm_card.png"
+    },
+    {
+      "name": "Desk Calendar",
+      "filename": "Desk_Calendar_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Desk_Calendar_card.png"
+    },
+    {
+      "name": "Diamond Ring",
+      "filename": "Diamond_Ring_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Diamond_Ring_card.png"
+    },
+    {
+      "name": "Durovs Cap",
+      "filename": "Durovs_Cap_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Durovs_Cap_card.png"
+    },
+    {
+      "name": "Easter Egg",
+      "filename": "Easter_Egg_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Easter_Egg_card.png"
+    },
+    {
+      "name": "Electric Skull",
+      "filename": "Electric_Skull_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Electric_Skull_card.png"
+    },
+    {
+      "name": "Eternal Candle",
+      "filename": "Eternal_Candle_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Eternal_Candle_card.png"
+    },
+    {
+      "name": "Eternal Rose",
+      "filename": "Eternal_Rose_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Eternal_Rose_card.png"
+    },
+    {
+      "name": "Evil Eye",
+      "filename": "Evil_Eye_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Evil_Eye_card.png"
+    },
+    {
+      "name": "Faith Amulet",
+      "filename": "Faith_Amulet_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Faith_Amulet_card.png"
+    },
+    {
+      "name": "Flying Broom",
+      "filename": "Flying_Broom_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Flying_Broom_card.png"
+    },
+    {
+      "name": "Fresh Socks",
+      "filename": "Fresh_Socks_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Fresh_Socks_card.png"
+    },
+    {
+      "name": "Gem Signet",
+      "filename": "Gem_Signet_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Gem_Signet_card.png"
+    },
+    {
+      "name": "Genie Lamp",
+      "filename": "Genie_Lamp_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Genie_Lamp_card.png"
+    },
+    {
+      "name": "Ginger Cookie",
+      "filename": "Ginger_Cookie_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Ginger_Cookie_card.png"
+    },
+    {
+      "name": "Hanging Star",
+      "filename": "Hanging_Star_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Hanging_Star_card.png"
+    },
+    {
+      "name": "Happy Brownie",
+      "filename": "Happy_Brownie_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Happy_Brownie_card.png"
+    },
+    {
+      "name": "Heart Locket",
+      "filename": "Heart_Locket_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Heart_Locket_card.png"
+    },
+    {
+      "name": "Heroic Helmet",
+      "filename": "Heroic_Helmet_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Heroic_Helmet_card.png"
+    },
+    {
+      "name": "Hex Pot",
+      "filename": "Hex_Pot_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Hex_Pot_card.png"
+    },
+    {
+      "name": "Holiday Drink",
+      "filename": "Holiday_Drink_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Holiday_Drink_card.png"
+    },
+    {
+      "name": "Homemade Cake",
+      "filename": "Homemade_Cake_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Homemade_Cake_card.png"
+    },
+    {
+      "name": "Hypno Lollipop",
+      "filename": "Hypno_Lollipop_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Hypno_Lollipop_card.png"
+    },
+    {
+      "name": "Ice Cream",
+      "filename": "Ice_Cream_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Ice_Cream_card.png"
+    },
+    {
+      "name": "Input Key",
+      "filename": "Input_Key_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Input_Key_card.png"
+    },
+    {
+      "name": "Instant Ramen",
+      "filename": "Instant_Ramen_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Instant_Ramen_card.png"
+    },
+    {
+      "name": "Ion Gem",
+      "filename": "Ion_Gem_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Ion_Gem_card.png"
+    },
+    {
+      "name": "Ionic Dryer",
+      "filename": "Ionic_Dryer_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Ionic_Dryer_card.png"
+    },
+    {
+      "name": "Jack in the Box",
+      "filename": "Jack_in_the_Box_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Jack_in_the_Box_card.png"
+    },
+    {
+      "name": "Jelly Bunny",
+      "filename": "Jelly_Bunny_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Jelly_Bunny_card.png"
+    },
+    {
+      "name": "Jester Hat",
+      "filename": "Jester_Hat_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Jester_Hat_card.png"
+    },
+    {
+      "name": "Jingle Bells",
+      "filename": "Jingle_Bells_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Jingle_Bells_card.png"
+    },
+    {
+      "name": "Jolly Chimp",
+      "filename": "Jolly_Chimp_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Jolly_Chimp_card.png"
+    },
+    {
+      "name": "Joyful Bundle",
+      "filename": "Joyful_Bundle_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Joyful_Bundle_card.png"
+    },
+    {
+      "name": "Kissed Frog",
+      "filename": "Kissed_Frog_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Kissed_Frog_card.png"
+    },
+    {
+      "name": "Light Sword",
+      "filename": "Light_Sword_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Light_Sword_card.png"
+    },
+    {
+      "name": "Lol Pop",
+      "filename": "Lol_Pop_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Lol_Pop_card.png"
+    },
+    {
+      "name": "Loot Bag",
+      "filename": "Loot_Bag_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Loot_Bag_card.png"
+    },
+    {
+      "name": "Love Candle",
+      "filename": "Love_Candle_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Love_Candle_card.png"
+    },
+    {
+      "name": "Love Potion",
+      "filename": "Love_Potion_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Love_Potion_card.png"
+    },
+    {
+      "name": "Low Rider",
+      "filename": "Low_Rider_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Low_Rider_card.png"
+    },
+    {
+      "name": "Lunar Snake",
+      "filename": "Lunar_Snake_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Lunar_Snake_card.png"
+    },
+    {
+      "name": "Lush Bouquet",
+      "filename": "Lush_Bouquet_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Lush_Bouquet_card.png"
+    },
+    {
+      "name": "Mad Pumpkin",
+      "filename": "Mad_Pumpkin_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Mad_Pumpkin_card.png"
+    },
+    {
+      "name": "Magic Potion",
+      "filename": "Magic_Potion_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Magic_Potion_card.png"
+    },
+    {
+      "name": "Mighty Arm",
+      "filename": "Mighty_Arm_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Mighty_Arm_card.png"
+    },
+    {
+      "name": "Mini Oscar",
+      "filename": "Mini_Oscar_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Mini_Oscar_card.png"
+    },
+    {
+      "name": "Moon Pendant",
+      "filename": "Moon_Pendant_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Moon_Pendant_card.png"
+    },
+    {
+      "name": "Mousse Cake",
+      "filename": "Mousse_Cake_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Mousse_Cake_card.png"
+    },
+    {
+      "name": "Nail Bracelet",
+      "filename": "Nail_Bracelet_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Nail_Bracelet_card.png"
+    },
+    {
+      "name": "Neko Helmet",
+      "filename": "Neko_Helmet_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Neko_Helmet_card.png"
+    },
+    {
+      "name": "Party Sparkler",
+      "filename": "Party_Sparkler_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Party_Sparkler_card.png"
+    },
+    {
+      "name": "Perfume Bottle",
+      "filename": "Perfume_Bottle_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Perfume_Bottle_card.png"
+    },
+    {
+      "name": "Pet Snake",
+      "filename": "Pet_Snake_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Pet_Snake_card.png"
+    },
+    {
+      "name": "Plush Pepe",
+      "filename": "Plush_Pepe_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Plush_Pepe_card.png"
+    },
+    {
+      "name": "Precious Peach",
+      "filename": "Precious_Peach_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Precious_Peach_card.png"
+    },
+    {
+      "name": "Record Player",
+      "filename": "Record_Player_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Record_Player_card.png"
+    },
+    {
+      "name": "Restless Jar",
+      "filename": "Restless_Jar_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Restless_Jar_card.png"
+    },
+    {
+      "name": "Sakura Flower",
+      "filename": "Sakura_Flower_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Sakura_Flower_card.png"
+    },
+    {
+      "name": "Santa Hat",
+      "filename": "Santa_Hat_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Santa_Hat_card.png"
+    },
+    {
+      "name": "Scared Cat",
+      "filename": "Scared_Cat_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Scared_Cat_card.png"
+    },
+    {
+      "name": "Sharp Tongue",
+      "filename": "Sharp_Tongue_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Sharp_Tongue_card.png"
+    },
+    {
+      "name": "Signet Ring",
+      "filename": "Signet_Ring_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Signet_Ring_card.png"
+    },
+    {
+      "name": "Skull Flower",
+      "filename": "Skull_Flower_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Skull_Flower_card.png"
+    },
+    {
+      "name": "Sky Stilettos",
+      "filename": "Sky_Stilettos_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Sky_Stilettos_card.png"
+    },
+    {
+      "name": "Sleigh Bell",
+      "filename": "Sleigh_Bell_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Sleigh_Bell_card.png"
+    },
+    {
+      "name": "Snake Box",
+      "filename": "Snake_Box_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Snake_Box_card.png"
+    },
+    {
+      "name": "Snoop Cigar",
+      "filename": "Snoop_Cigar_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Snoop_Cigar_card.png"
+    },
+    {
+      "name": "Snoop Dogg",
+      "filename": "Snoop_Dogg_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Snoop_Dogg_card.png"
+    },
+    {
+      "name": "Snow Globe",
+      "filename": "Snow_Globe_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Snow_Globe_card.png"
+    },
+    {
+      "name": "Snow Mittens",
+      "filename": "Snow_Mittens_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Snow_Mittens_card.png"
+    },
+    {
+      "name": "Spiced Wine",
+      "filename": "Spiced_Wine_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Spiced_Wine_card.png"
+    },
+    {
+      "name": "Spring Basket",
+      "filename": "Spring_Basket_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Spring_Basket_card.png"
+    },
+    {
+      "name": "Spy Agaric",
+      "filename": "Spy_Agaric_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Spy_Agaric_card.png"
+    },
+    {
+      "name": "Star Notepad",
+      "filename": "Star_Notepad_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Star_Notepad_card.png"
+    },
+    {
+      "name": "Stellar Rocket",
+      "filename": "Stellar_Rocket_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Stellar_Rocket_card.png"
+    },
+    {
+      "name": "Swag Bag",
+      "filename": "Swag_Bag_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Swag_Bag_card.png"
+    },
+    {
+      "name": "Swiss Watch",
+      "filename": "Swiss_Watch_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Swiss_Watch_card.png"
+    },
+    {
+      "name": "Tama Gadget",
+      "filename": "Tama_Gadget_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Tama_Gadget_card.png"
+    },
+    {
+      "name": "Top Hat",
+      "filename": "Top_Hat_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Top_Hat_card.png"
+    },
+    {
+      "name": "Toy Bear",
+      "filename": "Toy_Bear_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Toy_Bear_card.png"
+    },
+    {
+      "name": "Trapped Heart",
+      "filename": "Trapped_Heart_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Trapped_Heart_card.png"
+    },
+    {
+      "name": "Valentine Box",
+      "filename": "Valentine_Box_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Valentine_Box_card.png"
+    },
+    {
+      "name": "Vintage Cigar",
+      "filename": "Vintage_Cigar_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Vintage_Cigar_card.png"
+    },
+    {
+      "name": "Voodoo Doll",
+      "filename": "Voodoo_Doll_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Voodoo_Doll_card.png"
+    },
+    {
+      "name": "Westside Sign",
+      "filename": "Westside_Sign_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Westside_Sign_card.png"
+    },
+    {
+      "name": "Whip Cupcake",
+      "filename": "Whip_Cupcake_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Whip_Cupcake_card.png"
+    },
+    {
+      "name": "Winter Wreath",
+      "filename": "Winter_Wreath_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Winter_Wreath_card.png"
+    },
+    {
+      "name": "Witch Hat",
+      "filename": "Witch_Hat_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Witch_Hat_card.png"
+    },
+    {
+      "name": "Xmas Stocking",
+      "filename": "Xmas_Stocking_card.png",
+      "url": "https://giftschart.01studio.xyz/api/new_gift_cards/Xmas_Stocking_card.png"
+    }
+  ],
+  "stickers": [
+    {
+      "name": "azuki raizan",
+      "filename": "azuki_raizan_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/azuki_raizan_price_card.png"
+    },
+    {
+      "name": "azuki shao",
+      "filename": "azuki_shao_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/azuki_shao_price_card.png"
+    },
+    {
+      "name": "baby shark doo doo moods",
+      "filename": "baby_shark_doo_doo_moods_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/baby_shark_doo_doo_moods_price_card.png"
+    },
+    {
+      "name": "babydoge mememania",
+      "filename": "babydoge_mememania_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/babydoge_mememania_price_card.png"
+    },
+    {
+      "name": "blum bunny",
+      "filename": "blum_bunny_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/blum_bunny_price_card.png"
+    },
+    {
+      "name": "blum cap",
+      "filename": "blum_cap_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/blum_cap_price_card.png"
+    },
+    {
+      "name": "blum cat",
+      "filename": "blum_cat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/blum_cat_price_card.png"
+    },
+    {
+      "name": "blum cook",
+      "filename": "blum_cook_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/blum_cook_price_card.png"
+    },
+    {
+      "name": "blum curly",
+      "filename": "blum_curly_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/blum_curly_price_card.png"
+    },
+    {
+      "name": "blum general",
+      "filename": "blum_general_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/blum_general_price_card.png"
+    },
+    {
+      "name": "blum no",
+      "filename": "blum_no_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/blum_no_price_card.png"
+    },
+    {
+      "name": "blum worker",
+      "filename": "blum_worker_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/blum_worker_price_card.png"
+    },
+    {
+      "name": "bored ape yacht club ape edition",
+      "filename": "bored_ape_yacht_club_ape_edition_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_ape_yacht_club_ape_edition_price_card.png"
+    },
+    {
+      "name": "bored ape yacht club bored ape originals",
+      "filename": "bored_ape_yacht_club_bored_ape_originals_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_ape_yacht_club_bored_ape_originals_price_card.png"
+    },
+    {
+      "name": "bored stickers 2092",
+      "filename": "bored_stickers_2092_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_2092_price_card.png"
+    },
+    {
+      "name": "bored stickers 3151",
+      "filename": "bored_stickers_3151_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_3151_price_card.png"
+    },
+    {
+      "name": "bored stickers 3278",
+      "filename": "bored_stickers_3278_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_3278_price_card.png"
+    },
+    {
+      "name": "bored stickers 4017",
+      "filename": "bored_stickers_4017_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_4017_price_card.png"
+    },
+    {
+      "name": "bored stickers 5824",
+      "filename": "bored_stickers_5824_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_5824_price_card.png"
+    },
+    {
+      "name": "bored stickers 6527",
+      "filename": "bored_stickers_6527_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_6527_price_card.png"
+    },
+    {
+      "name": "bored stickers 9287",
+      "filename": "bored_stickers_9287_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_9287_price_card.png"
+    },
+    {
+      "name": "bored stickers 9765",
+      "filename": "bored_stickers_9765_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_9765_price_card.png"
+    },
+    {
+      "name": "bored stickers 9780",
+      "filename": "bored_stickers_9780_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_9780_price_card.png"
+    },
+    {
+      "name": "bored stickers cny 2092",
+      "filename": "bored_stickers_cny_2092_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/bored_stickers_cny_2092_price_card.png"
+    },
+    {
+      "name": "cattea life cattea chaos",
+      "filename": "cattea_life_cattea_chaos_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/cattea_life_cattea_chaos_price_card.png"
+    },
+    {
+      "name": "chimpers dojo chimpers x jarritos",
+      "filename": "chimpers_dojo_chimpers_x_jarritos_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/chimpers_dojo_chimpers_x_jarritos_price_card.png"
+    },
+    {
+      "name": "chimpers genesis energy",
+      "filename": "chimpers_genesis_energy_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/chimpers_genesis_energy_price_card.png"
+    },
+    {
+      "name": "city holder holder s guide",
+      "filename": "city_holder_holder_s_guide_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/city_holder_holder_s_guide_price_card.png"
+    },
+    {
+      "name": "claynosaurz red rex pack",
+      "filename": "claynosaurz_red_rex_pack_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/claynosaurz_red_rex_pack_price_card.png"
+    },
+    {
+      "name": "cyberkongz wilson",
+      "filename": "cyberkongz_wilson_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/cyberkongz_wilson_price_card.png"
+    },
+    {
+      "name": "dogs og alien",
+      "filename": "dogs_og_alien_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_alien_price_card.png"
+    },
+    {
+      "name": "dogs og alumni",
+      "filename": "dogs_og_alumni_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_alumni_price_card.png"
+    },
+    {
+      "name": "dogs og anime ears",
+      "filename": "dogs_og_anime_ears_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_anime_ears_price_card.png"
+    },
+    {
+      "name": "dogs og asterix",
+      "filename": "dogs_og_asterix_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_asterix_price_card.png"
+    },
+    {
+      "name": "dogs og baseball bat",
+      "filename": "dogs_og_baseball_bat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_baseball_bat_price_card.png"
+    },
+    {
+      "name": "dogs og baseball cap",
+      "filename": "dogs_og_baseball_cap_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_baseball_cap_price_card.png"
+    },
+    {
+      "name": "dogs og blue eyes hat",
+      "filename": "dogs_og_blue_eyes_hat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_blue_eyes_hat_price_card.png"
+    },
+    {
+      "name": "dogs og bodyguard",
+      "filename": "dogs_og_bodyguard_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_bodyguard_price_card.png"
+    },
+    {
+      "name": "dogs og bow tie",
+      "filename": "dogs_og_bow_tie_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_bow_tie_price_card.png"
+    },
+    {
+      "name": "dogs og cherry glasses",
+      "filename": "dogs_og_cherry_glasses_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_cherry_glasses_price_card.png"
+    },
+    {
+      "name": "dogs og cook",
+      "filename": "dogs_og_cook_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_cook_price_card.png"
+    },
+    {
+      "name": "dogs og cyclist",
+      "filename": "dogs_og_cyclist_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_cyclist_price_card.png"
+    },
+    {
+      "name": "dogs og diver",
+      "filename": "dogs_og_diver_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_diver_price_card.png"
+    },
+    {
+      "name": "dogs og dog tyson",
+      "filename": "dogs_og_dog_tyson_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_dog_tyson_price_card.png"
+    },
+    {
+      "name": "dogs og dogtor",
+      "filename": "dogs_og_dogtor_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_dogtor_price_card.png"
+    },
+    {
+      "name": "dogs og duck",
+      "filename": "dogs_og_duck_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_duck_price_card.png"
+    },
+    {
+      "name": "dogs og emo boy",
+      "filename": "dogs_og_emo_boy_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_emo_boy_price_card.png"
+    },
+    {
+      "name": "dogs og extra eyes",
+      "filename": "dogs_og_extra_eyes_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_extra_eyes_price_card.png"
+    },
+    {
+      "name": "dogs og frog glasses",
+      "filename": "dogs_og_frog_glasses_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_frog_glasses_price_card.png"
+    },
+    {
+      "name": "dogs og frog hat",
+      "filename": "dogs_og_frog_hat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_frog_hat_price_card.png"
+    },
+    {
+      "name": "dogs og gentleman",
+      "filename": "dogs_og_gentleman_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_gentleman_price_card.png"
+    },
+    {
+      "name": "dogs og gnome",
+      "filename": "dogs_og_gnome_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_gnome_price_card.png"
+    },
+    {
+      "name": "dogs og google intern hat",
+      "filename": "dogs_og_google_intern_hat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_google_intern_hat_price_card.png"
+    },
+    {
+      "name": "dogs og hello kitty",
+      "filename": "dogs_og_hello_kitty_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_hello_kitty_price_card.png"
+    },
+    {
+      "name": "dogs og hypnotist",
+      "filename": "dogs_og_hypnotist_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_hypnotist_price_card.png"
+    },
+    {
+      "name": "dogs og ice cream",
+      "filename": "dogs_og_ice_cream_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_ice_cream_price_card.png"
+    },
+    {
+      "name": "dogs og jester",
+      "filename": "dogs_og_jester_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_jester_price_card.png"
+    },
+    {
+      "name": "dogs og kamikaze",
+      "filename": "dogs_og_kamikaze_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_kamikaze_price_card.png"
+    },
+    {
+      "name": "dogs og kfc",
+      "filename": "dogs_og_kfc_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_kfc_price_card.png"
+    },
+    {
+      "name": "dogs og king",
+      "filename": "dogs_og_king_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_king_price_card.png"
+    },
+    {
+      "name": "dogs og knitted hat",
+      "filename": "dogs_og_knitted_hat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_knitted_hat_price_card.png"
+    },
+    {
+      "name": "dogs og nerd",
+      "filename": "dogs_og_nerd_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_nerd_price_card.png"
+    },
+    {
+      "name": "dogs og newsboy cap",
+      "filename": "dogs_og_newsboy_cap_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_newsboy_cap_price_card.png"
+    },
+    {
+      "name": "dogs og noodles",
+      "filename": "dogs_og_noodles_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_noodles_price_card.png"
+    },
+    {
+      "name": "dogs og nose glasses",
+      "filename": "dogs_og_nose_glasses_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_nose_glasses_price_card.png"
+    },
+    {
+      "name": "dogs og not cap",
+      "filename": "dogs_og_not_cap_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_not_cap_price_card.png"
+    },
+    {
+      "name": "dogs og not coin",
+      "filename": "dogs_og_not_coin_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_not_coin_price_card.png"
+    },
+    {
+      "name": "dogs og one piece sanji",
+      "filename": "dogs_og_one_piece_sanji_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_one_piece_sanji_price_card.png"
+    },
+    {
+      "name": "dogs og one piece zoro",
+      "filename": "dogs_og_one_piece_zoro_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_one_piece_zoro_price_card.png"
+    },
+    {
+      "name": "dogs og orange hat",
+      "filename": "dogs_og_orange_hat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_orange_hat_price_card.png"
+    },
+    {
+      "name": "dogs og panama hat",
+      "filename": "dogs_og_panama_hat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_panama_hat_price_card.png"
+    },
+    {
+      "name": "dogs og pilot",
+      "filename": "dogs_og_pilot_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_pilot_price_card.png"
+    },
+    {
+      "name": "dogs og pink bob",
+      "filename": "dogs_og_pink_bob_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_pink_bob_price_card.png"
+    },
+    {
+      "name": "dogs og princess",
+      "filename": "dogs_og_princess_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_princess_price_card.png"
+    },
+    {
+      "name": "dogs og robber",
+      "filename": "dogs_og_robber_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_robber_price_card.png"
+    },
+    {
+      "name": "dogs og santa dogs",
+      "filename": "dogs_og_santa_dogs_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_santa_dogs_price_card.png"
+    },
+    {
+      "name": "dogs og scarf",
+      "filename": "dogs_og_scarf_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_scarf_price_card.png"
+    },
+    {
+      "name": "dogs og scary eyes",
+      "filename": "dogs_og_scary_eyes_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_scary_eyes_price_card.png"
+    },
+    {
+      "name": "dogs og shaggy",
+      "filename": "dogs_og_shaggy_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_shaggy_price_card.png"
+    },
+    {
+      "name": "dogs og sharky dog",
+      "filename": "dogs_og_sharky_dog_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_sharky_dog_price_card.png"
+    },
+    {
+      "name": "dogs og sheikh",
+      "filename": "dogs_og_sheikh_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_sheikh_price_card.png"
+    },
+    {
+      "name": "dogs og sherlock holmes",
+      "filename": "dogs_og_sherlock_holmes_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_sherlock_holmes_price_card.png"
+    },
+    {
+      "name": "dogs og smile",
+      "filename": "dogs_og_smile_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_smile_price_card.png"
+    },
+    {
+      "name": "dogs og sock head",
+      "filename": "dogs_og_sock_head_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_sock_head_price_card.png"
+    },
+    {
+      "name": "dogs og strawberry hat",
+      "filename": "dogs_og_strawberry_hat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_strawberry_hat_price_card.png"
+    },
+    {
+      "name": "dogs og tank driver",
+      "filename": "dogs_og_tank_driver_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_tank_driver_price_card.png"
+    },
+    {
+      "name": "dogs og tattoo artist",
+      "filename": "dogs_og_tattoo_artist_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_tattoo_artist_price_card.png"
+    },
+    {
+      "name": "dogs og teletubby",
+      "filename": "dogs_og_teletubby_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_teletubby_price_card.png"
+    },
+    {
+      "name": "dogs og termidogtor",
+      "filename": "dogs_og_termidogtor_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_termidogtor_price_card.png"
+    },
+    {
+      "name": "dogs og tin foil hat",
+      "filename": "dogs_og_tin_foil_hat_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_tin_foil_hat_price_card.png"
+    },
+    {
+      "name": "dogs og toast bread",
+      "filename": "dogs_og_toast_bread_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_toast_bread_price_card.png"
+    },
+    {
+      "name": "dogs og toddler",
+      "filename": "dogs_og_toddler_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_toddler_price_card.png"
+    },
+    {
+      "name": "dogs og tubeteyka",
+      "filename": "dogs_og_tubeteyka_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_tubeteyka_price_card.png"
+    },
+    {
+      "name": "dogs og unicorn",
+      "filename": "dogs_og_unicorn_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_unicorn_price_card.png"
+    },
+    {
+      "name": "dogs og ushanka",
+      "filename": "dogs_og_ushanka_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_ushanka_price_card.png"
+    },
+    {
+      "name": "dogs og van dogh",
+      "filename": "dogs_og_van_dogh_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_van_dogh_price_card.png"
+    },
+    {
+      "name": "dogs og viking",
+      "filename": "dogs_og_viking_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_viking_price_card.png"
+    },
+    {
+      "name": "dogs og witch",
+      "filename": "dogs_og_witch_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_og_witch_price_card.png"
+    },
+    {
+      "name": "dogs rewards full dig",
+      "filename": "dogs_rewards_full_dig_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_rewards_full_dig_price_card.png"
+    },
+    {
+      "name": "dogs rewards gold bone",
+      "filename": "dogs_rewards_gold_bone_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_rewards_gold_bone_price_card.png"
+    },
+    {
+      "name": "dogs rewards silver bone",
+      "filename": "dogs_rewards_silver_bone_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_rewards_silver_bone_price_card.png"
+    },
+    {
+      "name": "dogs unleashed bones",
+      "filename": "dogs_unleashed_bones_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/dogs_unleashed_bones_price_card.png"
+    },
+    {
+      "name": "doodles doodles dark mode",
+      "filename": "doodles_doodles_dark_mode_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/doodles_doodles_dark_mode_price_card.png"
+    },
+    {
+      "name": "doodles og icons",
+      "filename": "doodles_og_icons_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/doodles_og_icons_price_card.png"
+    },
+    {
+      "name": "flappy bird blue wings",
+      "filename": "flappy_bird_blue_wings_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/flappy_bird_blue_wings_price_card.png"
+    },
+    {
+      "name": "flappy bird blush flight",
+      "filename": "flappy_bird_blush_flight_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/flappy_bird_blush_flight_price_card.png"
+    },
+    {
+      "name": "flappy bird frost flap",
+      "filename": "flappy_bird_frost_flap_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/flappy_bird_frost_flap_price_card.png"
+    },
+    {
+      "name": "flappy bird light glide",
+      "filename": "flappy_bird_light_glide_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/flappy_bird_light_glide_price_card.png"
+    },
+    {
+      "name": "flappy bird ruby wings",
+      "filename": "flappy_bird_ruby_wings_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/flappy_bird_ruby_wings_price_card.png"
+    },
+    {
+      "name": "imaginary ones panda warrior",
+      "filename": "imaginary_ones_panda_warrior_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/imaginary_ones_panda_warrior_price_card.png"
+    },
+    {
+      "name": "kudai gmi",
+      "filename": "kudai_gmi_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/kudai_gmi_price_card.png"
+    },
+    {
+      "name": "kudai ngmi",
+      "filename": "kudai_ngmi_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/kudai_ngmi_price_card.png"
+    },
+    {
+      "name": "lazy rich chill or thrill",
+      "filename": "lazy_rich_chill_or_thrill_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/lazy_rich_chill_or_thrill_price_card.png"
+    },
+    {
+      "name": "lazy rich sloth capital",
+      "filename": "lazy_rich_sloth_capital_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/lazy_rich_sloth_capital_price_card.png"
+    },
+    {
+      "name": "lil pudgys lil pudgys x baby shark",
+      "filename": "lil_pudgys_lil_pudgys_x_baby_shark_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/lil_pudgys_lil_pudgys_x_baby_shark_price_card.png"
+    },
+    {
+      "name": "lost dogs lost memeries",
+      "filename": "lost_dogs_lost_memeries_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/lost_dogs_lost_memeries_price_card.png"
+    },
+    {
+      "name": "lost dogs magic of the way",
+      "filename": "lost_dogs_magic_of_the_way_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/lost_dogs_magic_of_the_way_price_card.png"
+    },
+    {
+      "name": "moonbirds moonbirds originals",
+      "filename": "moonbirds_moonbirds_originals_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/moonbirds_moonbirds_originals_price_card.png"
+    },
+    {
+      "name": "mr freeman eat shit laugh",
+      "filename": "mr_freeman_eat_shit_laugh_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/mr_freeman_eat_shit_laugh_price_card.png"
+    },
+    {
+      "name": "no signal error 1",
+      "filename": "no_signal_error_1_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/no_signal_error_1_price_card.png"
+    },
+    {
+      "name": "not pixel cute pack",
+      "filename": "not_pixel_cute_pack_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_cute_pack_price_card.png"
+    },
+    {
+      "name": "not pixel diamond pixel",
+      "filename": "not_pixel_diamond_pixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_diamond_pixel_price_card.png"
+    },
+    {
+      "name": "not pixel dogs pixel",
+      "filename": "not_pixel_dogs_pixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_dogs_pixel_price_card.png"
+    },
+    {
+      "name": "not pixel error pixel",
+      "filename": "not_pixel_error_pixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_error_pixel_price_card.png"
+    },
+    {
+      "name": "not pixel films memes",
+      "filename": "not_pixel_films_memes_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_films_memes_price_card.png"
+    },
+    {
+      "name": "not pixel grass pixel",
+      "filename": "not_pixel_grass_pixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_grass_pixel_price_card.png"
+    },
+    {
+      "name": "not pixel macpixel",
+      "filename": "not_pixel_macpixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_macpixel_price_card.png"
+    },
+    {
+      "name": "not pixel pixangel",
+      "filename": "not_pixel_pixangel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_pixangel_price_card.png"
+    },
+    {
+      "name": "not pixel pixanos",
+      "filename": "not_pixel_pixanos_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_pixanos_price_card.png"
+    },
+    {
+      "name": "not pixel pixel earth",
+      "filename": "not_pixel_pixel_earth_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_pixel_earth_price_card.png"
+    },
+    {
+      "name": "not pixel pixel knight",
+      "filename": "not_pixel_pixel_knight_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_pixel_knight_price_card.png"
+    },
+    {
+      "name": "not pixel pixel phrases",
+      "filename": "not_pixel_pixel_phrases_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_pixel_phrases_price_card.png"
+    },
+    {
+      "name": "not pixel pixevil",
+      "filename": "not_pixel_pixevil_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_pixevil_price_card.png"
+    },
+    {
+      "name": "not pixel pixioznik",
+      "filename": "not_pixel_pixioznik_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_pixioznik_price_card.png"
+    },
+    {
+      "name": "not pixel random memes",
+      "filename": "not_pixel_random_memes_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_random_memes_price_card.png"
+    },
+    {
+      "name": "not pixel retro pixel",
+      "filename": "not_pixel_retro_pixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_retro_pixel_price_card.png"
+    },
+    {
+      "name": "not pixel smileface pack",
+      "filename": "not_pixel_smileface_pack_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_smileface_pack_price_card.png"
+    },
+    {
+      "name": "not pixel superpixel",
+      "filename": "not_pixel_superpixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_superpixel_price_card.png"
+    },
+    {
+      "name": "not pixel tournament s1",
+      "filename": "not_pixel_tournament_s1_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_tournament_s1_price_card.png"
+    },
+    {
+      "name": "not pixel vice pixel",
+      "filename": "not_pixel_vice_pixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_vice_pixel_price_card.png"
+    },
+    {
+      "name": "not pixel zompixel",
+      "filename": "not_pixel_zompixel_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/not_pixel_zompixel_price_card.png"
+    },
+    {
+      "name": "notcoin flags",
+      "filename": "notcoin_flags_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/notcoin_flags_price_card.png"
+    },
+    {
+      "name": "notcoin not memes",
+      "filename": "notcoin_not_memes_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/notcoin_not_memes_price_card.png"
+    },
+    {
+      "name": "nyan cat nyan cat party pack",
+      "filename": "nyan_cat_nyan_cat_party_pack_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/nyan_cat_nyan_cat_party_pack_price_card.png"
+    },
+    {
+      "name": "ponke ponke day ones",
+      "filename": "ponke_ponke_day_ones_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/ponke_ponke_day_ones_price_card.png"
+    },
+    {
+      "name": "project soap tyler gold edition",
+      "filename": "project_soap_tyler_gold_edition_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/project_soap_tyler_gold_edition_price_card.png"
+    },
+    {
+      "name": "project soap tyler mode on",
+      "filename": "project_soap_tyler_mode_on_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/project_soap_tyler_mode_on_price_card.png"
+    },
+    {
+      "name": "pucca pucca moods",
+      "filename": "pucca_pucca_moods_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pucca_pucca_moods_price_card.png"
+    },
+    {
+      "name": "pudgy friends pengu x baby shark",
+      "filename": "pudgy_friends_pengu_x_baby_shark_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_friends_pengu_x_baby_shark_price_card.png"
+    },
+    {
+      "name": "pudgy friends pengu x nascar",
+      "filename": "pudgy_friends_pengu_x_nascar_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_friends_pengu_x_nascar_price_card.png"
+    },
+    {
+      "name": "pudgy penguins blue pengu",
+      "filename": "pudgy_penguins_blue_pengu_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_penguins_blue_pengu_price_card.png"
+    },
+    {
+      "name": "pudgy penguins classic pengu",
+      "filename": "pudgy_penguins_classic_pengu_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_penguins_classic_pengu_price_card.png"
+    },
+    {
+      "name": "pudgy penguins cool blue pengu",
+      "filename": "pudgy_penguins_cool_blue_pengu_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_penguins_cool_blue_pengu_price_card.png"
+    },
+    {
+      "name": "pudgy penguins ice pengu",
+      "filename": "pudgy_penguins_ice_pengu_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_penguins_ice_pengu_price_card.png"
+    },
+    {
+      "name": "pudgy penguins midas pengu",
+      "filename": "pudgy_penguins_midas_pengu_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_penguins_midas_pengu_price_card.png"
+    },
+    {
+      "name": "pudgy penguins pengu cny",
+      "filename": "pudgy_penguins_pengu_cny_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_penguins_pengu_cny_price_card.png"
+    },
+    {
+      "name": "pudgy penguins pengu valentines",
+      "filename": "pudgy_penguins_pengu_valentines_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/pudgy_penguins_pengu_valentines_price_card.png"
+    },
+    {
+      "name": "ric flair ric flair",
+      "filename": "ric_flair_ric_flair_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/ric_flair_ric_flair_price_card.png"
+    },
+    {
+      "name": "sappy sappy originals",
+      "filename": "sappy_sappy_originals_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/sappy_sappy_originals_price_card.png"
+    },
+    {
+      "name": "smeshariki chamomile valley",
+      "filename": "smeshariki_chamomile_valley_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/smeshariki_chamomile_valley_price_card.png"
+    },
+    {
+      "name": "smeshariki the memes",
+      "filename": "smeshariki_the_memes_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/smeshariki_the_memes_price_card.png"
+    },
+    {
+      "name": "sticker pack freedom",
+      "filename": "sticker_pack_freedom_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/sticker_pack_freedom_price_card.png"
+    },
+    {
+      "name": "sundog to the sun",
+      "filename": "sundog_to_the_sun_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/sundog_to_the_sun_price_card.png"
+    },
+    {
+      "name": "void void dudes",
+      "filename": "void_void_dudes_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/void_void_dudes_price_card.png"
+    },
+    {
+      "name": "wagmi hub egg hammer",
+      "filename": "wagmi_hub_egg_hammer_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/wagmi_hub_egg_hammer_price_card.png"
+    },
+    {
+      "name": "wagmi hub wagmi ai agent",
+      "filename": "wagmi_hub_wagmi_ai_agent_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/wagmi_hub_wagmi_ai_agent_price_card.png"
+    },
+    {
+      "name": "wallet friends 10 10 edition",
+      "filename": "wallet_friends_10_10_edition_price_card.png",
+      "url": "https://giftschart.01studio.xyz/api/sticker_price_cards/wallet_friends_10_10_edition_price_card.png"
+    }
+  ]
+}
