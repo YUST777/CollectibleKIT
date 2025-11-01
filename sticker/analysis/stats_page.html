@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+    <script
+      src="https://telegram.org/js/telegram-web-app.js"
+      onload="window.Telegram.WebApp.expand(); window.Telegram.WebApp.colorScheme === 'dark' ? window.Telegram.WebApp.setHeaderColor('#1C1C1E') : window.Telegram.WebApp.setHeaderColor('#FFFFFF'); window.Telegram.WebApp.colorScheme === 'dark' ? window.Telegram.WebApp.setBackgroundColor('#1C1C1E') : window.Telegram.WebApp.setBackgroundColor('#ffffff');"
+    ></script>
+    
+
+    <meta charset="UTF-8" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://t.me/sticker_bot" />
+    <meta property="og:site_name" content="Telegram Sticker Bot" />
+    <meta property="og:title" content="Telegram Sticker Bot" />
+    <meta property="og:description" content="Telegram Sticker Bot" />
+    <meta property="og:locale" content="en_US" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>Telegram Sticker Bot</title>
+    <style>
+      body,
+      html {
+        background-color: #000;
+        height: 100vh;
+        /* height: 100%; */
+        padding: 0;
+        margin: 0;
+        -ms-scroll-chaining: none;
+        overscroll-behavior: none;
+        -ms-touch-action: none;
+            touch-action: none;
+      }
+    </style>
+    <script
+      defer
+      data-domain="stickerdom.store"
+      src="https://plausible.joincommunity.xyz/js/script.js"
+    ></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script type="module" crossorigin src="/assets/index-bc21643c.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-fd0c8adf.js">
+    <link rel="stylesheet" href="/assets/index-09342620.css">
+  </head>
+  <body data-mode="light">
+    <div id="root"></div>
+    
+    <script>
+      const urlParams = new URLSearchParams(window.location.search)
+      const themeParam = urlParams.get('theme')
+
+      const themeStorage = localStorage.getItem('theme')
+
+      const theme = themeParam || themeStorage
+
+      if (theme) {
+        localStorage.setItem('theme', theme)
+        document.body.setAttribute('data-mode', theme)
+      } else {
+        window.Telegram.WebApp.colorScheme === 'dark'
+          ? document.body.setAttribute('data-mode', 'dark')
+          : null
+      }
+    </script>
+  </body>
+</html>

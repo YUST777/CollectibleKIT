@@ -81,11 +81,7 @@ interface StickerPortfolio {
   };
 }
 
-interface PortfolioTabProps {
-  hideAdsBanner?: boolean;
-}
-
-export const PortfolioTab: React.FC<PortfolioTabProps> = ({ hideAdsBanner = false }) => {
+export const PortfolioTab: React.FC = () => {
   const user = useUser();
   const { webApp } = useTelegram();
   const [activeTab, setActiveTab] = useState<'gifts' | 'stickers'>('gifts');
@@ -1248,7 +1244,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({ hideAdsBanner = fals
   return (
     <div className="space-y-4 py-4 animate-fade-in">
       {/* Ads Banner */}
-      {!hideAdsBanner && <AdsBanner />}
+      <AdsBanner />
 
       {/* Inner Tabs */}
       <div className="flex justify-start px-4">

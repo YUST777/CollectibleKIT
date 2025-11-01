@@ -399,7 +399,7 @@ export const ProfileTab: React.FC = () => {
 
       {currentInnerTab === 'portfolio' && (
         <div className="-mx-4">
-          <PortfolioTab hideAdsBanner={true} />
+          <PortfolioTab />
         </div>
       )}
     </div>
