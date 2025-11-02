@@ -114,7 +114,7 @@ export const DynamicNavigation: React.FC = () => {
 
   // Single main navigation bar always rendered
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t border-gray-700 px-4 py-3 transition-all duration-300 ease-in-out pb-12" style={{ backgroundColor: '#252525' }}>
+    <div className="fixed bottom-0 left-0 right-0 border-t border-gray-700 px-4 py-3 transition-all duration-300 ease-in-out pb-12 z-[60]" style={{ backgroundColor: '#252525' }}>
       <div className="flex justify-around">
         <button
           onClick={() => handleMainTabClick('home')}

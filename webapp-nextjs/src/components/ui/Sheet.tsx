@@ -11,7 +11,7 @@ const SheetClose = SheetPrimitive.Close
 
 const SheetPortal = (props: SheetPrimitive.DialogPortalProps) => (
   <SheetPrimitive.Portal {...props}>
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[70]">
       {props.children}
     </div>
   </SheetPrimitive.Portal>
@@ -25,7 +25,7 @@ const SheetOverlay = React.forwardRef<
   <SheetPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+      "fixed inset-0 z-[70] bg-black/60 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
       className
     )}
     {...props}
@@ -43,7 +43,7 @@ const SheetContent = React.forwardRef<
       ref={ref}
       {...props}
       className={cn(
-        "fixed z-50 inset-x-0 bottom-0 mt-24 h-auto max-h-[85vh] overflow-y-auto rounded-t-[24px] bg-[#1c1c1d] p-6 shadow-lg data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-full data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-full",
+        "fixed z-[70] inset-x-0 bottom-0 mt-24 h-auto max-h-[85vh] overflow-y-auto rounded-t-[24px] bg-[#1c1c1d] p-6 shadow-lg data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-full data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-full",
         className
       )}
     >
