@@ -1111,27 +1111,65 @@ export const PortfolioTab: React.FC = () => {
       return;
     }
 
+    // Show loading toast
+    const loadingToast = toast.loading('Fetching gift metadata and price...');
+
     // Generate fragment URL
     const slugLower = selectedGiftName.toLowerCase().replace(/\s+/g, '');
     const fragmentUrl = `https://nft.fragment.com/gift/${slugLower}-${ribbonNum}.medium.jpg`;
 
-    // Create new gift initially without price
+    // Fetch metadata first
+    let modelName = null;
+    let backdropName = null;
+    let patternName = null;
+    let price = null;
+
+    try {
+      console.log('📊 Fetching metadata for', selectedGiftName, ribbonNum);
+      const metadataResponse = await fetch(`/api/portfolio/gift-metadata?gift_name=${encodeURIComponent(selectedGiftName)}&item_id=${ribbonNum}`);
+      
+      if (metadataResponse.ok) {
+        const metadata = await metadataResponse.json();
+        
+        if (metadata.success && metadata.model) {
+          modelName = metadata.model;
+          backdropName = metadata.backdrop;
+          patternName = metadata.symbol;
+          console.log('✅ Got metadata:', { modelName, backdropName, patternName });
+        }
+      }
+    } catch (error) {
+      console.error('⚠️ Failed to fetch metadata:', error);
+    }
+
+    // Fetch price with metadata
+    try {
+      const priceResult = await getGiftPrice(selectedGiftName, modelName, backdropName);
+      if (priceResult.price !== null) {
+        price = priceResult.price;
+        console.log('✅ Got price:', price);
+      }
+    } catch (error) {
+      console.error('⚠️ Failed to fetch price:', error);
+    }
+
+    // Create new gift with metadata and price
     const newGift: PortfolioGift = {
       slug: slugLower,
       num: ribbonNum,
       title: selectedGiftName,
-      model_name: null,
-      backdrop_name: null,
-      pattern_name: null,
+      model_name: modelName,
+      backdrop_name: backdropName,
+      pattern_name: patternName,
       model_rarity: null,
       backdrop_rarity: null,
       pattern_rarity: null,
-      model_display: undefined,
-      backdrop_display: undefined,
-      pattern_display: undefined,
+      model_display: modelName ? `${modelName} -` : undefined,
+      backdrop_display: backdropName ? `${backdropName} -` : undefined,
+      pattern_display: patternName ? `${patternName} -` : undefined,
       pinned: false,
       fragment_url: fragmentUrl,
-      price: null,
+      price: price,
       priceError: undefined,
       availability_issued: null,
       availability_total: null,
@@ -1139,9 +1177,10 @@ export const PortfolioTab: React.FC = () => {
       is_custom: true // Mark as custom gift
     };
 
-    // Add to gifts immediately (optimistic update)
+    // Add to gifts
     setGifts(prev => [...prev, newGift]);
     closeAddGiftDrawer();
+    toast.dismiss(loadingToast);
     toast.success('Gift added to portfolio!');
 
     // Save to database via API for cross-device sync
@@ -1167,37 +1206,6 @@ export const PortfolioTab: React.FC = () => {
     } catch (error) {
       console.error('❌ Error saving custom gift to database:', error);
       // Don't show error to user as the gift is already added locally
-    }
-
-    // Fetch price from Portal Market in background
-    try {
-      const priceResult = await getGiftPrice(selectedGiftName, null, null);
-      if (priceResult.price !== null) {
-        // Update the gift with the price
-        setGifts(prev => prev.map(gift => {
-          if (gift.slug === slugLower && gift.num === ribbonNum) {
-            return { ...gift, price: priceResult.price };
-          }
-          return gift;
-        }));
-      } else if (priceResult.error) {
-        // Update the gift with error
-        setGifts(prev => prev.map(gift => {
-          if (gift.slug === slugLower && gift.num === ribbonNum) {
-            return { ...gift, priceError: priceResult.error };
-          }
-          return gift;
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching price from Portal:', error);
-      // Update the gift with error
-      setGifts(prev => prev.map(gift => {
-        if (gift.slug === slugLower && gift.num === ribbonNum) {
-          return { ...gift, priceError: 'Failed to fetch price' };
-        }
-        return gift;
-      }));
     }
   };
 
