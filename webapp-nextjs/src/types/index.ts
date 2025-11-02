@@ -144,7 +144,7 @@ export interface User {
   username?: string;
   first_name?: string;
   credits: number;
-  user_type: 'vip' | 'test' | 'premium' | 'normal';
+  user_type: 'vip' | 'premium' | 'normal';
   can_process: boolean;
   watermark: boolean;
   credits_remaining: number | 'unlimited';

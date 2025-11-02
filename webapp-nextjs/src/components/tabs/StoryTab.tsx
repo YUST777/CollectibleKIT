@@ -26,7 +26,7 @@ export const StoryTab: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if user can use custom watermark
-  const canUseCustomWatermark = user?.user_type === 'premium' || user?.user_type === 'vip' || user?.user_type === 'test';
+  const canUseCustomWatermark = user?.user_type === 'premium' || user?.user_type === 'vip';
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -146,7 +146,7 @@ export const StoryTab: React.FC = () => {
       if (result.success) {
         // Only update user info for premium/vip users to preserve their status
         // For normal users, keep the existing user state to preserve premium status
-        if (result.user_type && (result.user_type === 'premium' || result.user_type === 'vip' || result.user_type === 'test')) {
+        if (result.user_type && (result.user_type === 'premium' || result.user_type === 'vip')) {
           setUser({
             ...user,
             user_type: result.user_type,
@@ -168,7 +168,7 @@ export const StoryTab: React.FC = () => {
 
         // Show success message
         let statusMessage = '';
-        if (result.user_type === 'vip' || result.user_type === 'test') {
+        if (result.user_type === 'vip') {
           statusMessage = 'VIP processing complete!';
         } else if (result.user_type === 'premium') {
           statusMessage = 'Premium processing complete!';
@@ -461,7 +461,7 @@ export const StoryTab: React.FC = () => {
         <div>
 
 
-      {/* Watermark Settings (All users can see, but only Premium/VIP/Test can use) */}
+      {/* Watermark Settings (All users can see, but only Premium/VIP can use) */}
       {storyPieces.length === 0 && (
         <div className="tg-card">
           <div className="flex items-center justify-between mb-3">

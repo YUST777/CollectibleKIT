@@ -12,21 +12,17 @@ const VIP_USERS = new Set([
   7152782013,
   800092886,
   879660478,
-  1234567890, // Add test user
 ]);
 
-// Test users (VIP privileges for testing)
-const TEST_USERS = new Set([
-  1234567890,
-  9876543210,
-]);
+// Test users (VIP privileges for testing) - REMOVED ALL TEST USERS
+const TEST_USERS = new Set<number>();
 
 // AD TESTING USER - This ID will see ads (for Monetag testing)
 const AD_TEST_USER_ID = 7660176383;
 
 export interface UserPermissions {
   can_process: boolean;
-  user_type: 'vip' | 'premium' | 'normal' | 'test';
+  user_type: 'vip' | 'premium' | 'normal';
   watermark: boolean;
   credits_remaining: number | 'unlimited';
   free_remaining: number;
@@ -39,14 +35,16 @@ export class UserService {
    */
   static async getUserPermissions(userId: number): Promise<UserPermissions> {
     try {
-      // Special handling for test user (ID 0) - allow unlimited processing
-      if (userId === 0) {
+      // NO TEST USERS - Require real user authentication
+      if (userId === 0 || userId < 100000) {
+        console.error('❌ Invalid user ID:', userId);
         return {
-          can_process: true,
-          user_type: 'test',
-          watermark: false,
-          credits_remaining: 'unlimited',
-          free_remaining: 999999
+          can_process: false,
+          user_type: 'normal',
+          watermark: true,
+          credits_remaining: 0,
+          free_remaining: 0,
+          message: 'Invalid user ID'
         };
       }
       
@@ -71,7 +69,7 @@ export class UserService {
       }
 
       // Check user type - NEW SYSTEM: Credits only, no free uses
-      let userType: 'vip' | 'premium' | 'normal' | 'test' = 'normal';
+      let userType: 'vip' | 'premium' | 'normal' = 'normal';
       let canProcess = false;
       let watermark = true;
       let creditsRemaining: number | 'unlimited' = user.credits;
@@ -104,11 +102,6 @@ export class UserService {
         }
       } else if (VIP_USERS.has(userId) || user.user_type === 'vip') {
         userType = 'vip';
-        canProcess = true;
-        watermark = false;
-        creditsRemaining = 'unlimited';
-      } else if (TEST_USERS.has(userId) || user.user_type === 'test') {
-        userType = 'test';
         canProcess = true;
         watermark = false;
         creditsRemaining = 'unlimited';
@@ -147,7 +140,7 @@ export class UserService {
         user_type: userType,
         watermark: watermark,
         credits_remaining: creditsRemaining,
-        free_remaining: userType === 'premium' || userType === 'vip' || userType === 'test' ? 999999 : user.credits,
+        free_remaining: userType === 'premium' || userType === 'vip' ? 999999 : user.credits,
         message: canProcess ? undefined : 'No credits remaining'
       };
 
@@ -220,8 +213,8 @@ export class UserService {
       // Debug: Check what user_type permissions returned
       console.log(`🔍 Processing request for userId: ${userId}, user_type from permissions: ${permissions.user_type}`);
       
-      if (permissions.user_type === 'vip' || permissions.user_type === 'test' || permissions.user_type === 'premium') {
-        // VIP/Test/Premium users: NO credits consumed (unlimited tool usage)
+      if (permissions.user_type === 'vip' || permissions.user_type === 'premium') {
+        // VIP/Premium users: NO credits consumed (unlimited tool usage)
         console.log(`✅ ${permissions.user_type} user: No credits required (unlimited access)`);
         updatedUser = await db.getUser(userId);
       } else {

@@ -286,7 +286,7 @@ export const ProfileTab: React.FC = () => {
                 <p className="text-text-active text-sm">
                   {user?.user_type === 'premium' ? 'Premium User' : 
                    user?.user_type === 'vip' ? 'VIP User' :
-                   user?.user_type === 'test' ? 'Test User' : 'Free User'}
+                   'Free User'}
                 </p>
               </div>
             </div>
@@ -296,7 +296,7 @@ export const ProfileTab: React.FC = () => {
               <div className="flex justify-between items-center">
                 <span className="text-text-idle font-medium">Credits</span>
                 <span className="text-icon-active font-bold">
-                  {user?.user_type === 'premium' || user?.user_type === 'vip' || user?.user_type === 'test'
+                  {user?.user_type === 'premium' || user?.user_type === 'vip'
                     ? '∞' 
                     : typeof user?.credits_remaining === 'number' 
                       ? user.credits_remaining 

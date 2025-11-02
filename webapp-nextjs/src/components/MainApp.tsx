@@ -173,27 +173,9 @@ export const MainApp: React.FC = () => {
             document.documentElement.style.setProperty('--tg-viewport-height', `${webApp.viewportHeight}px`);
           });
         } else {
-          console.warn('⚠️ Telegram WebApp not available - running in development mode');
-          // Set development user for testing
-          setUser({
-            user_id: 1234567890,
-            username: 'testuser',
-            first_name: 'Test',
-            user_type: 'test',
-            watermark: false,
-            credits: 100,
-            can_process: true,
-            credits_remaining: 100,
-            created_at: Date.now(),
-            last_activity: Date.now(),
-          });
-          
-          // Also set TON balance for development
-          setTonBalance({
-            balance: 1000,
-            rewards: 0,
-            walletConnected: false,
-          });
+          console.error('❌ Telegram WebApp not available - cannot authenticate');
+          console.error('❌ App requires Telegram authentication. Please open from Telegram.');
+          // Don't set any user - they need to be authenticated via Telegram
         }
         
         clearTimeout(timeout);

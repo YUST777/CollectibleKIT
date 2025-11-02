@@ -12,7 +12,7 @@ export interface User {
   credits: number;
   created_at: number;
   last_activity: number;
-  user_type?: 'vip' | 'premium' | 'normal' | 'test' | string;
+  user_type?: 'vip' | 'premium' | 'normal' | string;
   watermark?: boolean;
   can_process?: boolean;
   credits_remaining?: number;
