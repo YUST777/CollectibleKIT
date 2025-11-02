@@ -501,10 +501,10 @@ export const PortfolioTab: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gifts.length]); // Only trigger when gift count changes (not on every update)
 
-  const loadPortfolio = async () => {
+  const loadPortfolio = async (): Promise<any[]> => {
     if (!user?.user_id) {
       console.warn('⚠️ loadPortfolio: No user_id, aborting');
-      return;
+      return [];
     }
 
     console.log('📊 loadPortfolio: Starting for user', user.user_id);
@@ -538,6 +538,7 @@ export const PortfolioTab: React.FC = () => {
     }
     
     setIsLoading(false);
+    return allGifts;
   };
 
   const loadAutoGifts = async () => {
@@ -1024,7 +1025,7 @@ export const PortfolioTab: React.FC = () => {
     }
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     hapticFeedback('impact', 'medium', webApp || undefined);
     
     // Clear cache to force fresh data
@@ -1034,11 +1035,37 @@ export const PortfolioTab: React.FC = () => {
       console.log('🗑️ Cache cleared for refresh');
     }
     
-    loadPortfolio();
+    const loadedGifts = await loadPortfolio();
     loadPortfolioHistory();
     if (activeTab === 'stickers') {
       loadStickers();
     }
+    
+    // Refresh prices for all gifts (both auto and custom)
+    console.log('💰 Refreshing prices for all gifts...');
+    const pricePromises = loadedGifts.map(async (gift) => {
+      const key = `${gift.slug}-${gift.num}`;
+      try {
+        const priceResult = await getGiftPrice(gift.title, gift.backdrop_name || null, gift.model_name || null);
+        if (priceResult.price !== null) {
+          setGifts(prev => prev.map(g => {
+            if (g.slug === gift.slug && g.num === gift.num) {
+              return { ...g, price: priceResult.price };
+            }
+            return g;
+          }));
+          console.log('✅ Updated price for', gift.title, ':', priceResult.price);
+        }
+      } catch (error) {
+        console.error('Error refreshing price for', gift.title, ':', error);
+      }
+    });
+    
+    // Don't await - let it run in background
+    Promise.all(pricePromises).then(() => {
+      console.log('✅ All prices refreshed');
+    });
+    
     toast.success('Portfolio updated');
   };
 
