@@ -29,33 +29,6 @@ SESSION_NAME = ' sticker0.2/gifts_session'  # Use authorized user session
 current_jwt_token = None
 pricing_data = None
 
-def convert_query_id_to_user_format(query_id_init_data: str) -> str:
-    """Convert RequestWebViewRequest format to webapp format"""
-    try:
-        # Parse the query_id format
-        params = {}
-        for param in query_id_init_data.split('&'):
-            if '=' in param:
-                key, value = param.split('=', 1)
-                params[key] = value
-        
-        print(f"DEBUG: Found params: {list(params.keys())}", file=sys.stderr)
-        
-        # Remove query_id, keep everything else
-        if 'query_id' in params:
-            del params['query_id']
-        
-        # Reconstruct as user= format (maintain order: user, auth_date, etc.)
-        # Try to maintain order to preserve hash validity
-        reconstructed = '&'.join(f"{k}={v}" for k, v in params.items())
-        
-        print(f"DEBUG: Converted params: {list(params.keys())}", file=sys.stderr)
-        
-        return reconstructed
-    except Exception as e:
-        print(f"ERROR: Failed to convert initData format: {e}", file=sys.stderr)
-        return query_id_init_data  # Return original if conversion fails
-
 async def get_webview_url(client: TelegramClient) -> dict:
     """Get webview URL using Telethon"""
     try:
@@ -72,7 +45,19 @@ async def get_webview_url(client: TelegramClient) -> dict:
         return None
 
 async def get_fresh_init_data() -> str:
-    """Get fresh initData using Telethon webview"""
+    """
+    Get fresh initData using Telethon webview
+    
+    ⚠️ WARNING: This generates query_id= format from RequestWebViewRequest.
+    Stickerdom API requires user= format with valid hash.
+    
+    The cryptographic hash includes ALL parameters. You cannot:
+    - Remove query_id without invalidating the hash
+    - Regenerate the hash without the bot's secret key
+    
+    SOLUTION: Use MANUAL_INIT_DATA env var with webapp initData from browser.
+    See: sticker0.2/SIMPLE_FIX.md for instructions.
+    """
     client = None
     try:
         client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
@@ -114,15 +99,14 @@ async def get_fresh_init_data() -> str:
                 # Still encoded, decode again
                 init_data = urllib.parse.unquote(init_data)
             
-            print(f"DEBUG: Extracted initData from fragment, starts with 'user=': {init_data.startswith('user=')}", file=sys.stderr)
+            print(f"DEBUG: Extracted initData from fragment", file=sys.stderr)
+            print(f"DEBUG: Format: query_id={init_data.startswith('query_id=')}, user={init_data.startswith('user=')}", file=sys.stderr)
             print(f"DEBUG: First 100 chars: {init_data[:100]}", file=sys.stderr)
             
-            # Convert query_id= format to user= format if needed
-            if init_data.startswith('query_id='):
-                print(f"DEBUG: Converting query_id format to user format", file=sys.stderr)
-                init_data = convert_query_id_to_user_format(init_data)
-                print(f"DEBUG: Converted, now starts with 'user=': {init_data.startswith('user=')}", file=sys.stderr)
-                print(f"DEBUG: Converted first 150 chars: {init_data[:150]}", file=sys.stderr)
+            # ⚠️ WARNING: Do NOT convert query_id= format!
+            # The hash is cryptographically signed and includes query_id.
+            # Removing it invalidates the hash signature.
+            # API will reject this format - use MANUAL_INIT_DATA from browser instead
             
             return init_data
         
