@@ -9,7 +9,7 @@ import { useUser } from '@/store/useAppStore';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { hapticFeedback } from '@/lib/telegram';
 import { getGiftPrice } from '@/lib/portalMarketService';
-import { PaperAirplaneIcon, StarIcon, Cog6ToothIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PaperAirplaneIcon, StarIcon, Cog6ToothIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 
@@ -841,6 +841,58 @@ export const PortfolioTab: React.FC = () => {
     loadChartData(gift.title, chartType);
   };
 
+  const handleDeleteGift = async (gift: PortfolioGift, index: number) => {
+    hapticFeedback('impact', 'light', webApp || undefined);
+    
+    // Show confirmation
+    const confirmed = webApp?.showConfirm?.('Are you sure you want to remove this gift from your portfolio?');
+    
+    if (!confirmed && !window.confirm('Are you sure you want to remove this gift from your portfolio?')) {
+      return;
+    }
+    
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      // Check if it's a custom gift by trying to get gift ID from localStorage
+      // or we need to track custom gifts differently
+      const customGifts = await fetch('/api/portfolio/custom-gifts', {
+        headers
+      }).then(r => r.json());
+      
+      // Find if this gift is a custom gift
+      const customGift = customGifts.success ? customGifts.gifts.find((cg: any) => 
+        cg.slug === gift.slug && cg.num === gift.num
+      ) : null;
+      
+      if (customGift) {
+        // Delete from custom gifts API
+        const response = await fetch(`/api/portfolio/custom-gifts?id=${customGift.id}`, {
+          method: 'DELETE',
+          headers
+        });
+        
+        if (response.ok) {
+          toast.success('Custom gift removed');
+          // Reload portfolio
+          loadPortfolio();
+        } else {
+          toast.error('Failed to remove custom gift');
+        }
+      } else {
+        // For now, we can't delete auto gifts from Telegram
+        // Just remove from local state
+        const newGifts = gifts.filter((_, i) => i !== index);
+        setGifts(newGifts);
+        toast.success('Gift removed from view');
+      }
+    } catch (error) {
+      console.error('Error deleting gift:', error);
+      toast.error('Failed to remove gift');
+    }
+  };
+
   const loadChartData = async (collectionName: string, type?: '24h' | '3d' | '1w' | '1m' | '3m') => {
     const chartTypeToUse = type || chartType;
     setChartLoading(true);
@@ -1545,6 +1597,16 @@ export const PortfolioTab: React.FC = () => {
                         title="Edit gift"
                       >
                         <Cog6ToothIcon className="w-4 h-4 text-white/80" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteGift(gift, index);
+                        }}
+                        className="p-1.5 hover:bg-red-500/20 rounded-lg transition-all backdrop-blur-sm"
+                        title="Delete gift"
+                      >
+                        <XMarkIcon className="w-4 h-4 text-red-400" />
                       </button>
                     </div>
                   </div>
