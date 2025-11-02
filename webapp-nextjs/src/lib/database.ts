@@ -1526,6 +1526,26 @@ class DatabaseService {
       return null;
     }
   }
+
+  // Portfolio methods
+  async getPortfolioHistory(userId: number): Promise<Array<{date: string; total_value: number; gifts_count: number}>> {
+    try {
+      // TODO: Implement portfolio history retrieval from database
+      return [];
+    } catch (error) {
+      console.error('Error getting portfolio history:', error);
+      return [];
+    }
+  }
+
+  async savePortfolioSnapshot(userId: number, totalValue: number, giftsCount: number): Promise<void> {
+    try {
+      // TODO: Implement portfolio snapshot saving to database
+      console.log('Portfolio snapshot (stub):', { userId, totalValue, giftsCount });
+    } catch (error) {
+      console.error('Error saving portfolio snapshot:', error);
+    }
+  }
 }
 
 // Export singleton instance

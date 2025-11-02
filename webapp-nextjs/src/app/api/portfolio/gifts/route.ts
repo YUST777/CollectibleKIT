@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     
     // For now, return empty array - this should be integrated with the Python bot
     // to fetch actual gifts from the user's Telegram Star profile
-    const gifts = [];
+    const gifts: any[] = [];
     const totalValue = 0;
 
     return NextResponse.json({
