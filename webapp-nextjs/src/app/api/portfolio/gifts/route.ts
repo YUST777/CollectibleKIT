@@ -78,12 +78,14 @@ export async function GET(request: NextRequest) {
     const pythonScript = path.join(projectRoot, 'bot', 'get_profile_gifts.py');
     const venvPython = '/usr/bin/python3';
     
-    // Build command arguments - pass user ID
-    const args = [pythonScript, user.id.toString()];
+    // Build command arguments - prefer username if available (better for Telethon lookup)
+    const userIdentifier = user.username ? `@${user.username}` : user.id.toString();
+    const args = [pythonScript, userIdentifier];
     
     console.log('🐍 Running portfolio gifts script:', {
       python: venvPython,
       script: pythonScript,
+      userIdentifier: userIdentifier,
       userId: user.id,
       cwd: process.cwd(),
       projectRoot
