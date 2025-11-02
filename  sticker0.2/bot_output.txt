@@ -1,0 +1,43 @@
+2025-11-02 18:06:24,398 - __main__ - INFO - Pricing data loaded successfully
+2025-11-02 18:06:24,404 - telethon.network.mtprotosender - INFO - Connecting to 149.154.167.92:443/TcpFull...
+2025-11-02 18:06:24,472 - telethon.network.mtprotosender - INFO - Connection to 149.154.167.92:443/TcpFull complete!
+2025-11-02 18:06:24,936 - __main__ - INFO - Telethon client started with user session
+2025-11-02 18:06:25,263 - __main__ - ERROR - WebView request error: The API access for bot users is restricted. The method you tried to invoke cannot be executed as a bot (caused by RequestWebViewRequest)
+2025-11-02 18:06:25,263 - __main__ - ERROR - Failed to get webview URL
+2025-11-02 18:06:25,264 - telethon.network.mtprotosender - INFO - Disconnecting from 149.154.167.92:443/TcpFull...
+2025-11-02 18:06:25,264 - telethon.network.mtprotosender - INFO - Disconnection from 149.154.167.92:443/TcpFull complete!
+2025-11-02 18:06:25,273 - __main__ - INFO - Telethon client disconnected
+Traceback (most recent call last):
+  File "/home/yousefmsm1/Desktop/ sticker0.2/my_bot.py", line 629, in main
+    application.run_polling(drop_pending_updates=True)
+  File "/home/yousefmsm1/Desktop/ sticker0.2/venv/lib/python3.12/site-packages/telegram/ext/_application.py", line 836, in run_polling
+    return self.__run(
+           ^^^^^^^^^^^
+  File "/home/yousefmsm1/Desktop/ sticker0.2/venv/lib/python3.12/site-packages/telegram/ext/_application.py", line 1007, in __run
+    loop = asyncio.get_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/events.py", line 702, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+/home/yousefmsm1/Desktop/ sticker0.2/my_bot.py:635: RuntimeWarning: coroutine 'Updater.start_polling' was never awaited
+  traceback.print_exc()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+🚀 Starting Simple Sticker Portfolio Bot...
+📊 Loading pricing data...
+✅ Pricing data loaded
+🔐 Getting fresh initData via Telethon webview...
+⚠️ Could not get fresh initData via webview
+💡 Falling back to manual initData (may be expired)
+⚠️ No initData available - portfolio commands may not work
+💡 To enable auto-refresh, run: python3 setup_telethon_session.py
+   This will create a user session (one-time phone login required)
+✅ Bot is ready!
+
+📱 Available commands:
+• /start - Welcome message
+• /portfolio <user_id> - Get portfolio value
+
+🔧 Example usage:
+/portfolio 800092886
+
+❌ Bot error: There is no current event loop in thread 'MainThread'.
