@@ -509,7 +509,46 @@ export const PortfolioTab: React.FC = () => {
 
     console.log('📊 loadPortfolio: Starting for user', user.user_id);
     
-    // Check cache first
+    setIsLoading(true);
+    
+    // Load both auto and custom gifts in parallel
+    const [autoGiftsResponse, customGiftsResponse] = await Promise.all([
+      loadAutoGifts(),
+      loadCustomGiftsFromDBAPI()
+    ]);
+    
+    // Merge results
+    const allGifts = [...(autoGiftsResponse?.gifts || []), ...(customGiftsResponse?.gifts || [])];
+    const totalValue = (autoGiftsResponse?.totalValue || 0) + (customGiftsResponse?.totalValue || 0);
+    
+    setGifts(allGifts);
+    setTotalValue(totalValue);
+    
+    // Cache the merged result
+    const cacheKey = `portfolio_gifts_${user.user_id}`;
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        gifts: allGifts,
+        totalValue: totalValue,
+        timestamp: Date.now()
+      }));
+      console.log('✅ Portfolio data cached');
+    } catch (e) {
+      console.warn('⚠️ Error caching portfolio data:', e);
+    }
+    
+    setIsLoading(false);
+  };
+
+  const loadAutoGifts = async () => {
+    if (!user?.user_id) {
+      console.warn('⚠️ loadAutoGifts: No user_id, aborting');
+      return null;
+    }
+
+    console.log('📊 loadAutoGifts: Starting for user', user.user_id);
+    
+    // Check cache first for auto gifts
     const cacheKey = `portfolio_gifts_${user.user_id}`;
     const cacheExpiry = 5 * 60 * 1000; // 5 minutes cache
     
@@ -518,37 +557,35 @@ export const PortfolioTab: React.FC = () => {
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
         const age = Date.now() - parsed.timestamp;
+        const cachedAutoGifts = parsed.gifts?.filter((g: any) => !g.is_custom) || [];
         
-        if (age < cacheExpiry) {
-          console.log('✅ Using cached portfolio data (age:', Math.round(age / 1000), 'seconds)');
-          setGifts(parsed.gifts);
-          setTotalValue(parsed.totalValue);
-          setIsLoading(false);
-          return; // Return early with cached data
-        } else {
-          console.log('⚠️ Cache expired (age:', Math.round(age / 1000), 'seconds), fetching fresh data');
+        if (age < cacheExpiry && cachedAutoGifts.length > 0) {
+          console.log('✅ Using cached auto gifts (age:', Math.round(age / 1000), 'seconds)');
+          return {
+            gifts: cachedAutoGifts,
+            totalValue: parsed.totalValue || 0
+          };
         }
       }
     } catch (e) {
       console.warn('⚠️ Error reading cache:', e);
     }
     
-    setIsLoading(true);
     try {
       // Get Telegram initData to send with request
       const webApp = (window as any).Telegram?.WebApp || (window as any).tg;
       const initData = webApp?.initData;
       
-      console.log('📊 loadPortfolio: initData available:', !!initData, 'length:', initData?.length);
+      console.log('📊 loadAutoGifts: initData available:', !!initData, 'length:', initData?.length);
       
       const headers: Record<string, string> = {};
       if (initData) {
         headers['X-Telegram-Init-Data'] = initData;
       } else {
-        console.error('❌ loadPortfolio: No initData available - API will fail authentication');
+        console.error('❌ loadAutoGifts: No initData available - API will fail authentication');
       }
       
-      console.log('📊 loadPortfolio: Making API request to /api/portfolio/gifts');
+      console.log('📊 loadAutoGifts: Making API request to /api/portfolio/gifts');
       
       // Create abort controller for timeout
       const abortController = new AbortController();
@@ -566,33 +603,18 @@ export const PortfolioTab: React.FC = () => {
       } catch (fetchError) {
         clearTimeout(timeoutId);
         console.error('❌ Fetch error:', fetchError);
-        
-        if (fetchError instanceof Error) {
-          if (fetchError.name === 'AbortError') {
-            toast.error('Request timed out - please try again');
-            setIsLoading(false);
-            return;
-          } else if (fetchError.message.includes('Failed to fetch') || fetchError.message === 'Load failed') {
-            toast.error('Network error - please check your connection');
-          } else {
-            toast.error(`Request failed: ${fetchError.message}`);
-          }
-        } else {
-          toast.error('Failed to load portfolio - network error');
-        }
-        setIsLoading(false);
-        return;
+        return null;
       }
       
-      console.log('📊 loadPortfolio: Response status:', response.status);
+      console.log('📊 loadAutoGifts: Response status:', response.status);
       
       const responseText = await response.text();
-      console.log('📊 loadPortfolio: Response body (first 500 chars):', responseText.substring(0, 500));
+      console.log('📊 loadAutoGifts: Response body (first 500 chars):', responseText.substring(0, 500));
       
       if (response.ok) {
         try {
           const data = JSON.parse(responseText);
-          console.log('📊 loadPortfolio: Parsed data:', { 
+          console.log('📊 loadAutoGifts: Parsed data:', { 
             success: data.success, 
             giftsCount: data.gifts?.length,
             totalValue: data.total_value 
@@ -600,20 +622,8 @@ export const PortfolioTab: React.FC = () => {
           
           if (data.success) {
             const giftsList = data.gifts || [];
-            console.log('✅ Portfolio loaded successfully:', {
-              giftsCount: giftsList.length,
-              totalValue: data.total_value,
-              gifts: giftsList.map((g: any) => ({
-                title: g.title,
-                slug: g.slug,
-                num: g.num,
-                price: g.price,
-                fragment_url: g.fragment_url,
-                hasPrice: g.price !== null && g.price !== undefined
-              }))
-            });
             
-            // Ensure all required fields are present
+            // Normalize gifts with is_custom: false
             const normalizedGifts = giftsList.map((g: any) => ({
               slug: g.slug || '',
               num: g.num || null,
@@ -635,78 +645,85 @@ export const PortfolioTab: React.FC = () => {
               availability_total: g.availability_total || null,
               total_supply: g.total_supply || null,
               is_custom: false, // Auto-fetched gifts are not custom
-              gift_id: g.id || undefined // Include database ID if present
+              gift_id: g.id || undefined
             }));
             
-            console.log('📦 Normalized gifts:', normalizedGifts);
-            console.log('📦 Setting gifts - count:', normalizedGifts.length);
-            
-            // Merge auto gifts with existing custom gifts
-            setGifts(prevGifts => {
-              // Get existing custom gifts
-              const customGifts = prevGifts.filter(g => g.is_custom);
-              
-              // Combine custom gifts with new auto gifts
-              const merged = [...normalizedGifts, ...customGifts];
-              
-              console.log('✅ Merging gifts - auto:', normalizedGifts.length, 'custom:', customGifts.length, 'total:', merged.length);
-              
-              // Save merged gifts to cache
-              try {
-                localStorage.setItem(cacheKey, JSON.stringify({
-                  gifts: merged,
-                  totalValue: data.total_value || 0,
-                  timestamp: Date.now()
-                }));
-                console.log('✅ Portfolio data cached');
-              } catch (e) {
-                console.warn('⚠️ Error caching portfolio data:', e);
-              }
-              
-              return merged;
-            });
-            setTotalValue(data.total_value || 0);
-            
-            console.log('✅ Portfolio state updated - totalValue:', data.total_value);
-
-            // Save portfolio snapshot if not already saved today (fire and forget, don't wait)
-            if (normalizedGifts.length > 0) {
-              savePortfolioSnapshot(data.total_value || 0, normalizedGifts.length).catch(err => {
-                console.error('Error saving snapshot (non-blocking):', err);
-              });
-            }
-            
-            // Stop loading AFTER setting all state
-            setIsLoading(false);
-            console.log('✅ Loading state set to false');
-          } else {
-            console.error('❌ Portfolio API returned success:false');
-            console.error('❌ Error:', data.error);
-            console.error('❌ Debug info:', data.debug);
-            toast.error(data.error || 'Failed to load portfolio');
-            setIsLoading(false);
+            console.log('✅ Auto gifts loaded:', normalizedGifts.length);
+            return {
+              gifts: normalizedGifts,
+              totalValue: data.total_value || 0
+            };
           }
         } catch (parseError) {
           console.error('❌ Failed to parse portfolio response:', parseError);
-          toast.error('Failed to parse portfolio data');
-          setIsLoading(false);
+          return null;
         }
-      } else {
-        console.error('❌ Portfolio API error:', response.status, responseText.substring(0, 200));
-        try {
-          const errorData = JSON.parse(responseText);
-          toast.error(errorData.error || `Failed to load portfolio (${response.status})`);
-        } catch {
-          toast.error(`Failed to load portfolio (${response.status})`);
-        }
-        setIsLoading(false);
       }
     } catch (error) {
-      console.error('Error loading portfolio:', error);
-      toast.error('Failed to load portfolio');
-      setIsLoading(false);
+      console.error('❌ loadAutoGifts error:', error);
+      return null;
     }
-    // Note: No finally block - we explicitly set isLoading(false) in all paths above
+    return null;
+  };
+
+  const loadCustomGiftsFromDBAPI = async () => {
+    if (!user?.user_id) return null;
+    
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      const response = await fetch('/api/portfolio/custom-gifts', {
+        headers
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.gifts && data.gifts.length > 0) {
+          console.log('✅ Loaded', data.gifts.length, 'custom gifts from database');
+          
+          const customGiftsFromDB = data.gifts.map((g: any) => {
+            const slugLower = (g.slug || '').toLowerCase().replace(/\s+/g, '');
+            const fragmentUrl = slugLower && g.num ? `https://nft.fragment.com/gift/${slugLower}-${g.num}.medium.jpg` : null;
+            
+            return {
+              slug: g.slug || '',
+              num: g.num || null,
+              title: g.title || 'Unknown Gift',
+              model_name: g.model_name || null,
+              backdrop_name: g.backdrop_name || null,
+              pattern_name: g.pattern_name || null,
+              model_rarity: g.model_rarity || null,
+              backdrop_rarity: g.backdrop_rarity || null,
+              pattern_rarity: g.pattern_rarity || null,
+              model_display: undefined,
+              backdrop_display: undefined,
+              pattern_display: undefined,
+              pinned: g.pinned || false,
+              fragment_url: fragmentUrl,
+              price: g.price || null,
+              priceError: undefined,
+              availability_issued: g.availability_issued || null,
+              availability_total: g.availability_total || null,
+              total_supply: g.total_supply || undefined,
+              is_custom: true,
+              gift_id: g.id
+            };
+          });
+          
+          const totalValue = customGiftsFromDB.reduce((sum: number, g: PortfolioGift) => sum + (g.price || 0), 0);
+          
+          return {
+            gifts: customGiftsFromDB,
+            totalValue
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error loading custom gifts from database:', error);
+    }
+    
+    return null;
   };
 
   const loadPortfolioHistory = async () => {
@@ -1088,10 +1105,35 @@ export const PortfolioTab: React.FC = () => {
       is_custom: true // Mark as custom gift
     };
 
-    // Add to gifts immediately
+    // Add to gifts immediately (optimistic update)
     setGifts(prev => [...prev, newGift]);
     closeAddGiftDrawer();
     toast.success('Gift added to portfolio!');
+
+    // Save to database via API for cross-device sync
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      const response = await fetch('/api/portfolio/custom-gifts', {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ gift: newGift })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Custom gift saved to database:', result);
+      } else {
+        console.error('⚠️ Failed to save custom gift to database:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error saving custom gift to database:', error);
+      // Don't show error to user as the gift is already added locally
+    }
 
     // Fetch price from Portal Market in background
     try {
