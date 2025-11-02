@@ -196,6 +196,22 @@ export async function GET(request: NextRequest) {
           
           console.error('❌ Python script error (exit code', code, '):', stderrFiltered || 'Unknown error', output);
           
+          // Try to parse output as JSON to get the actual error message
+          let actualError = 'Failed to fetch portfolio gifts';
+          try {
+            if (output.trim()) {
+              const parsed = JSON.parse(output);
+              if (parsed.error) {
+                actualError = parsed.error;
+              }
+            }
+          } catch (e) {
+            // If we can't parse, use stderr or default message
+            if (stderrFiltered.trim()) {
+              actualError = stderrFiltered.trim();
+            }
+          }
+          
           // On error, return stale cache if available
           if (cachedData) {
             console.log('⚠️ Returning stale cache due to Python script error');
@@ -208,11 +224,9 @@ export async function GET(request: NextRequest) {
               message: 'Using cached data'
             }));
           } else {
-            // Only show actual errors, not informational messages
-            const errorMessage = stderrFiltered.trim() || 'Failed to fetch portfolio gifts';
             resolve(NextResponse.json({
               success: false,
-              error: errorMessage
+              error: actualError
             }, { status: 500 }));
           }
         }
