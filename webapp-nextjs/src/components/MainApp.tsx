@@ -54,12 +54,22 @@ export const MainApp: React.FC = () => {
       // Add timeout to prevent infinite loading
       const timeout = setTimeout(() => {
         console.log('⚠️ User initialization timeout - using fallback');
-      }, 5000);
+      }, 10000); // Increased timeout to 10s
       
       try {
-        const webApp = getTelegramWebApp();
+        // Wait for Telegram WebApp SDK to load (it loads asynchronously)
+        let webApp = getTelegramWebApp();
+        let attempts = 0;
+        const maxAttempts = 20; // Try for 4 seconds (20 * 200ms)
+        
+        while (!webApp && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          webApp = getTelegramWebApp();
+          attempts++;
+        }
+        
         console.log('Initializing user from Telegram WebApp');
-        console.log('WebApp:', webApp);
+        console.log('WebApp:', webApp, 'attempts:', attempts);
         
         if (webApp) {
           // Set Telegram WebApp ready
