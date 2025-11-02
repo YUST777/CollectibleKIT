@@ -1125,8 +1125,8 @@ export const PortfolioTab: React.FC = () => {
     let price = null;
 
     try {
-      console.log('📊 Fetching metadata for', selectedGiftName, ribbonNum);
-      const metadataResponse = await fetch(`/api/portfolio/gift-metadata?gift_name=${encodeURIComponent(selectedGiftName)}&item_id=${ribbonNum}`);
+      console.log('📊 Fetching metadata for', slugLower, ribbonNum);
+      const metadataResponse = await fetch(`/api/portfolio/gift-metadata?gift_name=${encodeURIComponent(slugLower)}&item_id=${ribbonNum}`);
       
       console.log('📊 Metadata response status:', metadataResponse.status);
       
