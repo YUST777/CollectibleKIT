@@ -17,6 +17,7 @@ import {
   useCurrentTertiaryTab,
   useAppActions 
 } from '@/store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 import { HomeIcon } from '@heroicons/react/24/outline';
 
 export const DynamicNavigation: React.FC = () => {
@@ -29,8 +30,14 @@ export const DynamicNavigation: React.FC = () => {
     setCurrentTertiaryTab, 
     navigateBack,
     openSideDrawer,
+    closeSideDrawer,
     setLastUsedDrawer
   } = useAppActions();
+  
+  const { isSideDrawerOpen, drawerType } = useAppStore((state) => ({
+    isSideDrawerOpen: state.isSideDrawerOpen,
+    drawerType: state.drawerType
+  }));
 
   // Preload all SVG icons to prevent loading delays
   React.useEffect(() => {
@@ -69,10 +76,15 @@ export const DynamicNavigation: React.FC = () => {
       return;
     }
 
-    // Tools and Games behavior: first click opens default content, subsequent clicks open the side drawer
+    // Tools and Games behavior: toggle drawer if already on that tab and drawer is open
     if (tab === 'tools') {
       if (navigationLevel === 'tools') {
-        openSideDrawer('tools');
+        // Toggle: close if open, open if closed
+        if (isSideDrawerOpen && drawerType === 'tools') {
+          closeSideDrawer();
+        } else {
+          openSideDrawer('tools');
+        }
       } else {
         setNavigationLevel('tools');
         setCurrentSubTab('collection');
@@ -84,7 +96,12 @@ export const DynamicNavigation: React.FC = () => {
 
     if (tab === 'games') {
       if (navigationLevel === 'games') {
-        openSideDrawer('games');
+        // Toggle: close if open, open if closed
+        if (isSideDrawerOpen && drawerType === 'games') {
+          closeSideDrawer();
+        } else {
+          openSideDrawer('games');
+        }
       } else {
         setNavigationLevel('games');
         setCurrentSubTab('zoom');
