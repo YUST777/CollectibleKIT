@@ -16,6 +16,117 @@ import toast from 'react-hot-toast';
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 const ModelThumbnail = dynamic(() => import('@/components/ModelThumbnail').then(mod => ({ default: mod.ModelThumbnail })), { ssr: false });
 
+// Helper function to get collection image URL
+const getCollectionImageUrl = (giftName: string): string => {
+  const nameMap: { [key: string]: string } = {
+    'Artisan Brick': 'Artisan_Brick',
+    'Astral Shard': 'Astral_Shard',
+    'B-Day Candle': 'B_Day_Candle',
+    'Berry Box': 'Berry_Box',
+    'Big Year': 'Big_Year',
+    'Bonded Ring': 'Bonded_Ring',
+    'Bow Tie': 'Bow_Tie',
+    'Bunny Muffin': 'Bunny_Muffin',
+    'Candy Cane': 'Candy_Cane',
+    'Clover Pin': 'Clover_Pin',
+    'Cookie Heart': 'Cookie_Heart',
+    'Crystal Ball': 'Crystal_Ball',
+    'Cupid Charm': 'Cupid_Charm',
+    'Desk Calendar': 'Desk_Calendar',
+    'Diamond Ring': 'Diamond_Ring',
+    'Durov\'s Cap': 'Durovs_Cap',
+    'Easter Egg': 'Easter_Egg',
+    'Electric Skull': 'Electric_Skull',
+    'Eternal Candle': 'Eternal_Candle',
+    'Eternal Rose': 'Eternal_Rose',
+    'Evil Eye': 'Evil_Eye',
+    'Faith Amulet': 'Faith_Amulet',
+    'Flying Broom': 'Flying_Broom',
+    'Fresh Socks': 'Fresh_Socks',
+    'Gem Signet': 'Gem_Signet',
+    'Genie Lamp': 'Genie_Lamp',
+    'Ginger Cookie': 'Ginger_Cookie',
+    'Hanging Star': 'Hanging_Star',
+    'Happy Brownie': 'Happy_Brownie',
+    'Heart Locket': 'Heart_Locket',
+    'Heroic Helmet': 'Heroic_Helmet',
+    'Hex Pot': 'Hex_Pot',
+    'Holiday Drink': 'Holiday_Drink',
+    'Homemade Cake': 'Homemade_Cake',
+    'Hypno Lollipop': 'Hypno_Lollipop',
+    'Ice Cream': 'Ice_Cream',
+    'Input Key': 'Input_Key',
+    'Instant Ramen': 'Instant_Ramen',
+    'Ion Gem': 'Ion_Gem',
+    'Ionic Dryer': 'Ionic_Dryer',
+    'Jack-in-the-Box': 'Jack_in_the_Box',
+    'Jelly Bunny': 'Jelly_Bunny',
+    'Jester Hat': 'Jester_Hat',
+    'Jingle Bells': 'Jingle_Bells',
+    'Jolly Chimp': 'Jolly_Chimp',
+    'Joyful Bundle': 'Joyful_Bundle',
+    'Kissed Frog': 'Kissed_Frog',
+    'Light Sword': 'Light_Sword',
+    'Lol Pop': 'Lol_Pop',
+    'Loot Bag': 'Loot_Bag',
+    'Love Candle': 'Love_Candle',
+    'Love Potion': 'Love_Potion',
+    'Low Rider': 'Low_Rider',
+    'Lunar Snake': 'Lunar_Snake',
+    'Lush Bouquet': 'Lush_Bouquet',
+    'Mad Pumpkin': 'Mad_Pumpkin',
+    'Magic Potion': 'Magic_Potion',
+    'Mighty Arm': 'Mighty_Arm',
+    'Mini Oscar': 'Mini_Oscar',
+    'Moon Pendant': 'Moon_Pendant',
+    'Mousse Cake': 'Mousse_Cake',
+    'Nail Bracelet': 'Nail_Bracelet',
+    'Neko Helmet': 'Neko_Helmet',
+    'Party Sparkler': 'Party_Sparkler',
+    'Perfume Bottle': 'Perfume_Bottle',
+    'Pet Snake': 'Pet_Snake',
+    'Plush Pepe': 'Plush_Pepe',
+    'Precious Peach': 'Precious_Peach',
+    'Record Player': 'Record_Player',
+    'Restless Jar': 'Restless_Jar',
+    'Sakura Flower': 'Sakura_Flower',
+    'Santa Hat': 'Santa_Hat',
+    'Scared Cat': 'Scared_Cat',
+    'Sharp Tongue': 'Sharp_Tongue',
+    'Signet Ring': 'Signet_Ring',
+    'Skull Flower': 'Skull_Flower',
+    'Sky Stilettos': 'Sky_Stilettos',
+    'Sleigh Bell': 'Sleigh_Bell',
+    'Snake Box': 'Snake_Box',
+    'Snoop Cigar': 'Snoop_Cigar',
+    'Snoop Dogg': 'Snoop_Dogg',
+    'Snow Globe': 'Snow_Globe',
+    'Snow Mittens': 'Snow_Mittens',
+    'Spiced Wine': 'Spiced_Wine',
+    'Spring Basket': 'Spring_Basket',
+    'Spy Agaric': 'Spy_Agaric',
+    'Star Notepad': 'Star_Notepad',
+    'Stellar Rocket': 'Stellar_Rocket',
+    'Swag Bag': 'SwagBag',
+    'Swiss Watch': 'Swiss_Watch',
+    'Tama Gadget': 'Tama_Gadget',
+    'Top Hat': 'Top_Hat',
+    'Toy Bear': 'Toy_Bear',
+    'Trapped Heart': 'Trapped_Heart',
+    'Valentine Box': 'Valentine_Box',
+    'Vintage Cigar': 'Vintage_Cigar',
+    'Voodoo Doll': 'Voodoo_Doll',
+    'West Side Sign': 'WestsideSign',
+    'Whip Cupcake': 'Whip_Cupcake',
+    'Winter Wreath': 'Winter_Wreath',
+    'Witch Hat': 'Witch_Hat',
+    'Xmas Stocking': 'Xmas_Stocking'
+  };
+  
+  const filename = nameMap[giftName] || giftName.replace(/\s+/g, '_');
+  return `/assets/Gift Collection Images/${filename}.png`;
+};
+
 interface PortfolioGift {
   slug: string;
   num: number | null;
@@ -2151,13 +2262,22 @@ export const PortfolioTab: React.FC = () => {
                         alt={selectedGift.title}
                         className="w-full h-full object-contain"
                         onError={(e) => {
-                          e.currentTarget.style.display = 'none';
+                          // Fallback to collection image if fragment_url fails
+                          const collectionImageUrl = getCollectionImageUrl(selectedGift.title);
+                          e.currentTarget.src = collectionImageUrl;
                         }}
                       />
                     </div>
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-4xl z-10">
-                      ?
+                    <div className="absolute inset-3 flex items-center justify-center z-10">
+                      <img
+                        src={getCollectionImageUrl(selectedGift.title)}
+                        alt={selectedGift.title}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
                     </div>
                   )}
                 </div>
