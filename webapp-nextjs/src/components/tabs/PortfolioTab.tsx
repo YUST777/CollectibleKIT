@@ -1128,15 +1128,23 @@ export const PortfolioTab: React.FC = () => {
       console.log('📊 Fetching metadata for', selectedGiftName, ribbonNum);
       const metadataResponse = await fetch(`/api/portfolio/gift-metadata?gift_name=${encodeURIComponent(selectedGiftName)}&item_id=${ribbonNum}`);
       
+      console.log('📊 Metadata response status:', metadataResponse.status);
+      
       if (metadataResponse.ok) {
         const metadata = await metadataResponse.json();
+        console.log('📊 Metadata response:', metadata);
         
         if (metadata.success && metadata.model) {
           modelName = metadata.model;
           backdropName = metadata.backdrop;
           patternName = metadata.symbol;
           console.log('✅ Got metadata:', { modelName, backdropName, patternName });
+        } else {
+          console.warn('⚠️ Metadata fetch returned success:false or no model');
         }
+      } else {
+        const errorText = await metadataResponse.text();
+        console.error('⚠️ Metadata fetch failed:', metadataResponse.status, errorText);
       }
     } catch (error) {
       console.error('⚠️ Failed to fetch metadata:', error);
