@@ -58,18 +58,36 @@ export const MainApp: React.FC = () => {
       
       try {
         // Wait for Telegram WebApp SDK to load (it loads asynchronously)
+        // Telegram Desktop/Web may need more time to initialize
         let webApp = getTelegramWebApp();
         let attempts = 0;
-        const maxAttempts = 20; // Try for 4 seconds (20 * 200ms)
+        const maxAttempts = 50; // Try for 10 seconds (50 * 200ms) - Desktop/Web needs more time
         
         while (!webApp && attempts < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, 200));
           webApp = getTelegramWebApp();
+          
+          // Also check if window.Telegram.WebApp exists but isn't ready yet
+          if (!webApp && typeof window !== 'undefined') {
+            const tgWindow = window as any;
+            if (tgWindow.Telegram && tgWindow.Telegram.WebApp) {
+              webApp = tgWindow.Telegram.WebApp;
+            } else if (tgWindow.tg) {
+              webApp = tgWindow.tg;
+            }
+          }
+          
           attempts++;
+          
+          if (attempts % 10 === 0) {
+            console.log(`⏳ Still waiting for Telegram WebApp SDK... (attempt ${attempts}/${maxAttempts})`);
+          }
         }
         
         console.log('Initializing user from Telegram WebApp');
         console.log('WebApp:', webApp, 'attempts:', attempts);
+        console.log('Window.Telegram:', typeof window !== 'undefined' ? (window as any).Telegram : 'N/A');
+        console.log('Window.tg:', typeof window !== 'undefined' ? (window as any).tg : 'N/A');
         
         if (webApp) {
           // Set Telegram WebApp ready

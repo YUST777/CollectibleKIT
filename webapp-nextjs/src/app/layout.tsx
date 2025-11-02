@@ -46,20 +46,9 @@ export default function RootLayout({
             `,
           }}
         />
-        {/* Telegram WebApp SDK: load only when running inside Telegram */}
+        {/* Telegram WebApp SDK: Always load - Telegram will initialize it if available */}
         <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                var ua = (navigator && navigator.userAgent) || '';
-                if (/Telegram/i.test(ua)) {
-                  var s = document.createElement('script');
-                  s.src = 'https://telegram.org/js/telegram-web-app.js';
-                  document.head.appendChild(s);
-                }
-              })();
-            `,
-          }}
+          src="https://telegram.org/js/telegram-web-app.js"
         />
         {/* Dev: Polyfill missing CloudStorage to suppress console errors when running outside Telegram */}
         <script

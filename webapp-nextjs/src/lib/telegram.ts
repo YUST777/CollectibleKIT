@@ -14,9 +14,32 @@ declare global {
 }
 
 export const getTelegramWebApp = (): TelegramWebApp | null => {
-  if (typeof window !== 'undefined') {
-    return window.tg || window.Telegram?.WebApp || null;
+  if (typeof window === 'undefined') {
+    return null;
   }
+  
+  const win = window as any;
+  
+  // Check multiple possible locations where Telegram SDK might expose WebApp
+  // Order matters: check most common first
+  if (win.Telegram?.WebApp) {
+    return win.Telegram.WebApp;
+  }
+  
+  if (win.tg) {
+    return win.tg;
+  }
+  
+  // Sometimes Telegram exposes it directly on window
+  if (win.telegram?.WebApp) {
+    return win.telegram.WebApp;
+  }
+  
+  // Check if Telegram object exists but WebApp isn't ready yet
+  if (win.Telegram && typeof win.Telegram.WebApp !== 'undefined') {
+    return win.Telegram.WebApp;
+  }
+  
   return null;
 };
 
