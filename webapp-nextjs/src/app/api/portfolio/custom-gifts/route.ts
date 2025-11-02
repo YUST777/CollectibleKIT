@@ -57,6 +57,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('💾 Adding custom gift:', {
+      slug: giftData.slug,
+      num: giftData.num,
+      model_name: giftData.model_name,
+      backdrop_name: giftData.backdrop_name,
+      price: giftData.price
+    });
+
     const success = await db.addCustomGift(user.id, giftData);
 
     if (success) {
