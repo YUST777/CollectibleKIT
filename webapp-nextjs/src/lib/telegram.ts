@@ -178,26 +178,49 @@ export const trackTelegramAnalytics = (event: string, data?: any) => {
 };
 
 // Helper function for API routes to get user from Telegram WebApp data
-export async function getUserFromTelegram(request: Request): Promise<{ id: number; first_name?: string; last_name?: string; username?: string; is_premium?: boolean } | null> {
+export async function getUserFromTelegram(request: Request): Promise<{ id: number; first_name?: string; last_name?: string; username?: string; is_premium?: boolean; photo_url?: string } | null> {
   try {
     // Check for init data in headers (for client-side fetch calls)
     const initDataHeader = (request as any).headers?.get?.('X-Telegram-Init-Data') || 
                             (request as any).headers?.get?.('x-telegram-init-data');
     
     if (initDataHeader) {
-      console.log('📱 Got init data from header');
+      console.log('📱 Got init data from header, length:', initDataHeader.length);
+      
+      // Parse the initData string (it's in URLSearchParams format)
       const params = new URLSearchParams(initDataHeader);
       const userParam = params.get('user');
+      
       if (userParam) {
-        const userData = JSON.parse(decodeURIComponent(userParam));
-        console.log('📱 Extracted user from header:', userData);
-        return {
-          id: userData.id,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          username: userData.username,
-          is_premium: userData.is_premium
-        };
+        try {
+          const userData = JSON.parse(decodeURIComponent(userParam));
+          console.log('✅ Extracted user from header:', {
+            id: userData.id,
+            username: userData.username,
+            first_name: userData.first_name
+          });
+          
+          // Validate user ID is a real Telegram user ID (should be >= 100000)
+          if (userData.id && userData.id >= 100000) {
+            return {
+              id: userData.id,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              username: userData.username,
+              is_premium: userData.is_premium,
+              photo_url: userData.photo_url
+            };
+          } else {
+            console.error('❌ Invalid user ID:', userData.id);
+            return null;
+          }
+        } catch (parseError) {
+          console.error('❌ Failed to parse user data from header:', parseError);
+          return null;
+        }
+      } else {
+        console.error('❌ No user param in initData header');
+        return null;
       }
     }
     
@@ -211,34 +234,34 @@ export async function getUserFromTelegram(request: Request): Promise<{ id: numbe
       const userParam = params.get('user');
       
       if (userParam) {
-        const userData = JSON.parse(decodeURIComponent(userParam));
-        console.log('📱 Extracted user from Telegram WebApp:', userData);
-        return {
-          id: userData.id,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          username: userData.username,
-          is_premium: userData.is_premium
-        };
+        try {
+          const userData = JSON.parse(decodeURIComponent(userParam));
+          console.log('📱 Extracted user from Telegram WebApp URL:', {
+            id: userData.id,
+            username: userData.username
+          });
+          
+          if (userData.id && userData.id >= 100000) {
+            return {
+              id: userData.id,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              username: userData.username,
+              is_premium: userData.is_premium,
+              photo_url: userData.photo_url
+            };
+          }
+        } catch (parseError) {
+          console.error('❌ Failed to parse user data from URL:', parseError);
+        }
       }
     }
     
-    // Development mode: Allow testing in browser with a default user
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 Development mode: Using default test user');
-      return {
-        id: 123456789, // Default test user ID
-        first_name: 'Test',
-        last_name: 'User',
-        username: 'testuser',
-        is_premium: false
-      };
-    }
-    
-    console.log('❌ No valid Telegram authentication found');
+    // NO FALLBACK TO TEST USER - Require real Telegram authentication
+    console.error('❌ No valid Telegram authentication found. Request must include X-Telegram-Init-Data header.');
     return null;
   } catch (error) {
-    console.error('Error getting user from Telegram:', error);
+    console.error('❌ Error getting user from Telegram:', error);
     return null;
   }
 }
