@@ -148,25 +148,11 @@ async def get_profile_gifts(user_id=None):
                 }))
                 sys.exit(1)
             except Exception as e:
-                # If we can't find the user, try to get session owner and verify match
-                try:
-                    session_user = await client.get_me()
-                    if str(session_user.id) == str(user_id):
-                        # It's the session owner, use them
-                        target_user = session_user
-                    else:
-                        # Different user, can't fetch their gifts
-                        print(json.dumps({
-                            "success": False,
-                            "error": f"Could not find user {user_id}: User not in Telethon session contacts. Only the authenticated session owner's gifts can be fetched."
-                        }))
-                        sys.exit(1)
-                except Exception as session_error:
-                    print(json.dumps({
-                        "success": False,
-                        "error": f"Could not find user {user_id}: {str(e)}"
-                    }))
-                    sys.exit(1)
+                print(json.dumps({
+                    "success": False,
+                    "error": f"Could not find user {user_id}: {str(e)}"
+                }))
+                sys.exit(1)
         else:
             # Get the current user (session owner)
             target_user = await client.get_me()
