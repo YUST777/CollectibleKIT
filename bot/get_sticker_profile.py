@@ -23,7 +23,7 @@ BOT_USERNAME = 'StickerDomStoreBot'  # The stickerdom bot
 # Use same credentials as gifts script
 API_ID = 22307634
 API_HASH = '7ab906fc6d065a2047a84411c1697593'
-SESSION_NAME = 'telethon_session'  # Use authorized session
+SESSION_NAME = ' sticker0.2/gifts_session'  # Use authorized user session
 
 # Global variables for auth
 current_jwt_token = None
@@ -71,6 +71,8 @@ async def get_fresh_init_data() -> str:
         if 'tgWebAppData' in query_params:
             tg_data_encoded = query_params['tgWebAppData'][0]
             init_data = urllib.parse.unquote(tg_data_encoded)
+            print(f"DEBUG: Extracted initData from query param, starts with 'user=': {init_data.startswith('user=')}", file=sys.stderr)
+            print(f"DEBUG: First 100 chars: {init_data[:100]}", file=sys.stderr)
             return init_data
         
         # Fallback: check fragment
@@ -79,7 +81,13 @@ async def get_fresh_init_data() -> str:
             init_data_encoded = fragment.split('tgWebAppData=')[1]
             if '&' in init_data_encoded:
                 init_data_encoded = init_data_encoded.split('&')[0]
+            # Decode twice if needed (sometimes double-encoded)
             init_data = urllib.parse.unquote(init_data_encoded)
+            if init_data.startswith('query_id='):
+                # Still encoded, decode again
+                init_data = urllib.parse.unquote(init_data)
+            print(f"DEBUG: Extracted initData from fragment, starts with 'user=': {init_data.startswith('user=')}", file=sys.stderr)
+            print(f"DEBUG: First 100 chars: {init_data[:100]}", file=sys.stderr)
             return init_data
         
         return None
@@ -98,13 +106,27 @@ def get_jwt_token(init_data: str) -> str:
             'Accept': 'application/json',
         }
         
-        response = requests.post(f"{API_BASE}/api/v1/auth", headers=headers, data=init_data, timeout=15)
+        print(f"DEBUG: Sending initData to auth API (length: {len(init_data)})", file=sys.stderr)
+        # Try decoded format first (ensure UTF-8 encoding)
+        response = requests.post(f"{API_BASE}/api/v1/auth", headers=headers, data=init_data.encode('utf-8'), timeout=15)
+        
+        print(f"DEBUG: Auth response status: {response.status_code}", file=sys.stderr)
         
         if response.status_code == 200:
             data = response.json()
             if data.get('ok') and data.get('data'):
                 return data['data']
+            else:
+                # Try URL-encoded version
+                print(f"DEBUG: Trying URL-encoded format", file=sys.stderr)
+                encoded_init = urllib.parse.quote(init_data, safe='=&')
+                response2 = requests.post(f"{API_BASE}/api/v1/auth", headers=headers, data=encoded_init, timeout=15)
+                if response2.status_code == 200:
+                    data2 = response2.json()
+                    if data2.get('ok') and data2.get('data'):
+                        return data2['data']
         
+        print(f"DEBUG: All auth attempts failed", file=sys.stderr)
         return None
     except Exception as e:
         print(f"ERROR: Auth failed: {e}", file=sys.stderr)
@@ -115,6 +137,7 @@ def get_user_portfolio(user_id: str) -> dict:
     global current_jwt_token
     
     if not current_jwt_token:
+        print("ERROR: No JWT token available", file=sys.stderr)
         return None
     
     try:
@@ -123,12 +146,19 @@ def get_user_portfolio(user_id: str) -> dict:
             'Accept': 'application/json',
         }
         
+        print(f"DEBUG: Requesting profile for user {user_id}", file=sys.stderr)
         response = requests.get(f"{API_BASE}/api/v1/user/{user_id}/profile", headers=headers, timeout=15)
+        
+        print(f"DEBUG: Profile response status: {response.status_code}", file=sys.stderr)
         
         if response.status_code == 200:
             data = response.json()
             if data.get('ok'):
                 return data.get('data')
+            else:
+                print(f"DEBUG: API returned ok=False: {data}", file=sys.stderr)
+        else:
+            print(f"DEBUG: API error response: {response.text[:500]}", file=sys.stderr)
         
         return None
     except Exception as e:
@@ -275,8 +305,15 @@ async def main():
     
     user_id = sys.argv[1]
     
-    # Get fresh initData and JWT token
-    init_data = await get_fresh_init_data()
+    # Try to get initData from environment first (manual override)
+    import os
+    init_data = os.getenv('MANUAL_INIT_DATA')
+    if init_data:
+        print(f"DEBUG: Using MANUAL_INIT_DATA from environment", file=sys.stderr)
+    else:
+        # Get fresh initData and JWT token
+        init_data = await get_fresh_init_data()
+    
     if not init_data:
         # Return empty data if auth fails (requires user session to be set up)
         print(json.dumps({
@@ -299,6 +336,7 @@ async def main():
     global current_jwt_token
     current_jwt_token = get_jwt_token(init_data)
     if not current_jwt_token:
+        print("DEBUG: JWT token auth failed", file=sys.stderr)
         # Return empty data if auth fails
         print(json.dumps({
             'success': True,
@@ -317,9 +355,12 @@ async def main():
         }), flush=True)
         return
     
+    print(f"DEBUG: JWT token obtained: {current_jwt_token[:50]}...", file=sys.stderr)
+    
     # Get user portfolio
     profile_data = get_user_portfolio(user_id)
     if not profile_data:
+        print(f"DEBUG: No profile data returned for user {user_id}", file=sys.stderr)
         # Return empty data if profile fetch fails
         print(json.dumps({
             'success': True,
@@ -337,6 +378,8 @@ async def main():
             }
         }), flush=True)
         return
+    
+    print(f"DEBUG: Got profile data with {len(profile_data.get('collections', []))} collections", file=sys.stderr)
     
     # Calculate portfolio value
     portfolio_data = calculate_portfolio_value(profile_data)
