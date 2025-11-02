@@ -36,6 +36,8 @@ interface PortfolioGift {
   availability_issued?: number | null;
   availability_total?: number | null;
   total_supply?: string;
+  is_custom?: boolean; // Flag to distinguish custom vs auto gifts
+  gift_id?: number; // Database ID for custom gifts
 }
 
 interface PortfolioHistoryPoint {
@@ -586,7 +588,9 @@ export const PortfolioTab: React.FC = () => {
               priceError: g.priceError || undefined,
               availability_issued: g.availability_issued || null,
               availability_total: g.availability_total || null,
-              total_supply: g.total_supply || null
+              total_supply: g.total_supply || null,
+              is_custom: false, // Auto-fetched gifts are not custom
+              gift_id: g.id || undefined // Include database ID if present
             }));
             
             console.log('📦 Normalized gifts:', normalizedGifts);
@@ -1025,7 +1029,8 @@ export const PortfolioTab: React.FC = () => {
       priceError: undefined,
       availability_issued: null,
       availability_total: null,
-      total_supply: undefined
+      total_supply: undefined,
+      is_custom: true // Mark as custom gift
     };
 
     // Add to gifts immediately
@@ -1584,20 +1589,22 @@ export const PortfolioTab: React.FC = () => {
                       >
                         <StarIcon className="w-4 h-4 text-white/80" />
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Open drawer with this gift's info to edit
-                          setSelectedGiftName(gift.title);
-                          setRibbonNumber(gift.num?.toString() || '');
-                          setIsAddGiftDrawerOpen(true);
-                          hapticFeedback('selection');
-                        }}
-                        className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
-                        title="Edit gift"
-                      >
-                        <Cog6ToothIcon className="w-4 h-4 text-white/80" />
-                      </button>
+                      {gift.is_custom && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Open drawer with this gift's info to edit
+                            setSelectedGiftName(gift.title);
+                            setRibbonNumber(gift.num?.toString() || '');
+                            setIsAddGiftDrawerOpen(true);
+                            hapticFeedback('selection');
+                          }}
+                          className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                          title="Edit gift"
+                        >
+                          <Cog6ToothIcon className="w-4 h-4 text-white/80" />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
