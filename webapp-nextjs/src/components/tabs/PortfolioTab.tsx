@@ -608,10 +608,10 @@ export const PortfolioTab: React.FC = () => {
       
       console.log('📊 loadAutoGifts: Response status:', response.status);
       
-      const responseText = await response.text();
-      console.log('📊 loadAutoGifts: Response body (first 500 chars):', responseText.substring(0, 500));
-      
       if (response.ok) {
+        const responseText = await response.text();
+        console.log('📊 loadAutoGifts: Response body (first 500 chars):', responseText.substring(0, 500));
+        
         try {
           const data = JSON.parse(responseText);
           console.log('📊 loadAutoGifts: Parsed data:', { 
@@ -653,11 +653,18 @@ export const PortfolioTab: React.FC = () => {
               gifts: normalizedGifts,
               totalValue: data.total_value || 0
             };
+          } else {
+            console.error('❌ API returned success:false, error:', data.error);
+            return null;
           }
         } catch (parseError) {
           console.error('❌ Failed to parse portfolio response:', parseError);
           return null;
         }
+      } else {
+        const errorText = await response.text();
+        console.error('❌ loadAutoGifts: Response not OK:', response.status, errorText);
+        return null;
       }
     } catch (error) {
       console.error('❌ loadAutoGifts error:', error);
