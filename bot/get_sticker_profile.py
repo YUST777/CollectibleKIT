@@ -29,6 +29,33 @@ SESSION_NAME = ' sticker0.2/gifts_session'  # Use authorized user session
 current_jwt_token = None
 pricing_data = None
 
+def convert_query_id_to_user_format(query_id_init_data: str) -> str:
+    """Convert RequestWebViewRequest format to webapp format"""
+    try:
+        # Parse the query_id format
+        params = {}
+        for param in query_id_init_data.split('&'):
+            if '=' in param:
+                key, value = param.split('=', 1)
+                params[key] = value
+        
+        print(f"DEBUG: Found params: {list(params.keys())}", file=sys.stderr)
+        
+        # Remove query_id, keep everything else
+        if 'query_id' in params:
+            del params['query_id']
+        
+        # Reconstruct as user= format (maintain order: user, auth_date, etc.)
+        # Try to maintain order to preserve hash validity
+        reconstructed = '&'.join(f"{k}={v}" for k, v in params.items())
+        
+        print(f"DEBUG: Converted params: {list(params.keys())}", file=sys.stderr)
+        
+        return reconstructed
+    except Exception as e:
+        print(f"ERROR: Failed to convert initData format: {e}", file=sys.stderr)
+        return query_id_init_data  # Return original if conversion fails
+
 async def get_webview_url(client: TelegramClient) -> dict:
     """Get webview URL using Telethon"""
     try:
@@ -86,8 +113,17 @@ async def get_fresh_init_data() -> str:
             if init_data.startswith('query_id='):
                 # Still encoded, decode again
                 init_data = urllib.parse.unquote(init_data)
+            
             print(f"DEBUG: Extracted initData from fragment, starts with 'user=': {init_data.startswith('user=')}", file=sys.stderr)
             print(f"DEBUG: First 100 chars: {init_data[:100]}", file=sys.stderr)
+            
+            # Convert query_id= format to user= format if needed
+            if init_data.startswith('query_id='):
+                print(f"DEBUG: Converting query_id format to user format", file=sys.stderr)
+                init_data = convert_query_id_to_user_format(init_data)
+                print(f"DEBUG: Converted, now starts with 'user=': {init_data.startswith('user=')}", file=sys.stderr)
+                print(f"DEBUG: Converted first 150 chars: {init_data[:150]}", file=sys.stderr)
+            
             return init_data
         
         return None
@@ -117,12 +153,14 @@ def get_jwt_token(init_data: str) -> str:
             if data.get('ok') and data.get('data'):
                 return data['data']
             else:
+                print(f"DEBUG: Decoded format rejected: {data}", file=sys.stderr)
                 # Try URL-encoded version
                 print(f"DEBUG: Trying URL-encoded format", file=sys.stderr)
                 encoded_init = urllib.parse.quote(init_data, safe='=&')
                 response2 = requests.post(f"{API_BASE}/api/v1/auth", headers=headers, data=encoded_init, timeout=15)
                 if response2.status_code == 200:
                     data2 = response2.json()
+                    print(f"DEBUG: URL-encoded format response: {data2}", file=sys.stderr)
                     if data2.get('ok') and data2.get('data'):
                         return data2['data']
         
