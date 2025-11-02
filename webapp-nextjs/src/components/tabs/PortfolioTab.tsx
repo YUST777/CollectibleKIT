@@ -105,6 +105,7 @@ export const PortfolioTab: React.FC = () => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
   const chartCanvasRef = useRef<HTMLCanvasElement>(null);
+  const pricesFetchedRef = useRef<Set<string>>(new Set());
 
   // Portfolio chart state
   const [portfolioChartType, setPortfolioChartType] = useState<'24h' | '3d' | '1w' | '1m'>('1w');
@@ -456,6 +457,50 @@ export const PortfolioTab: React.FC = () => {
     }
   }, [gifts, totalValue, user?.user_id]);
 
+  // Refresh prices for custom gifts that have null prices (only once)
+  useEffect(() => {
+    const fetchMissingPrices = async () => {
+      const customGiftsWithoutPrice = gifts.filter(g => {
+        const key = `${g.slug}-${g.num}`;
+        return g.is_custom && (g.price === null || g.price === undefined) && !pricesFetchedRef.current.has(key);
+      });
+      
+      if (customGiftsWithoutPrice.length > 0) {
+        console.log('💰 Fetching prices for', customGiftsWithoutPrice.length, 'custom gifts without prices');
+        
+        for (const gift of customGiftsWithoutPrice) {
+          const key = `${gift.slug}-${gift.num}`;
+          pricesFetchedRef.current.add(key);
+          
+          try {
+            const priceResult = await getGiftPrice(gift.title, gift.backdrop_name || null, gift.model_name || null);
+            
+            if (priceResult.price !== null) {
+              // Update the gift with the price
+              setGifts(prev => prev.map(g => {
+                if (g.slug === gift.slug && g.num === gift.num && g.is_custom) {
+                  return { ...g, price: priceResult.price };
+                }
+                return g;
+              }));
+              console.log('✅ Updated price for', gift.title, ':', priceResult.price);
+            } else if (priceResult.error) {
+              console.warn('⚠️ Price fetch failed for', gift.title, ':', priceResult.error);
+            }
+          } catch (error) {
+            console.error('Error fetching price for', gift.title, ':', error);
+          }
+        }
+      }
+    };
+
+    // Only run if we have custom gifts without prices
+    if (gifts.length > 0) {
+      fetchMissingPrices();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gifts.length]); // Only trigger when gift count changes (not on every update)
+
   const loadPortfolio = async () => {
     if (!user?.user_id) {
       console.warn('⚠️ loadPortfolio: No user_id, aborting');
@@ -596,23 +641,33 @@ export const PortfolioTab: React.FC = () => {
             console.log('📦 Normalized gifts:', normalizedGifts);
             console.log('📦 Setting gifts - count:', normalizedGifts.length);
             
-            // Set gifts and value first
-            setGifts(normalizedGifts);
+            // Merge auto gifts with existing custom gifts
+            setGifts(prevGifts => {
+              // Get existing custom gifts
+              const customGifts = prevGifts.filter(g => g.is_custom);
+              
+              // Combine custom gifts with new auto gifts
+              const merged = [...normalizedGifts, ...customGifts];
+              
+              console.log('✅ Merging gifts - auto:', normalizedGifts.length, 'custom:', customGifts.length, 'total:', merged.length);
+              
+              // Save merged gifts to cache
+              try {
+                localStorage.setItem(cacheKey, JSON.stringify({
+                  gifts: merged,
+                  totalValue: data.total_value || 0,
+                  timestamp: Date.now()
+                }));
+                console.log('✅ Portfolio data cached');
+              } catch (e) {
+                console.warn('⚠️ Error caching portfolio data:', e);
+              }
+              
+              return merged;
+            });
             setTotalValue(data.total_value || 0);
             
-            console.log('✅ Portfolio state updated - gifts:', normalizedGifts.length, 'totalValue:', data.total_value);
-            
-            // Save to cache
-            try {
-              localStorage.setItem(cacheKey, JSON.stringify({
-                gifts: normalizedGifts,
-                totalValue: data.total_value || 0,
-                timestamp: Date.now()
-              }));
-              console.log('✅ Portfolio data cached');
-            } catch (e) {
-              console.warn('⚠️ Error caching portfolio data:', e);
-            }
+            console.log('✅ Portfolio state updated - totalValue:', data.total_value);
 
             // Save portfolio snapshot if not already saved today (fire and forget, don't wait)
             if (normalizedGifts.length > 0) {
