@@ -20,7 +20,7 @@ try:
     APORTALSMP_AVAILABLE = True
 except ImportError:
     APORTALSMP_AVAILABLE = False
-    print("⚠️ aportalsmp not available - prices will not be fetched", file=sys.stderr)
+    # Silent - library not available is not an error for user
 
 # Import config from gifts directory
 try:
@@ -117,8 +117,9 @@ async def get_profile_gifts(user_id=None):
                     session_name="portals_session",
                     session_path=gifts_dir
                 )
-                print("✅ Portal Market authentication successful!", file=sys.stderr)
+                # Silent success - no need to print to stderr
             except Exception as e:
+                # Only log errors, not success messages
                 print(f"⚠️ Portal Market not available: {e}", file=sys.stderr)
                 portal_auth_data = None
         
@@ -133,7 +134,7 @@ async def get_profile_gifts(user_id=None):
                     # Numeric ID
                     entity = await client.get_entity(int(user_id))
                 target_user = entity
-                print(f"✅ Fetching gifts for user: {getattr(entity, 'first_name', 'User')} (@{getattr(entity, 'username', 'unknown')}) - ID: {entity.id}", file=sys.stderr)
+                # Silent - no need to print user info to stderr
             except (UsernameNotOccupiedError, UsernameInvalidError):
                 print(json.dumps({
                     "success": False,
@@ -155,7 +156,7 @@ async def get_profile_gifts(user_id=None):
         else:
             # Get the current user (session owner)
             target_user = await client.get_me()
-            print(f"✅ Connected as: {target_user.first_name} (@{target_user.username}) - ID: {target_user.id}", file=sys.stderr)
+            # Silent - no need to print connection info to stderr
         
         # Fetch ALL saved gifts with pagination using the working method
         all_gifts, total_count = await fetch_all_gifts(client, target_user)

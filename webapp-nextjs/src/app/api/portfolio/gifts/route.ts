@@ -104,7 +104,50 @@ export async function GET(request: NextRequest) {
       python.on('close', async (code) => {
         if (code === 0) {
           try {
+            // Filter out informational stderr messages (Portal Market auth, etc.)
+            // Only show actual errors in stderr
+            const stderrFiltered = error
+              .split('\n')
+              .filter((line: string) => {
+                // Filter out success/info messages
+                const lowerLine = line.toLowerCase();
+                return !lowerLine.includes('portal market authentication successful') &&
+                       !lowerLine.includes('fetching gifts for user') &&
+                       !lowerLine.includes('connected as') &&
+                       !lowerLine.includes('aportalsmp not available');
+              })
+              .join('\n');
+            
+            if (stderrFiltered.trim()) {
+              console.log('ℹ️ Python stderr (non-critical):', stderrFiltered);
+            }
+            
             const result = JSON.parse(output);
+            
+            // Check if result has error (even with exit code 0)
+            if (result.success === false && result.error) {
+              console.error('❌ Python script returned error:', result.error);
+              
+              // On error, return stale cache if available
+              if (cachedData) {
+                console.log('⚠️ Returning stale cache due to Python script error');
+                resolve(NextResponse.json({
+                  success: true,
+                  gifts: cachedData.gifts,
+                  total_value: cachedData.totalValue,
+                  cached: true,
+                  stale: true,
+                  message: 'Using cached data'
+                }));
+              } else {
+                resolve(NextResponse.json({
+                  success: false,
+                  error: result.error || 'Failed to fetch portfolio gifts'
+                }, { status: 500 }));
+              }
+              return;
+            }
+            
             console.log('✅ Portfolio gifts fetched successfully');
             
             // Cache the results
@@ -117,14 +160,38 @@ export async function GET(request: NextRequest) {
             }));
           } catch (parseError) {
             console.error('❌ Parse error:', parseError, output);
-            resolve(NextResponse.json({
-              success: false,
-              error: 'Failed to parse response',
-              debug: output
-            }, { status: 500 }));
+            
+            // On parse error, return stale cache if available
+            if (cachedData) {
+              console.log('⚠️ Returning stale cache due to parse error');
+              resolve(NextResponse.json({
+                success: true,
+                gifts: cachedData.gifts,
+                total_value: cachedData.totalValue,
+                cached: true,
+                stale: true,
+                message: 'Using cached data'
+              }));
+            } else {
+              resolve(NextResponse.json({
+                success: false,
+                error: 'Failed to parse response'
+              }, { status: 500 }));
+            }
           }
         } else {
-          console.error('❌ Python script error:', error, output);
+          // Filter stderr to remove informational messages
+          const stderrFiltered = error
+            .split('\n')
+            .filter((line: string) => {
+              const lowerLine = line.toLowerCase();
+              return !lowerLine.includes('portal market authentication successful') &&
+                     !lowerLine.includes('fetching gifts for user') &&
+                     !lowerLine.includes('connected as');
+            })
+            .join('\n');
+          
+          console.error('❌ Python script error (exit code', code, '):', stderrFiltered || 'Unknown error', output);
           
           // On error, return stale cache if available
           if (cachedData) {
@@ -135,13 +202,14 @@ export async function GET(request: NextRequest) {
               total_value: cachedData.totalValue,
               cached: true,
               stale: true,
-              error: 'Failed to refresh data, showing cached data'
+              message: 'Using cached data'
             }));
           } else {
+            // Only show actual errors, not informational messages
+            const errorMessage = stderrFiltered.trim() || 'Failed to fetch portfolio gifts';
             resolve(NextResponse.json({
               success: false,
-              error: error || 'Failed to fetch portfolio gifts',
-              debug: output
+              error: errorMessage
             }, { status: 500 }));
           }
         }
