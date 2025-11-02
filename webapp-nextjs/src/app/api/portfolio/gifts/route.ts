@@ -43,8 +43,11 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // If rate limit exceeded, return stale cache or error
-    if (!canRefresh) {
+    // If no cache exists, allow the request (first-time user)
+    const isFirstLoad = !cachedData;
+    
+    // If rate limit exceeded, return stale cache or continue for first load
+    if (!canRefresh && !isFirstLoad) {
       if (cachedData) {
         console.log('⚠️ Rate limit exceeded, returning stale cache');
         return NextResponse.json({
@@ -64,8 +67,8 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Rate limit OK, fetch fresh data
-    console.log('🔄 Fetching fresh portfolio data from Python script');
+    // Rate limit OK or first load, fetch fresh data
+    console.log('🔄 Fetching fresh portfolio data from Python script', isFirstLoad ? '(first load)' : '');
     
     // Update rate limit before making the call
     await db.updateRateLimit(user.id);
