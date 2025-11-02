@@ -13,9 +13,14 @@ const ToolDrawer: React.FC = () => {
   }));
   const { setNavigationLevel, setCurrentSubTab, setCurrentTertiaryTab, closeSideDrawer, setLastUsedDrawer } = useAppActions();
 
-  const openTool = (tab: 'collection' | 'story') => {
-    setNavigationLevel('tools');
-    setCurrentSubTab(tab);
+  const openTool = (tab: 'collection' | 'story' | 'portfolio') => {
+    if (tab === 'portfolio') {
+      setNavigationLevel('main');
+      setCurrentSubTab('portfolio');
+    } else {
+      setNavigationLevel('tools');
+      setCurrentSubTab(tab);
+    }
     // sensible tertiary defaults
     if (tab === 'collection') setCurrentTertiaryTab('creation');
     else if (tab === 'story') setCurrentTertiaryTab('making');
@@ -36,8 +41,9 @@ const ToolDrawer: React.FC = () => {
   const items = [
     { id: 'collection', title: 'Collection', iconPath: '/icons/collectiontool.svg', onClick: () => openTool('collection') },
     { id: 'story', title: 'Cutter', iconPath: '/icons/cuttertool.svg', onClick: () => openTool('story') },
+    { id: 'portfolio', title: 'Portfolio', iconPath: '/icons/portfolio.svg', onClick: () => openTool('portfolio') },
   ].map((i) => {
-    const active = navigationLevel === 'tools' && currentSubTab === i.id;
+    const active = (i.id === 'portfolio' && navigationLevel === 'main' && currentSubTab === 'portfolio') || (navigationLevel === 'tools' && currentSubTab === i.id);
     return {
       id: i.id,
       title: i.title,

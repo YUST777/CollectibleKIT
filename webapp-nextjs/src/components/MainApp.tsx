@@ -20,6 +20,7 @@ import { GameTab } from './tabs/GameTab';
 import { CollectionTab } from './tabs/CollectionTab';
 import { ProfileTab } from './tabs/ProfileTab';
 import { HomeTab } from './tabs/HomeTab';
+import { PortfolioTab } from './tabs/PortfolioTab';
 import { Modal } from './ui/Modal';
 import { Drawer } from './ui/Drawer';
 import { getTelegramWebApp } from '@/lib/telegram';
@@ -226,9 +227,10 @@ export const MainApp: React.FC = () => {
   }, []);
 
   const renderTabContent = () => {
-    // If we're at main level, show either Home or Profile based on currentSubTab
+    // If we're at main level, show either Home or Profile or Portfolio based on currentSubTab
     if (navigationLevel === 'main') {
       if (currentSubTab === 'profile') return <ProfileTab />;
+      if (currentSubTab === 'portfolio') return <PortfolioTab />;
       return <HomeTab />;
     }
 
