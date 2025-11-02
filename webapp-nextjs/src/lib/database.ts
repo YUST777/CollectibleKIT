@@ -361,6 +361,51 @@ class DatabaseService {
         )
       `);
 
+      // Portfolio: Custom gifts table (user-added gifts)
+      await this.dbRun(`
+        CREATE TABLE IF NOT EXISTS portfolio_custom_gifts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          slug TEXT NOT NULL,
+          title TEXT NOT NULL,
+          num INTEGER,
+          model_name TEXT,
+          backdrop_name TEXT,
+          pattern_name TEXT,
+          model_rarity REAL,
+          backdrop_rarity REAL,
+          pattern_rarity REAL,
+          price REAL,
+          availability_issued INTEGER,
+          availability_total INTEGER,
+          total_supply TEXT,
+          created_at REAL NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users (user_id)
+        )
+      `);
+
+      // Portfolio: Auto gifts cache table (fetched from Telegram)
+      await this.dbRun(`
+        CREATE TABLE IF NOT EXISTS portfolio_auto_gifts_cache (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL UNIQUE,
+          gifts_data TEXT NOT NULL,
+          total_value REAL NOT NULL,
+          cached_at REAL NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users (user_id)
+        )
+      `);
+
+      // Portfolio: Rate limiting table
+      await this.dbRun(`
+        CREATE TABLE IF NOT EXISTS portfolio_rate_limit (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL UNIQUE,
+          last_refresh REAL NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users (user_id)
+        )
+      `);
+
       // Tasks table
       await this.dbRun(`
         CREATE TABLE IF NOT EXISTS tasks (
@@ -1544,6 +1589,135 @@ class DatabaseService {
       console.log('Portfolio snapshot (stub):', { userId, totalValue, giftsCount });
     } catch (error) {
       console.error('Error saving portfolio snapshot:', error);
+    }
+  }
+
+  // Custom gifts methods
+  async getCustomGifts(userId: number): Promise<any[]> {
+    try {
+      const rows = await this.dbAll(
+        `SELECT * FROM portfolio_custom_gifts WHERE user_id = ? ORDER BY created_at DESC`,
+        [userId]
+      );
+      return rows;
+    } catch (error) {
+      console.error('Error getting custom gifts:', error);
+      return [];
+    }
+  }
+
+  async addCustomGift(userId: number, giftData: any): Promise<boolean> {
+    try {
+      await this.dbRun(
+        `INSERT INTO portfolio_custom_gifts (
+          user_id, slug, title, num, model_name, backdrop_name, pattern_name,
+          model_rarity, backdrop_rarity, pattern_rarity, price,
+          availability_issued, availability_total, total_supply, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          giftData.slug || '',
+          giftData.title || 'Unknown Gift',
+          giftData.num || null,
+          giftData.model_name || null,
+          giftData.backdrop_name || null,
+          giftData.pattern_name || null,
+          giftData.model_rarity || null,
+          giftData.backdrop_rarity || null,
+          giftData.pattern_rarity || null,
+          giftData.price || null,
+          giftData.availability_issued || null,
+          giftData.availability_total || null,
+          giftData.total_supply || null,
+          Date.now()
+        ]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error adding custom gift:', error);
+      return false;
+    }
+  }
+
+  async deleteCustomGift(userId: number, giftId: number): Promise<boolean> {
+    try {
+      await this.dbRun(
+        `DELETE FROM portfolio_custom_gifts WHERE id = ? AND user_id = ?`,
+        [giftId, userId]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error deleting custom gift:', error);
+      return false;
+    }
+  }
+
+  // Auto gifts cache methods
+  async getAutoGiftsCache(userId: number): Promise<{ gifts: any[]; totalValue: number; cachedAt: number } | null> {
+    try {
+      const row = await this.dbGet(
+        `SELECT * FROM portfolio_auto_gifts_cache WHERE user_id = ?`,
+        [userId]
+      ) as any;
+      
+      if (row) {
+        return {
+          gifts: JSON.parse(row.gifts_data),
+          totalValue: row.total_value,
+          cachedAt: row.cached_at
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting auto gifts cache:', error);
+      return null;
+    }
+  }
+
+  async setAutoGiftsCache(userId: number, gifts: any[], totalValue: number): Promise<boolean> {
+    try {
+      await this.dbRun(
+        `INSERT OR REPLACE INTO portfolio_auto_gifts_cache (user_id, gifts_data, total_value, cached_at)
+         VALUES (?, ?, ?, ?)`,
+        [userId, JSON.stringify(gifts), totalValue, Date.now()]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error setting auto gifts cache:', error);
+      return false;
+    }
+  }
+
+  // Rate limiting methods
+  async checkRateLimit(userId: number, minIntervalMs: number = 60000): Promise<boolean> {
+    try {
+      const row = await this.dbGet(
+        `SELECT last_refresh FROM portfolio_rate_limit WHERE user_id = ?`,
+        [userId]
+      ) as any;
+      
+      if (!row) {
+        // First time, allow
+        return true;
+      }
+      
+      const timeSinceLastRefresh = Date.now() - row.last_refresh;
+      return timeSinceLastRefresh >= minIntervalMs;
+    } catch (error) {
+      console.error('Error checking rate limit:', error);
+      return true; // Allow on error
+    }
+  }
+
+  async updateRateLimit(userId: number): Promise<void> {
+    try {
+      await this.dbRun(
+        `INSERT OR REPLACE INTO portfolio_rate_limit (user_id, last_refresh)
+         VALUES (?, ?)`,
+        [userId, Date.now()]
+      );
+    } catch (error) {
+      console.error('Error updating rate limit:', error);
     }
   }
 }
