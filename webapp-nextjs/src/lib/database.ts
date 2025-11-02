@@ -386,6 +386,21 @@ class DatabaseService {
         )
       `);
 
+      // Migration: Add owner columns to portfolio_custom_gifts if they don't exist
+      const portfolioCustomGiftsColumns = [
+        { name: 'owner_username', type: 'TEXT' },
+        { name: 'owner_name', type: 'TEXT' }
+      ];
+
+      for (const column of portfolioCustomGiftsColumns) {
+        try {
+          await this.dbRun(`ALTER TABLE portfolio_custom_gifts ADD COLUMN ${column.name} ${column.type}`);
+          console.log(`✅ Added column to portfolio_custom_gifts: ${column.name}`);
+        } catch (err) {
+          // Column already exists, ignore error
+        }
+      }
+
       // Portfolio: Auto gifts cache table (fetched from Telegram)
       await this.dbRun(`
         CREATE TABLE IF NOT EXISTS portfolio_auto_gifts_cache (
