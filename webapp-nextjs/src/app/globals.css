@@ -89,7 +89,7 @@
   }
 
   .tg-card {
-    @apply bg-box-bg rounded-xl p-4 border border-icon-idle/30;
+    @apply backdrop-blur-xl bg-[#1c1d1f]/40 rounded-xl p-4 border border-gray-700/50 shadow-lg shadow-black/20;
   }
 
   .tg-input {

@@ -1366,7 +1366,7 @@ export const CollectionTab: React.FC = () => {
             </div>
           ) : (
             <div className="gift-preview-placeholder">
-              <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex flex-col items-center justify-center border border-gray-600">
+              <div className="w-full h-full backdrop-blur-xl bg-[#1c1d1f]/40 rounded-lg flex flex-col items-center justify-center border border-gray-700/50 shadow-lg shadow-black/20">
                 <svg fill="currentColor" viewBox="0 0 20 20" className="w-6 h-6 text-gray-400 mb-1">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
                 </svg>

@@ -521,7 +521,7 @@ export const StoryTab: React.FC = () => {
           
           <div
             {...getRootProps()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center bg-box-bg transition-all duration-300 cursor-pointer ${
+            className={`border-2 border-dashed rounded-xl p-8 text-center backdrop-blur-xl bg-[#1c1d1f]/40 transition-all duration-300 cursor-pointer shadow-lg shadow-black/20 ${
               isDragActive ? 'border-icon-active bg-icon-active/10' : 'border-icon-idle/30 hover:border-icon-active'
             }`}
             onClick={() => fileInputRef.current?.click()}
