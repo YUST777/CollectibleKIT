@@ -376,6 +376,8 @@ class DatabaseService {
           backdrop_rarity REAL,
           pattern_rarity REAL,
           price REAL,
+          owner_username TEXT,
+          owner_name TEXT,
           availability_issued INTEGER,
           availability_total INTEGER,
           total_supply TEXT,
@@ -1611,9 +1613,9 @@ class DatabaseService {
       await this.dbRun(
         `INSERT INTO portfolio_custom_gifts (
           user_id, slug, title, num, model_name, backdrop_name, pattern_name,
-          model_rarity, backdrop_rarity, pattern_rarity, price,
+          model_rarity, backdrop_rarity, pattern_rarity, price, owner_username, owner_name,
           availability_issued, availability_total, total_supply, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           userId,
           giftData.slug || '',
@@ -1626,6 +1628,8 @@ class DatabaseService {
           giftData.backdrop_rarity || null,
           giftData.pattern_rarity || null,
           giftData.price || null,
+          giftData.owner_username || null,
+          giftData.owner_name || null,
           giftData.availability_issued || null,
           giftData.availability_total || null,
           giftData.total_supply || null,

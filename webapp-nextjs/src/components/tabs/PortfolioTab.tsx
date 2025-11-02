@@ -36,6 +36,8 @@ interface PortfolioGift {
   availability_issued?: number | null;
   availability_total?: number | null;
   total_supply?: string;
+  owner_username?: string | null;
+  owner_name?: string | null;
   is_custom?: boolean; // Flag to distinguish custom vs auto gifts
   gift_id?: number; // Database ID for custom gifts
 }
@@ -714,6 +716,8 @@ export const PortfolioTab: React.FC = () => {
               availability_issued: g.availability_issued || null,
               availability_total: g.availability_total || null,
               total_supply: g.total_supply || undefined,
+              owner_username: g.owner_username || null,
+              owner_name: g.owner_name || null,
               is_custom: true,
               gift_id: g.id
             };
@@ -1122,6 +1126,8 @@ export const PortfolioTab: React.FC = () => {
     let modelName = null;
     let backdropName = null;
     let patternName = null;
+    let ownerUsername = null;
+    let ownerName = null;
     let price = null;
 
     try {
@@ -1138,7 +1144,9 @@ export const PortfolioTab: React.FC = () => {
           modelName = metadata.model;
           backdropName = metadata.backdrop;
           patternName = metadata.symbol;
-          console.log('✅ Got metadata:', { modelName, backdropName, patternName });
+          ownerUsername = metadata.owner_username;
+          ownerName = metadata.owner_name;
+          console.log('✅ Got metadata:', { modelName, backdropName, patternName, ownerUsername, ownerName });
         } else {
           console.warn('⚠️ Metadata fetch returned success:false or no model');
         }
@@ -1182,6 +1190,8 @@ export const PortfolioTab: React.FC = () => {
       availability_issued: null,
       availability_total: null,
       total_supply: undefined,
+      owner_username: ownerUsername,
+      owner_name: ownerName,
       is_custom: true // Mark as custom gift
     };
 
@@ -2165,16 +2175,27 @@ export const PortfolioTab: React.FC = () => {
               <div className="px-4 pt-6 pb-8">
                 <div className="space-y-4">
                   {/* Owner */}
-                  <div className="flex items-center justify-between py-3 border-b border-gray-800">
-                    <span className="text-white text-sm">Owner</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500"></div>
-                      <span className="text-white text-sm font-medium">{user?.username || user?.first_name || 'Unknown'}</span>
-                      <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
+                  {selectedGift.owner_username && (
+                    <div className="flex items-center justify-between py-3 border-b border-gray-800">
+                      <span className="text-white text-sm">Owner</span>
+                      <a
+                        href={`https://t.me/${selectedGift.owner_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback('selection');
+                        }}
+                      >
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500"></div>
+                        <span className="text-white text-sm font-medium">{selectedGift.owner_name || selectedGift.owner_username}</span>
+                        <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                      </a>
                     </div>
-                  </div>
+                  )}
 
                   {/* Model */}
                   {selectedGift.model_name && (

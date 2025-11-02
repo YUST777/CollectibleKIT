@@ -33,6 +33,9 @@ async def get_gift_metadata(gift_name, item_id):
                     
                     # Try to extract from table rows
                     table = soup.find('table')
+                    owner_username = None
+                    owner_name = None
+                    
                     if table:
                         rows = table.find_all('tr')
                         for row in rows:
@@ -40,7 +43,19 @@ async def get_gift_metadata(gift_name, item_id):
                             if len(cells) >= 2:
                                 trait_type = cells[0].get_text(strip=True)
                                 value = cells[1].get_text(strip=True)
-                                if trait_type and value and trait_type not in ['Owner', 'Portal']:
+                                
+                                # Special handling for Owner row: extract username from link
+                                if trait_type == 'Owner':
+                                    owner_link = cells[1].find('a')
+                                    if owner_link and 'href' in owner_link.attrs:
+                                        href = owner_link['href']
+                                        # Extract username from URL like "https://t.me/armpit_juice"
+                                        username_match = re.search(r'/t\.me/([^/?]+)', href)
+                                        if username_match:
+                                            owner_username = username_match.group(1)
+                                    # Get display name (text inside the row)
+                                    owner_name = value
+                                elif trait_type and value and trait_type not in ['Owner', 'Portal']:
                                     attributes[trait_type] = value
                     
                     # Parse specific attributes and clean up (remove percentages)
@@ -63,6 +78,8 @@ async def get_gift_metadata(gift_name, item_id):
                         "backdrop": backdrop,
                         "symbol": symbol,
                         "quantity": quantity,
+                        "owner_username": owner_username,
+                        "owner_name": owner_name,
                         "attributes": attributes
                     }
                     
