@@ -964,16 +964,16 @@ export const PortfolioTab: React.FC = () => {
       model_rarity: null,
       backdrop_rarity: null,
       pattern_rarity: null,
-      model_display: undefined,
-      backdrop_display: undefined,
-      pattern_display: undefined,
+      model_display: null,
+      backdrop_display: null,
+      pattern_display: null,
       pinned: false,
       fragment_url: fragmentUrl,
       price: null,
       priceError: undefined,
       availability_issued: null,
       availability_total: null,
-      total_supply: undefined
+      total_supply: null
     };
 
     // Add to gifts immediately
