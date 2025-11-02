@@ -20,7 +20,6 @@ import { GameTab } from './tabs/GameTab';
 import { CollectionTab } from './tabs/CollectionTab';
 import { ProfileTab } from './tabs/ProfileTab';
 import { HomeTab } from './tabs/HomeTab';
-import { PortfolioTab } from './tabs/PortfolioTab';
 import { Modal } from './ui/Modal';
 import { Drawer } from './ui/Drawer';
 import { getTelegramWebApp } from '@/lib/telegram';
@@ -230,7 +229,6 @@ export const MainApp: React.FC = () => {
     // If we're at main level, show either Home or Profile based on currentSubTab
     if (navigationLevel === 'main') {
       if (currentSubTab === 'profile') return <ProfileTab />;
-      if (currentSubTab === 'portfolio') return <PortfolioTab />;
       return <HomeTab />;
     }
 
@@ -272,8 +270,8 @@ export const MainApp: React.FC = () => {
       <DrawerHandle />
       
       {/* Main Content */}
-      <main className="pb-28 lg:pb-6">
-        <div className="max-w-md mx-auto px-4 lg:max-w-full lg:mx-0 lg:px-6">
+      <main className="pb-28">
+        <div className="max-w-md mx-auto px-4">
           <div className="transition-all duration-300 ease-in-out">
             {renderTabContent()}
           </div>

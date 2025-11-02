@@ -1,73 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromTelegram } from '@/lib/telegram';
+import { db } from '@/lib/database';
 
-/**
- * GET: Fetch individual gift chart data
- * Returns price history for a specific gift
- */
 export async function GET(request: NextRequest) {
   try {
-    const telegramUser = await getUserFromTelegram(request);
-    if (!telegramUser) {
+    const user = await getUserFromTelegram(request);
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const giftName = searchParams.get('gift');
-    const chartType = searchParams.get('type') || '1w';
+    // Get portfolio history from database
+    const history = await db.getPortfolioHistory(user.id) || [];
 
-    if (!giftName) {
+    return NextResponse.json({
+      success: true,
+      history
+    });
+
+  } catch (error) {
+    console.error('❌ Portfolio chart error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch portfolio history' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getUserFromTelegram(request);
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Gift name required' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    // Fetch chart from external API
-    const encodedName = giftName.replace(/ /g, '+');
-    const chartTypeEndpoint = (chartType === '1m' || chartType === 'life') ? 'lifeChart' : 'weekChart';
-    const chartUrl = `https://giftcharts-api.onrender.com/${chartTypeEndpoint}?name=${encodedName}`;
+    const body = await request.json();
+    const { totalValue, giftsCount } = body;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    // Save portfolio snapshot to database
+    await db.savePortfolioSnapshot(user.id, totalValue, giftsCount);
 
-    try {
-      const response = await fetch(chartUrl, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        return NextResponse.json({
-          success: true,
-          data: Array.isArray(data) ? data : []
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: []
-      });
-    } catch (error) {
-      clearTimeout(timeoutId);
-      console.error(`Error fetching chart for ${giftName}:`, error);
-      return NextResponse.json({
-        success: true,
-        data: []
-      });
-    }
+    return NextResponse.json({
+      success: true
+    });
 
   } catch (error) {
-    console.error('Error in portfolio chart route:', error);
+    console.error('❌ Portfolio snapshot error:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch chart data' },
+      { success: false, error: 'Failed to save portfolio snapshot' },
       { status: 500 }
     );
   }

@@ -1,43 +1,53 @@
-/**
- * Portal Market Service
- * Handles fetching gift prices from Portal Market/Fragment API
- */
-
-interface GiftPriceResult {
+export interface GiftPriceResult {
   price: number | null;
   error?: string;
 }
 
-/**
- * Fetch gift price from Portal Market API
- * @param giftName - The name of the gift collection
- * @param modelName - Optional model name
- * @param patternName - Optional pattern name
- * @returns Price in TON or error
- */
 export async function getGiftPrice(
-  giftName: string,
+  giftName: string | null,
   modelName: string | null,
-  patternName: string | null
+  backdropName: string | null
 ): Promise<GiftPriceResult> {
   try {
-    // TODO: Implement actual Portal Market API integration
-    // For now, return null price to indicate no data available
-    console.log('Fetching price for:', { giftName, modelName, patternName });
+    const response = await fetch('/api/portal-market/price', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gift_name: giftName,
+        model_name: modelName,
+        backdrop_name: backdropName,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        price: null,
+        error: errorData.error || 'Failed to fetch price',
+      };
+    }
+
+    const data = await response.json();
     
-    // Placeholder: Return null to indicate no price data
+    if (data.success && data.price !== null && data.price !== undefined) {
+      return {
+        price: parseFloat(data.price),
+        error: undefined,
+      };
+    }
+
     return {
       price: null,
-      error: 'Price data not available yet'
+      error: data.error || 'No price data available',
     };
   } catch (error) {
     console.error('Error fetching gift price:', error);
     return {
       price: null,
-      error: 'Failed to fetch price'
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }
 }
-
-
 

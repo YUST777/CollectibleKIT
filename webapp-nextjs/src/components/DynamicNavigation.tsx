@@ -15,8 +15,7 @@ import {
   useNavigationLevel, 
   useCurrentSubTab, 
   useCurrentTertiaryTab,
-  useAppActions,
-  useAppStore
+  useAppActions 
 } from '@/store/useAppStore';
 import { HomeIcon } from '@heroicons/react/24/outline';
 
@@ -24,17 +23,12 @@ export const DynamicNavigation: React.FC = () => {
   const navigationLevel = useNavigationLevel();
   const currentSubTab = useCurrentSubTab();
   const currentTertiaryTab = useCurrentTertiaryTab();
-  const { isSideDrawerOpen, drawerType } = useAppStore(state => ({
-    isSideDrawerOpen: state.isSideDrawerOpen || false,
-    drawerType: state.drawerType || null
-  }));
   const { 
     setNavigationLevel, 
     setCurrentSubTab, 
     setCurrentTertiaryTab, 
     navigateBack,
     openSideDrawer,
-    closeSideDrawer,
     setLastUsedDrawer
   } = useAppActions();
 
@@ -75,15 +69,10 @@ export const DynamicNavigation: React.FC = () => {
       return;
     }
 
-    // Tools and Games behavior: first click opens default content, subsequent clicks toggle the side drawer
+    // Tools and Games behavior: first click opens default content, subsequent clicks open the side drawer
     if (tab === 'tools') {
       if (navigationLevel === 'tools') {
-        // Toggle: if drawer is open and it's the tools drawer, close it; otherwise open it
-        if (isSideDrawerOpen && drawerType === 'tools') {
-          closeSideDrawer();
-        } else {
-          openSideDrawer('tools');
-        }
+        openSideDrawer('tools');
       } else {
         setNavigationLevel('tools');
         setCurrentSubTab('collection');
@@ -95,12 +84,7 @@ export const DynamicNavigation: React.FC = () => {
 
     if (tab === 'games') {
       if (navigationLevel === 'games') {
-        // Toggle: if drawer is open and it's the games drawer, close it; otherwise open it
-        if (isSideDrawerOpen && drawerType === 'games') {
-          closeSideDrawer();
-        } else {
-          openSideDrawer('games');
-        }
+        openSideDrawer('games');
       } else {
         setNavigationLevel('games');
         setCurrentSubTab('zoom');
@@ -130,7 +114,7 @@ export const DynamicNavigation: React.FC = () => {
 
   // Single main navigation bar always rendered
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t border-gray-700 px-4 py-3 transition-all duration-300 ease-in-out pb-12 z-[60]" style={{ backgroundColor: '#252525' }}>
+    <div className="fixed bottom-0 left-0 right-0 border-t border-gray-700 px-4 py-3 transition-all duration-300 ease-in-out pb-12" style={{ backgroundColor: '#252525' }}>
       <div className="flex justify-around">
         <button
           onClick={() => handleMainTabClick('home')}

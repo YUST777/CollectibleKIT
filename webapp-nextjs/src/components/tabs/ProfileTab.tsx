@@ -23,7 +23,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { Crown } from 'lucide-react';
 import { AdPricingDrawer } from '@/components/ui/AdPricingDrawer';
-import { PortfolioTab } from './PortfolioTab';
 import toast from 'react-hot-toast';
 
 export const ProfileTab: React.FC = () => {
@@ -35,7 +34,7 @@ export const ProfileTab: React.FC = () => {
   
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [currentInnerTab, setCurrentInnerTab] = useState<'tasks' | 'referral' | 'earn' | 'ton' | 'portfolio'>('ton');
+  const [currentInnerTab, setCurrentInnerTab] = useState<'tasks' | 'referral' | 'earn' | 'ton'>('ton');
   
   // Use TON Connect React hooks
   const wallet = useTonWallet();
@@ -126,7 +125,7 @@ export const ProfileTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 py-4 lg:py-0 animate-fade-in">
+    <div className="space-y-4 py-4 animate-fade-in">
       {/* Header with Profile Picture */}
       <div className="flex items-center justify-between px-4 mb-4">
         {/* Profile Picture with Notification Badge */}
@@ -231,20 +230,6 @@ export const ProfileTab: React.FC = () => {
             }`}
           >
             TON
-          </button>
-
-          <button
-            onClick={() => {
-              setCurrentInnerTab('portfolio');
-              hapticFeedback('selection', 'light', webApp);
-            }}
-            className={`text-sm font-medium transition-colors ${
-              currentInnerTab === 'portfolio'
-                ? 'text-white border-b-2 border-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Portfolio
           </button>
         </div>
       </div>
@@ -394,12 +379,6 @@ export const ProfileTab: React.FC = () => {
 
           {/* TON Connect Button Container */}
           <div id="ton-connect-button" className="hidden" />
-        </div>
-      )}
-
-      {currentInnerTab === 'portfolio' && (
-        <div className="-mx-4">
-          <PortfolioTab />
         </div>
       )}
     </div>
