@@ -619,7 +619,7 @@ export const GameTab: React.FC = () => {
 
       {/* Content based on sub tab */}
       {currentSubTab === 'emoji' && (
-        <div className="bg-box-bg rounded-lg p-4">
+        <div className="backdrop-blur-xl bg-[#1c1d1f]/40 border border-gray-700/50 shadow-lg shadow-black/20 rounded-2xl p-4">
           <div className="flex items-center justify-center gap-2 mb-4">
             <h3 className="text-sm font-medium text-text-idle">
               Which gift model do these emojis describe?
@@ -640,7 +640,7 @@ export const GameTab: React.FC = () => {
       )}
 
       {currentSubTab === 'zoom' && (
-        <div className="bg-box-bg rounded-lg p-4">
+        <div className="backdrop-blur-xl bg-[#1c1d1f]/40 border border-gray-700/50 shadow-lg shadow-black/20 rounded-2xl p-4">
           <div className="flex items-center justify-center gap-2 mb-4">
             <h3 className="text-sm font-medium text-text-idle">
               What gift model is this? (Infinite Random Game)
@@ -921,7 +921,7 @@ export const GameTab: React.FC = () => {
                     .map((item, index) => (
                       <div
                         key={index}
-                        className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
+                        className={`flex items-center p-3 rounded-xl backdrop-blur-xl bg-[#1c1d1f]/40 border border-gray-700/50 shadow-lg shadow-black/20 cursor-pointer transition-all hover:shadow-xl ${
                           (currentFilterType === 'gift' && item.name === selectedGiftName) ||
                           (currentFilterType === 'model' && item.name === selectedModelName)
                             ? 'ring-2 ring-blue-500'
@@ -1043,7 +1043,7 @@ export const GameTab: React.FC = () => {
                       { icon: "📋", title: "Select the gift from the list", color: "from-green-500 to-emerald-500" },
                       { icon: "✨", title: "Each wrong guess shows more emojis", color: "from-yellow-500 to-orange-500" }
                     ].map((step, index) => (
-                      <div key={index} className="bg-gray-800/40 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 hover:bg-gray-800/60 transition-all group">
+                      <div key={index} className="backdrop-blur-xl bg-[#1c1d1f]/40 border border-gray-700/50 shadow-lg shadow-black/20 rounded-xl p-4 hover:shadow-xl transition-all group">
                         <div className="flex items-start gap-3">
                           <div className={`w-12 h-12 bg-gradient-to-br ${step.color} rounded-xl flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform`}>
                             {step.icon}
@@ -1099,7 +1099,7 @@ export const GameTab: React.FC = () => {
                       { icon: "📋", title: "Select the gift from the list", color: "from-green-500 to-emerald-500" },
                       { icon: "📉", title: "Each wrong guess zooms out 15%", color: "from-red-500 to-orange-500" }
                     ].map((step, index) => (
-                      <div key={index} className="bg-gray-800/40 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 hover:bg-gray-800/60 transition-all group">
+                      <div key={index} className="backdrop-blur-xl bg-[#1c1d1f]/40 border border-gray-700/50 shadow-lg shadow-black/20 rounded-xl p-4 hover:shadow-xl transition-all group">
                         <div className="flex items-start gap-3">
                           <div className={`w-12 h-12 bg-gradient-to-br ${step.color} rounded-xl flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform`}>
                             {step.icon}

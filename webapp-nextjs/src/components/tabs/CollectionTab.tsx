@@ -1475,7 +1475,7 @@ export const CollectionTab: React.FC = () => {
           <div className="flex items-center justify-center px-4">
             <button
               onClick={loadPublicCollections}
-              className="text-sm text-blue-500 hover:text-blue-600 bg-gray-800 px-3 py-1 rounded-lg border border-gray-700"
+              className="text-sm text-blue-500 hover:text-blue-600 backdrop-blur-xl bg-[#1c1d1f]/40 px-3 py-1 rounded-lg border border-gray-700/50 shadow-lg shadow-black/20"
               disabled={ideasLoading}
             >
               {ideasLoading ? 'Loading...' : 'Refresh'}
@@ -1499,7 +1499,7 @@ export const CollectionTab: React.FC = () => {
               {publicCollections.map((collection) => (
                 <div
                   key={collection.id}
-                  className="bg-[#282727] rounded-lg border border-gray-700 p-4 hover:shadow-md transition-shadow"
+                  className="backdrop-blur-xl bg-[#1c1d1f]/40 rounded-lg border border-gray-700/50 shadow-lg shadow-black/20 p-4 hover:shadow-xl transition-shadow"
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between mb-3">
@@ -1570,7 +1570,7 @@ export const CollectionTab: React.FC = () => {
 
       {/* Combined Control Block - Compact & Minimalistic */}
       <div className="flex items-center justify-center px-4">
-        <div className="flex items-center gap-1.5 bg-gray-800/50 rounded-lg px-2 py-1.5 border border-gray-700/50 backdrop-blur-sm shadow-lg">
+        <div className="flex items-center gap-1.5 backdrop-blur-xl bg-[#1c1d1f]/40 rounded-xl px-2 py-1.5 border border-gray-700/50 shadow-lg shadow-black/20">
           {/* Grid Size Selector */}
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-gray-400 font-medium">Size</span>
