@@ -124,7 +124,7 @@ const getCollectionImageUrl = (giftName: string): string => {
   };
   
   const filename = nameMap[giftName] || giftName.replace(/\s+/g, '_');
-  return `/assets/Gift Collection Images/${filename}.png`;
+  return `/assets/gifts/${filename}.png`;
 };
 
 // Helper function to get sticker image URL
