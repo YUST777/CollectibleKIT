@@ -140,6 +140,31 @@ const getStickerImageUrl = (collection: string, character: string, filename?: st
   return `/sticker_collections/${collectionPath}/${characterPath}/${file}`;
 };
 
+// Helper function to get gift image URL - handles both upgraded (slug format) and unupgradeable (numeric ID) gifts
+const getGiftImageUrl = (gift: { image_url?: string | null; id?: string | number | null }): string | null => {
+  // Use image_url if provided
+  if (gift.image_url) {
+    return gift.image_url;
+  }
+  
+  // If no image_url, determine from gift.id
+  if (!gift.id) {
+    return null;
+  }
+  
+  const giftId = gift.id.toString();
+  
+  // Check if gift ID looks like a slug (upgraded gift format: "Collection-Number")
+  // e.g., "TamaGadget-65287", "JollyChimp-38859", etc.
+  if (giftId.includes('-') && /^[a-zA-Z]/.test(giftId)) {
+    // This is an upgraded gift slug - use fragment.com URL format
+    return `https://nft.fragment.com/gift/${giftId.toLowerCase()}.medium.jpg`;
+  } else {
+    // This is a numeric ID (unupgradeable gift) - use cdn.changes.tg URL
+    return `https://cdn.changes.tg/gifts/originals/${giftId}/Original.png`;
+  }
+};
+
 interface PortfolioGift {
   slug: string;
   num: number | null;
@@ -2548,13 +2573,13 @@ export const PortfolioTab: React.FC = () => {
                             id: gift.id,
                             name: gift.name,
                             count: gift.count,
-                            url: `https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`
+                            url: getGiftImageUrl(gift)
                           });
                           return (
                           <div key={giftIndex} className="relative aspect-square bg-gray-800/50 rounded-lg overflow-hidden">
-                            {(gift.image_url || gift.id) && (
+                            {getGiftImageUrl(gift) && (
                               <img 
-                                src={gift.image_url || `https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
+                                src={getGiftImageUrl(gift) || ''} 
                                 alt={gift.name || 'Gift'} 
                                 className="absolute inset-0 w-full h-full object-cover"
                                 onError={(e) => {
@@ -3775,9 +3800,9 @@ export const PortfolioTab: React.FC = () => {
                       className="flex items-center gap-4 p-4 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] transition-colors border border-gray-700"
                     >
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800/50 flex-shrink-0 border border-gray-600">
-                        {(gift.image_url || gift.id) && (
+                        {getGiftImageUrl(gift) && (
                           <img 
-                            src={gift.image_url || `https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
+                            src={getGiftImageUrl(gift) || ''} 
                             alt={gift.name || 'Gift'} 
                             className="w-full h-full object-cover"
                             onError={(e) => {
