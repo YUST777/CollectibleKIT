@@ -2414,9 +2414,9 @@ export const PortfolioTab: React.FC = () => {
                     
                     <div className="flex items-center gap-1 text-xs text-white mt-2">
                       <span className="text-blue-200">Total value</span>
-                      <img src="/icons/ton.svg" alt="TON" className="w-3 h-3" />
+                      <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-3 h-3" />
                       <span className="font-semibold">
-                        {cg.total_value?.toFixed(2) || '0.00'}
+                        {formatPrice(cg.total_value)}
                       </span>
                     </div>
 
