@@ -252,10 +252,17 @@ async def get_profile_gifts(user_id=None):
                     # Convert slug to lowercase and remove spaces (Python way)
                     slug_lower = re.sub(r'\s+', '', slug.lower()) if slug != 'N/A' else ''
                     
-                    # Generate fragment.com image URL like Collection tab does
+                    # Generate fragment.com image URL - format: https://nft.fragment.com/gift/{collection}-{number}.medium.jpg
+                    # The slug might be "Collection-Number" or just "Collection", and num is the number
                     fragment_image_url = None
-                    if slug != 'N/A' and gift_num:
-                        fragment_image_url = f'https://nft.fragment.com/gift/{slug_lower}-{gift_num}.medium.jpg'
+                    if slug != 'N/A':
+                        if gift_num:
+                            # If we have both slug and num, combine them (slug might already have number, but use num if available)
+                            # Format: collection-number.medium.jpg (e.g., tamagadget-65287.medium.jpg)
+                            fragment_image_url = f'https://nft.fragment.com/gift/{slug_lower}-{gift_num}.medium.jpg'
+                        else:
+                            # If slug already contains the number (e.g., "TamaGadget-65287"), use it directly
+                            fragment_image_url = f'https://nft.fragment.com/gift/{slug_lower}.medium.jpg'
                     
                     # Extract attributes (model, backdrop, pattern) - same as gifts/bot.py
                     attributes = getattr(gift, 'attributes', [])

@@ -293,13 +293,10 @@ async def get_account_gifts(account_username: str):
             count = data['count']
             gift_value = price * count
             
-            # Get image URL for upgraded gift (use first gift's number if available)
-            first_gift = data['gifts'][0]
-            gift_num = getattr(first_gift, 'num', None)
-            image_url = None
-            if gift_num:
-                slug_lower = re.sub(r'\s+', '', slug.lower())
-                image_url = f'https://nft.fragment.com/gift/{slug_lower}-{gift_num}.medium.jpg'
+            # Get image URL for upgraded gift - format: https://nft.fragment.com/gift/{collection}-{number}.medium.jpg
+            # The slug is already in the format "Collection-Number" (e.g., "TamaGadget-65287")
+            slug_lower = slug.lower().replace(' ', '')
+            image_url = f'https://nft.fragment.com/gift/{slug_lower}.medium.jpg'
             
             gifts.append({
                 "id": slug,  # Use slug as ID for upgraded gifts
