@@ -163,6 +163,22 @@ async def get_profile_gifts(user_id=None):
         
         # Fetch unupgradeable gift prices once at the start
         unupgradeable_prices = {}
+        unupgradeable_names = {}
+        try:
+            # Load Quant static data for names and supplies
+            quant_file = '/root/01studio/CollectibleKIT/mrktandquantomapi/quant/clean_unique_gifts.json'
+            with open(quant_file, 'r') as f:
+                quant_data = json.load(f)
+                for item in quant_data:
+                    gift_id = item.get('id')
+                    unupgradeable_names[gift_id] = {
+                        'name': item.get('full_name', item.get('short_name', 'Unknown')),
+                        'supply': item.get('supply', None)
+                    }
+        except Exception as e:
+            # Silently fail
+            pass
+        
         try:
             import subprocess
             result = subprocess.run(
@@ -280,12 +296,18 @@ async def get_profile_gifts(user_id=None):
                     # For unupgradeable gifts, use original.png URL
                     original_image_url = None
                     price = None
+                    title = 'N/A'
+                    total_supply_value = None
                     if gift_id and is_unupgradeable:
                         original_image_url = f'https://cdn.changes.tg/gifts/originals/{gift_id}/Original.png'
-                        # Get price from unupgradeable_prices dict
+                        # Get price and metadata from unupgradeable dicts
                         gift_id_str = str(gift_id)
                         if gift_id_str in unupgradeable_prices:
                             price = unupgradeable_prices[gift_id_str]
+                        if gift_id_str in unupgradeable_names:
+                            gift_info = unupgradeable_names[gift_id_str]
+                            title = gift_info.get('name', 'N/A')
+                            total_supply_value = gift_info.get('supply')
                     
                     # For unupgraded gifts, try to get base floor price (no attributes)
                     if is_unupgraded and portal_auth_data:
@@ -306,14 +328,18 @@ async def get_profile_gifts(user_id=None):
                         except Exception as e:
                             print(f"⚠️ Error fetching floor price for unupgraded {title_for_search}: {e}", file=sys.stderr)
                     
+                    # Use metadata from unupgradeable lookup if available
+                    final_title = title if title != 'N/A' else (gift.title or 'N/A')
+                    final_supply = f"{availability_remains or 'N/A'}/{total_supply_value or getattr(gift, 'availability_total', 'N/A')}"
+                    
                     gift_data.update({
                         'slug': None,
-                        'title': gift.title or 'N/A',
+                        'title': final_title,
                         'gift_id': gift_id,
                         'num': None,
                         'fragment_url': original_image_url,  # Use Original.png for unupgradeable
                         'fragment_link': None,
-                        'total_supply': f"{availability_remains or 'N/A'}/{getattr(gift, 'availability_total', 'N/A')}",
+                        'total_supply': final_supply,
                         'model_name': None,
                         'backdrop_name': None,
                         'pattern_name': None,

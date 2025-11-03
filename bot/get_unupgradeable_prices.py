@@ -103,10 +103,10 @@ def get_mrkt_prices(token):
             
             for coll in collections:
                 name = coll.get('name')
-                if name in MRKT_ONLY_IDS:
-                    # Convert nanoTONs to TON
-                    floor_price_nano = coll.get('floorPriceNanoTons', 0)
-                    floor_price_ton = floor_price_nano / 1_000_000_000 if floor_price_nano else 0
+                # Convert nanoTONs to TON for ALL gifts
+                floor_price_nano = coll.get('floorPriceNanoTons', 0)
+                floor_price_ton = floor_price_nano / 1_000_000_000 if floor_price_nano else 0
+                if floor_price_ton > 0:  # Only include gifts with non-zero prices
                     prices[name] = floor_price_ton
             
             return prices
@@ -152,8 +152,9 @@ async def get_quant_init_data():
         await client.disconnect()
 
 def get_quant_prices(init_data):
-    """Get Quant prices for unupgradeable gifts"""
+    """Get Quant prices for unupgradeable gifts - use static file as API is unreliable"""
     try:
+        # Try API first
         import cloudscraper
         scraper = cloudscraper.create_scraper()
         headers = {'Authorization': f'tma {init_data}'}
@@ -173,10 +174,31 @@ def get_quant_prices(init_data):
                 except:
                     pass
             
-            return prices
-        return {}
+            if prices:
+                return prices
     except Exception as e:
-        print(f"ERROR: Quant prices failed: {e}", file=sys.stderr)
+        print(f"ERROR: Quant API failed: {e}", file=sys.stderr)
+    
+    # Fallback to static file
+    try:
+        quant_file = '/root/01studio/CollectibleKIT/mrktandquantomapi/quant/clean_unique_gifts.json'
+        with open(quant_file, 'r') as f:
+            data = json.load(f)
+        
+        prices = {}
+        for item in data:
+            gift_id = item.get('id')
+            floor_price = item.get('floor_price', '0')
+            try:
+                price = float(floor_price)
+                if price > 0:
+                    prices[gift_id] = price
+            except:
+                pass
+        
+        return prices
+    except Exception as e:
+        print(f"ERROR: Quant file failed: {e}", file=sys.stderr)
         return {}
 
 async def main():
