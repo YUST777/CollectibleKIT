@@ -2414,7 +2414,7 @@ export const PortfolioTab: React.FC = () => {
                     
                     <div className="flex items-center gap-1 text-xs text-white mt-2">
                       <span className="text-blue-200">Total value</span>
-                      <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-3 h-3" />
+                      <img src="/icons/ton.svg" alt="TON" className="w-3 h-3" />
                       <span className="font-semibold">
                         {cg.total_value?.toFixed(2) || '0.00'}
                       </span>
@@ -2545,7 +2545,7 @@ export const PortfolioTab: React.FC = () => {
                         }}
                         className={`px-3 py-1.5 text-xs rounded flex items-center gap-1 ${currency === 'TON' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-300'}`}
                       >
-                        <img src="/icons/toncoin.svg" alt="TON" className="w-3 h-3" />
+                        <img src="/icons/ton.svg" alt="TON" className="w-3 h-3" />
                         TON
                       </button>
                       <button
