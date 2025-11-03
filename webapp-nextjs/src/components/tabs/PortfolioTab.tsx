@@ -264,6 +264,8 @@ export const PortfolioTab: React.FC = () => {
   const [addGiftTab, setAddGiftTab] = useState<'custom' | 'channel'>('custom');
   const [channelUsername, setChannelUsername] = useState('');
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
+  const [isChannelGiftDrawerOpen, setIsChannelGiftDrawerOpen] = useState(false);
+  const [selectedChannelGift, setSelectedChannelGift] = useState<any>(null);
 
   // Add Sticker drawer state
   const [isAddStickerDrawerOpen, setIsAddStickerDrawerOpen] = useState(false);
@@ -2441,8 +2443,9 @@ export const PortfolioTab: React.FC = () => {
                 <div
                   key={`channel-gifts-${cg.channel_id}-${cgIndex}`}
                   onClick={() => {
-                    // TODO: Open channel gifts breakdown drawer
-                    console.log('Channel gifts clicked:', cg);
+                    setSelectedChannelGift(cg);
+                    setIsChannelGiftDrawerOpen(true);
+                    hapticFeedback('impact', 'light', webApp || undefined);
                   }}
                   className="rounded-2xl p-3 cursor-pointer hover:scale-105 transition-transform relative z-0 overflow-hidden group backdrop-blur-xl bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-[#242829] shadow-lg shadow-black/20"
                 >
@@ -2972,8 +2975,8 @@ export const PortfolioTab: React.FC = () => {
               <div className="space-y-2 max-h-[50vh] overflow-y-auto">
                 {(() => {
                   const filteredRegularGifts = allGifts.filter(gift => {
-                    if (!filterSearchTerm) return true;
-                    return gift.toLowerCase().includes(filterSearchTerm.toLowerCase());
+                  if (!filterSearchTerm) return true;
+                  return gift.toLowerCase().includes(filterSearchTerm.toLowerCase());
                   });
                   
                   const filteredUnupgradeableGifts = unupgradeableGifts.filter(gift => {
@@ -2984,27 +2987,27 @@ export const PortfolioTab: React.FC = () => {
                   const totalResults = filteredRegularGifts.length + filteredUnupgradeableGifts.length;
                   
                   return totalResults === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                      <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <p className="text-sm">No results found</p>
-                      <p className="text-xs mt-1">Try a different search term</p>
-                    </div>
-                  ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                    <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <p className="text-sm">No results found</p>
+                    <p className="text-xs mt-1">Try a different search term</p>
+                  </div>
+                ) : (
                     <>
                       {filteredRegularGifts.map((gift, index) => (
                         <div
                           key={`regular-${index}`}
-                          className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
-                            gift === selectedGiftName ? 'ring-2 ring-blue-500' : ''
-                          }`}
+                        className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
+                          gift === selectedGiftName ? 'ring-2 ring-blue-500' : ''
+                        }`}
                           onClick={() => {
                             setSelectedGiftName(gift);
                             setSelectedUnupgradeableGift(null);
                           }}
-                        >
-                          <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden bg-transparent">
+                      >
+                        <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden bg-transparent">
                             <img 
                               src={getCollectionImageUrl(gift)}
                               alt={gift}
@@ -3018,18 +3021,18 @@ export const PortfolioTab: React.FC = () => {
                               }}
                             />
                             <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold" style={{ display: 'none' }}>
-                              {gift.charAt(0)}
-                            </div>
+                            {gift.charAt(0)}
                           </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-white">{gift}</div>
-                          </div>
-                          {gift === selectedGiftName && (
-                            <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
                         </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-white">{gift}</div>
+                        </div>
+                        {gift === selectedGiftName && (
+                          <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
                       ))}
                       {filteredUnupgradeableGifts.map((gift, index) => (
                         <div
@@ -3097,9 +3100,9 @@ export const PortfolioTab: React.FC = () => {
                     className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all"
                   >
                     Add Gift
-                    </button>
-                  </div>
-                )}
+                  </button>
+                </div>
+              )}
               {selectedUnupgradeableGift && (
                 <div className="mt-6 pt-4 border-t border-gray-700 space-y-3">
                   <div>
@@ -3605,6 +3608,81 @@ export const PortfolioTab: React.FC = () => {
               )}
             </div>
           )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Channel Gift Breakdown Drawer */}
+      <Sheet open={isChannelGiftDrawerOpen} onOpenChange={setIsChannelGiftDrawerOpen}>
+        <SheetContent className="h-[80vh] bg-[#1a1b1e] border-t border-gray-800 overflow-y-auto">
+          <div className="p-6 pb-20">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-white">{selectedChannelGift?.channel_username && `@${selectedChannelGift.channel_username}`}</h2>
+              <p className="text-sm text-gray-400 mt-1">Channel Gifts Breakdown</p>
+            </div>
+
+            {selectedChannelGift && (
+              <div className="space-y-4">
+                {/* Total Summary */}
+                <div className="p-4 rounded-xl bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-[#242829]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white font-medium">Total Gifts</span>
+                    <span className="text-white font-bold text-xl">{selectedChannelGift.total_gifts}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-purple-800">
+                    <span className="text-gray-300 text-sm">Total Value</span>
+                    <div className="flex items-center gap-1">
+                      <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-4 h-4" />
+                      <span className="text-white font-bold text-lg">{formatPrice(selectedChannelGift.total_value)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual Gift Items */}
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-white mb-3">Gift Breakdown</h3>
+                  {selectedChannelGift.gifts_breakdown?.map((gift: any, index: number) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 p-4 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] transition-colors"
+                    >
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800/50 flex-shrink-0">
+                        {gift.id && (
+                          <img 
+                            src={`https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
+                            alt={gift.name || 'Gift'} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-medium truncate">{gift.name || 'Unknown Gift'}</div>
+                        <div className="text-gray-400 text-sm">Gift ID: {gift.id}</div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-white font-bold text-lg">{gift.count}x</div>
+                        {gift.price !== undefined && gift.price !== null && (
+                          <div className="flex items-center justify-end gap-1 mt-1">
+                            <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-3 h-3" />
+                            <span className="text-green-400 text-sm font-medium">
+                              {formatPrice(gift.price)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {(!selectedChannelGift.gifts_breakdown || selectedChannelGift.gifts_breakdown.length === 0) && (
+                    <div className="text-center py-8 text-gray-400">
+                      <p>No gifts found</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     </div>
