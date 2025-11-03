@@ -3641,8 +3641,8 @@ export const PortfolioTab: React.FC = () => {
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold text-white mb-3">Gift Receipt</h3>
                   {selectedChannelGift.gifts_breakdown?.map((gift: any, index: number) => {
-                    const unitPrice = gift.price || 0;
-                    const totalPrice = (gift.count || 0) * unitPrice;
+                    const unitPrice = gift.price_per_unit || gift.price || 0;
+                    const totalPrice = gift.total_value || (gift.count || 0) * unitPrice;
                     return (
                     <div
                       key={index}
@@ -3662,7 +3662,6 @@ export const PortfolioTab: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-white font-semibold text-base truncate">{gift.name || 'Unknown Gift'}</div>
-                        <div className="text-gray-400 text-xs mt-0.5">ID: {gift.id}</div>
                         {unitPrice > 0 && (
                           <div className="text-gray-500 text-xs mt-1">
                             {formatPrice(unitPrice)} each
