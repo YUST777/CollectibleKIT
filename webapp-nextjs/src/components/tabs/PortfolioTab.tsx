@@ -927,8 +927,21 @@ export const PortfolioTab: React.FC = () => {
           console.log('✅ Loaded', data.gifts.length, 'custom gifts from database');
           
           const customGiftsFromDB = data.gifts.map((g: any) => {
+            // Use fragment_url from database if it exists, otherwise construct it
+            let fragmentUrl = g.fragment_url || null;
             const slugLower = (g.slug || '').toLowerCase().replace(/\s+/g, '');
-            const fragmentUrl = slugLower && g.num ? `https://nft.fragment.com/gift/${slugLower}-${g.num}.medium.jpg` : null;
+            
+            if (!fragmentUrl && g.slug) {
+              // Check if slug already contains the number (upgraded gift format: "Collection-Number")
+              // e.g., "TamaGadget-65287" should be used directly as "tamagadget-65287.medium.jpg"
+              if (slugLower.includes('-') && /^[a-zA-Z]/.test(slugLower)) {
+                // Slug already has the number, use it directly
+                fragmentUrl = `https://nft.fragment.com/gift/${slugLower}.medium.jpg`;
+              } else if (g.num) {
+                // Regular gift format: construct as "collection-number.medium.jpg"
+                fragmentUrl = `https://nft.fragment.com/gift/${slugLower}-${g.num}.medium.jpg`;
+              }
+            }
             
             return {
               slug: g.slug || '',
@@ -1585,7 +1598,17 @@ export const PortfolioTab: React.FC = () => {
 
     // Generate fragment URL
     const slugLower = selectedGiftName.toLowerCase().replace(/\s+/g, '');
-    const fragmentUrl = `https://nft.fragment.com/gift/${slugLower}-${ribbonNum}.medium.jpg`;
+    
+    // Check if the gift name is already a full slug (upgraded gift format: "Collection-Number")
+    // e.g., "TamaGadget-65287" should be used directly as "tamagadget-65287.medium.jpg"
+    let fragmentUrl: string;
+    if (slugLower.includes('-') && /^[a-zA-Z]/.test(slugLower)) {
+      // Gift name is already a full slug, use it directly
+      fragmentUrl = `https://nft.fragment.com/gift/${slugLower}.medium.jpg`;
+    } else {
+      // Regular gift format: construct as "collection-number.medium.jpg"
+      fragmentUrl = `https://nft.fragment.com/gift/${slugLower}-${ribbonNum}.medium.jpg`;
+    }
 
     // Fetch metadata first
     let modelName = null;
