@@ -250,22 +250,57 @@ async def get_profile_gifts(user_id=None):
                         'price': price
                     })
                 else:
-                    # Not upgraded gift
+                    # Not upgraded gift - need to check if it's upgradeable
+                    gift_id = gift.id
+                    upgrade_stars = getattr(gift, 'upgrade_stars', None)
+                    availability_remains = getattr(gift, 'availability_remains', None)
+                    
+                    # Determine upgrade status
+                    is_unupgradeable = upgrade_stars is None  # Can't be upgraded (no mint available)
+                    is_unupgraded = upgrade_stars is not None  # Can be upgraded but user hasn't
+                    
+                    # For unupgradeable gifts, use original.png URL
+                    original_image_url = None
+                    if gift_id and is_unupgradeable:
+                        original_image_url = f'https://cdn.changes.tg/gifts/originals/{gift_id}/Original.png'
+                    
+                    # For unupgraded gifts, try to get base floor price (no attributes)
+                    price = None
+                    if is_unupgraded and portal_auth_data:
+                        # Try to get floor price for this gift type (no specific attributes)
+                        # We need the title/slug to search for it
+                        try:
+                            # Use the title to find the gift
+                            title_for_search = gift.title or 'N/A'
+                            if title_for_search != 'N/A':
+                                results = await search_gifts(
+                                    sort="price_asc",
+                                    limit=1,
+                                    gift_name=title_for_search,
+                                    authData=portal_auth_data
+                                )
+                                if results and len(results) > 0:
+                                    price = float(results[0].price)
+                        except Exception as e:
+                            print(f"⚠️ Error fetching floor price for unupgraded {title_for_search}: {e}", file=sys.stderr)
+                    
                     gift_data.update({
                         'slug': None,
                         'title': gift.title or 'N/A',
-                        'gift_id': gift.id,
+                        'gift_id': gift_id,
                         'num': None,
-                        'fragment_url': None,
+                        'fragment_url': original_image_url,  # Use Original.png for unupgradeable
                         'fragment_link': None,
-                        'total_supply': f"{getattr(gift, 'availability_remains', 'N/A')}/{getattr(gift, 'availability_total', 'N/A')}",
+                        'total_supply': f"{availability_remains or 'N/A'}/{getattr(gift, 'availability_total', 'N/A')}",
                         'model_name': None,
                         'backdrop_name': None,
                         'pattern_name': None,
                         'model_display': 'N/A',
                         'backdrop_display': 'N/A',
                         'pattern_display': 'N/A',
-                        'price': None
+                        'price': price,
+                        'is_unupgradeable': is_unupgradeable,  # Can't be upgraded
+                        'is_unupgraded': is_unupgraded  # Can be upgraded but not yet
                     })
                 
                 processed_gifts.append(gift_data)

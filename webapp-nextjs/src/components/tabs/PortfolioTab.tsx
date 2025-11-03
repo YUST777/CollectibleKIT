@@ -164,6 +164,8 @@ interface PortfolioGift {
   owner_name?: string | null;
   is_custom?: boolean; // Flag to distinguish custom vs auto gifts
   gift_id?: number; // Database ID for custom gifts
+  is_unupgradeable?: boolean; // Can't be upgraded (no mint available)
+  is_unupgraded?: boolean; // Can be upgraded but user hasn't minted yet
 }
 
 interface PortfolioHistoryPoint {
@@ -609,44 +611,94 @@ export const PortfolioTab: React.FC = () => {
     }
   }, [gifts, totalValue, user?.user_id]);
 
-  // Refresh prices for custom gifts that have null prices (only once)
-  useEffect(() => {
-    const fetchMissingPrices = async () => {
-      const customGiftsWithoutPrice = gifts.filter(g => {
-        const key = `${g.slug}-${g.num}`;
-        return g.is_custom && (g.price === null || g.price === undefined) && !pricesFetchedRef.current.has(key);
+  // Batched price fetching function
+  const fetchPricesInBatches = async (giftsToFetch: any[], maxGifts: number = 100, batchSize: number = 10, delayMs: number = 500) => {
+    // Limit to max gifts
+    const limitedGifts = giftsToFetch.slice(0, maxGifts);
+    const totalGifts = limitedGifts.length;
+    
+    if (totalGifts === 0) {
+      return;
+    }
+    
+    console.log(`💰 Fetching prices for ${totalGifts} gifts in batches of ${batchSize}...`);
+    
+    let completed = 0;
+    const loadingToast = toast.loading(`Fetching prices: 0/${totalGifts}`);
+    
+    // Process in batches
+    for (let i = 0; i < limitedGifts.length; i += batchSize) {
+      const batch = limitedGifts.slice(i, i + batchSize);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(totalGifts / batchSize);
+      
+      console.log(`📦 Processing batch ${batchNumber}/${totalBatches} (${batch.length} gifts)`);
+      
+      // Fetch prices for this batch in parallel
+      const batchPromises = batch.map(async (gift) => {
+        const key = `${gift.slug}-${gift.num}`;
+        try {
+          const priceResult = await getGiftPrice(gift.title, gift.backdrop_name || null, gift.model_name || null);
+          if (priceResult.price !== null) {
+            setGifts(prev => prev.map(g => {
+              if (g.slug === gift.slug && g.num === gift.num) {
+                return { ...g, price: priceResult.price };
+              }
+              return g;
+            }));
+            completed++;
+            console.log(`✅ [${completed}/${totalGifts}] Updated price for ${gift.title}: ${priceResult.price}`);
+            return true;
+          }
+        } catch (error) {
+          console.error(`❌ Error fetching price for ${gift.title}:`, error);
+        }
+        completed++;
+        return false;
       });
       
-      if (customGiftsWithoutPrice.length > 0) {
-        console.log('💰 Fetching prices for', customGiftsWithoutPrice.length, 'custom gifts without prices');
-        
-        for (const gift of customGiftsWithoutPrice) {
-          const key = `${gift.slug}-${gift.num}`;
+      // Wait for batch to complete
+      await Promise.all(batchPromises);
+      
+      // Update progress toast
+      toast.loading(`Fetching prices: ${completed}/${totalGifts}`, { id: loadingToast });
+      
+      // Delay before next batch (except for the last batch)
+      if (i + batchSize < limitedGifts.length) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+    
+    // Final update
+    toast.dismiss(loadingToast);
+    toast.success(`Prices fetched for ${completed} gifts`);
+    console.log(`✅ Price fetching complete: ${completed}/${totalGifts} gifts processed`);
+  };
+
+  // Fetch prices for gifts that don't have prices (initial load)
+  useEffect(() => {
+    const fetchMissingPrices = async () => {
+      // Get all gifts without prices (both auto and custom) that we haven't fetched yet
+      const giftsWithoutPrice = gifts.filter(g => {
+        const key = `${g.slug}-${g.num}`;
+        return (g.price === null || g.price === undefined) && !pricesFetchedRef.current.has(key);
+      });
+      
+      if (giftsWithoutPrice.length > 0) {
+        // Mark all as fetched to prevent duplicate requests
+        giftsWithoutPrice.forEach(g => {
+          const key = `${g.slug}-${g.num}`;
           pricesFetchedRef.current.add(key);
-          
-          try {
-            const priceResult = await getGiftPrice(gift.title, gift.backdrop_name || null, gift.model_name || null);
-            
-            if (priceResult.price !== null) {
-              // Update the gift with the price
-              setGifts(prev => prev.map(g => {
-                if (g.slug === gift.slug && g.num === gift.num && g.is_custom) {
-                  return { ...g, price: priceResult.price };
-                }
-                return g;
-              }));
-              console.log('✅ Updated price for', gift.title, ':', priceResult.price);
-            } else if (priceResult.error) {
-              console.warn('⚠️ Price fetch failed for', gift.title, ':', priceResult.error);
-            }
-          } catch (error) {
-            console.error('Error fetching price for', gift.title, ':', error);
-          }
-        }
+        });
+        
+        console.log(`💰 Auto-fetching prices for ${giftsWithoutPrice.length} gifts without prices...`);
+        
+        // Use batched fetching (max 100, 10 per batch, 500ms delay)
+        fetchPricesInBatches(giftsWithoutPrice, 100, 10, 500);
       }
     };
 
-    // Only run if we have custom gifts without prices
+    // Only run if we have gifts without prices
     if (gifts.length > 0) {
       fetchMissingPrices();
     }
@@ -1300,30 +1352,8 @@ export const PortfolioTab: React.FC = () => {
       loadStickers();
     }
     
-    // Refresh prices for all gifts (both auto and custom)
-    console.log('💰 Refreshing prices for all gifts...');
-    const pricePromises = loadedGifts.map(async (gift) => {
-      const key = `${gift.slug}-${gift.num}`;
-      try {
-        const priceResult = await getGiftPrice(gift.title, gift.backdrop_name || null, gift.model_name || null);
-        if (priceResult.price !== null) {
-          setGifts(prev => prev.map(g => {
-            if (g.slug === gift.slug && g.num === gift.num) {
-              return { ...g, price: priceResult.price };
-            }
-            return g;
-          }));
-          console.log('✅ Updated price for', gift.title, ':', priceResult.price);
-        }
-      } catch (error) {
-        console.error('Error refreshing price for', gift.title, ':', error);
-      }
-    });
-    
-    // Don't await - let it run in background
-    Promise.all(pricePromises).then(() => {
-      console.log('✅ All prices refreshed');
-    });
+    // Fetch prices in batches (max 100 gifts, 10 per batch, 500ms delay)
+    fetchPricesInBatches(loadedGifts, 100, 10, 500);
     
     toast.success('Portfolio updated');
   };
