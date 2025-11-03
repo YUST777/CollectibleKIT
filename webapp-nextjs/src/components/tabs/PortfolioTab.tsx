@@ -254,7 +254,9 @@ export const PortfolioTab: React.FC = () => {
   // Add Gift filter drawer state
   const [isAddGiftDrawerOpen, setIsAddGiftDrawerOpen] = useState(false);
   const [allGifts, setAllGifts] = useState<string[]>([]);
+  const [unupgradeableGifts, setUnupgradeableGifts] = useState<Array<{id: string, name: string, shortName: string, floorPrice: number, imageUrl: string, supply: number}>>([]);
   const [selectedGiftName, setSelectedGiftName] = useState<string | null>(null);
+  const [selectedUnupgradeableGift, setSelectedUnupgradeableGift] = useState<{id: string, name: string, shortName: string, floorPrice: number, imageUrl: string, supply: number} | null>(null);
   const [filterSearchTerm, setFilterSearchTerm] = useState('');
   const [ribbonNumber, setRibbonNumber] = useState<string>('');
   
@@ -335,7 +337,22 @@ export const PortfolioTab: React.FC = () => {
       }
     };
     
+    const loadUnupgradeableGifts = async () => {
+      try {
+        const response = await fetch('/api/portfolio/unupgradeable-gifts');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setUnupgradeableGifts(data.gifts || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load unupgradeable gifts:', error);
+      }
+    };
+    
     loadAllGifts();
+    loadUnupgradeableGifts();
   }, []);
 
   // Helper function to format price based on currency preference (for TON prices)
@@ -1460,6 +1477,7 @@ export const PortfolioTab: React.FC = () => {
   // Add Gift drawer functions
   const openAddGiftDrawer = () => {
     setSelectedGiftName(null);
+    setSelectedUnupgradeableGift(null);
     setFilterSearchTerm('');
     setRibbonNumber('');
     setIsAddGiftDrawerOpen(true);
@@ -1469,6 +1487,7 @@ export const PortfolioTab: React.FC = () => {
   const closeAddGiftDrawer = () => {
     setIsAddGiftDrawerOpen(false);
     setSelectedGiftName(null);
+    setSelectedUnupgradeableGift(null);
     setFilterSearchTerm('');
   };
 
@@ -1476,6 +1495,62 @@ export const PortfolioTab: React.FC = () => {
     setSelectedGiftName(giftName);
     setFilterSearchTerm('');
     hapticFeedback('impact');
+  };
+
+  const handleSaveUnupgradeableGift = async () => {
+    if (!selectedUnupgradeableGift) {
+      toast.error('Please select a gift');
+      return;
+    }
+
+    const gift = selectedUnupgradeableGift;
+    const newGift: PortfolioGift = {
+      slug: gift.shortName.toLowerCase().replace(/\s+/g, ''),
+      num: 0,
+      title: gift.name,
+      model_name: null,
+      backdrop_name: null,
+      pattern_name: null,
+      model_rarity: null,
+      backdrop_rarity: null,
+      pattern_rarity: null,
+      model_display: undefined,
+      backdrop_display: undefined,
+      pattern_display: undefined,
+      pinned: false,
+      fragment_url: gift.imageUrl,
+      price: gift.floorPrice > 0 ? gift.floorPrice : null,
+      priceError: undefined,
+      availability_issued: null,
+      availability_total: null,
+      total_supply: gift.supply,
+      owner_username: null,
+      owner_name: null,
+      is_custom: true,
+      is_unupgradeable: true
+    };
+
+    // Add to gifts
+    setGifts(prev => [...prev, newGift]);
+    closeAddGiftDrawer();
+    toast.success('Gift added to portfolio!');
+
+    // Save to database via API for cross-device sync
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      await fetch('/api/portfolio/custom-gifts', {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ gift: newGift })
+      });
+    } catch (error) {
+      console.error('Failed to save gift to database:', error);
+    }
   };
 
   const handleSaveGift = async () => {
@@ -2672,8 +2747,8 @@ export const PortfolioTab: React.FC = () => {
                             <XMarkIcon className="w-4 h-4 text-red-400" />
                           </button>
                         </>
-                      )}
-                    </div>
+              )}
+            </div>
                   </div>
                 </div>
               ))}
@@ -2693,9 +2768,9 @@ export const PortfolioTab: React.FC = () => {
                 <div className="relative z-10 space-y-1">
                   <h4 className="font-bold text-gray-400 text-sm truncate">Custom Sticker</h4>
                   <p className="text-xs text-gray-500">Click to add</p>
-                </div>
-              </div>
             </div>
+          </div>
+        </div>
           )}
         </>
       )}
@@ -2887,60 +2962,113 @@ export const PortfolioTab: React.FC = () => {
 
               {/* Filter Options List */}
               <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                {allGifts.filter(gift => {
-                  if (!filterSearchTerm) return true;
-                  return gift.toLowerCase().includes(filterSearchTerm.toLowerCase());
-                }).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                    <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <p className="text-sm">No results found</p>
-                    <p className="text-xs mt-1">Try a different search term</p>
-                  </div>
-                ) : (
-                  allGifts
-                    .filter(gift => {
-                      if (!filterSearchTerm) return true;
-                      return gift.toLowerCase().includes(filterSearchTerm.toLowerCase());
-                    })
-                    .map((gift, index) => (
-                      <div
-                        key={index}
-                        className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
-                          gift === selectedGiftName ? 'ring-2 ring-blue-500' : ''
-                        }`}
-                        onClick={() => selectGiftName(gift)}
-                      >
-                        <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden bg-transparent">
-                          <img 
-                            src={getCollectionImageUrl(gift)}
-                            alt={gift}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Fallback to gradient if image fails
-                              e.currentTarget.style.display = 'none';
-                              const fallback = e.currentTarget.nextElementSibling;
-                              if (fallback) {
-                                (fallback as HTMLElement).style.display = 'flex';
-                              }
-                            }}
-                          />
-                          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold" style={{ display: 'none' }}>
-                            {gift.charAt(0)}
+                {(() => {
+                  const filteredRegularGifts = allGifts.filter(gift => {
+                    if (!filterSearchTerm) return true;
+                    return gift.toLowerCase().includes(filterSearchTerm.toLowerCase());
+                  });
+                  
+                  const filteredUnupgradeableGifts = unupgradeableGifts.filter(gift => {
+                    if (!filterSearchTerm) return true;
+                    return gift.name.toLowerCase().includes(filterSearchTerm.toLowerCase());
+                  });
+                  
+                  const totalResults = filteredRegularGifts.length + filteredUnupgradeableGifts.length;
+                  
+                  return totalResults === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                      <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <p className="text-sm">No results found</p>
+                      <p className="text-xs mt-1">Try a different search term</p>
+                    </div>
+                  ) : (
+                    <>
+                      {filteredRegularGifts.map((gift, index) => (
+                        <div
+                          key={`regular-${index}`}
+                          className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
+                            gift === selectedGiftName ? 'ring-2 ring-blue-500' : ''
+                          }`}
+                          onClick={() => {
+                            setSelectedGiftName(gift);
+                            setSelectedUnupgradeableGift(null);
+                          }}
+                        >
+                          <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden bg-transparent">
+                            <img 
+                              src={getCollectionImageUrl(gift)}
+                              alt={gift}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling;
+                                if (fallback) {
+                                  (fallback as HTMLElement).style.display = 'flex';
+                                }
+                              }}
+                            />
+                            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold" style={{ display: 'none' }}>
+                              {gift.charAt(0)}
+                            </div>
                           </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-white">{gift}</div>
+                          </div>
+                          {gift === selectedGiftName && (
+                            <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
                         </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-white">{gift}</div>
+                      ))}
+                      {filteredUnupgradeableGifts.map((gift, index) => (
+                        <div
+                          key={`unupgradeable-${gift.id}`}
+                          className={`flex items-center p-3 rounded-xl bg-[#2d4a2d] hover:bg-[#355a35] cursor-pointer transition-colors ${
+                            selectedUnupgradeableGift?.id === gift.id ? 'ring-2 ring-blue-500' : ''
+                          }`}
+                          onClick={() => {
+                            setSelectedUnupgradeableGift(gift);
+                            setSelectedGiftName(null);
+                          }}
+                        >
+                          <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden bg-transparent">
+                            <img 
+                              src={gift.imageUrl}
+                              alt={gift.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling;
+                                if (fallback) {
+                                  (fallback as HTMLElement).style.display = 'flex';
+                                }
+                              }}
+                            />
+                            <div className="w-full h-full bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white font-bold" style={{ display: 'none' }}>
+                              {gift.name.charAt(0)}
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-white">{gift.name}</div>
+                            {gift.floorPrice > 0 && (
+                              <div className="text-xs text-green-300">
+                                {formatPrice(gift.floorPrice)} TON
+                              </div>
+                            )}
+                          </div>
+                          {selectedUnupgradeableGift?.id === gift.id && (
+                            <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
                         </div>
-                        {gift === selectedGiftName && (
-                          <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    ))
-                )}
+                      ))}
+                    </>
+                  );
+                })()}
               </div>
               
               {/* Number Input and OK Button */}
@@ -2964,6 +3092,16 @@ export const PortfolioTab: React.FC = () => {
                     </button>
                   </div>
                 )}
+              {selectedUnupgradeableGift && (
+                <div className="mt-6 pt-4 border-t border-gray-700 space-y-3">
+                  <button
+                    onClick={handleSaveUnupgradeableGift}
+                    className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 active:scale-95 transition-all"
+                  >
+                    Add Gift
+                  </button>
+                </div>
+              )}
               </div>
             ) : (
               <div className="space-y-6">
