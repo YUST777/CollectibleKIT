@@ -1523,7 +1523,7 @@ export const PortfolioTab: React.FC = () => {
       priceError: undefined,
       availability_issued: null,
       availability_total: null,
-      total_supply: gift.supply,
+      total_supply: gift.supply.toString(),
       owner_username: null,
       owner_name: null,
       is_custom: true,
