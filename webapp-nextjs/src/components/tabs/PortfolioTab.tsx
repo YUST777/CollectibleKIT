@@ -3638,14 +3638,17 @@ export const PortfolioTab: React.FC = () => {
                 </div>
 
                 {/* Individual Gift Items */}
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-white mb-3">Gift Breakdown</h3>
-                  {selectedChannelGift.gifts_breakdown?.map((gift: any, index: number) => (
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-white mb-3">Gift Receipt</h3>
+                  {selectedChannelGift.gifts_breakdown?.map((gift: any, index: number) => {
+                    const unitPrice = gift.price || 0;
+                    const totalPrice = (gift.count || 0) * unitPrice;
+                    return (
                     <div
                       key={index}
-                      className="flex items-center gap-4 p-4 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] transition-colors"
+                      className="flex items-center gap-4 p-4 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] transition-colors border border-gray-700"
                     >
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800/50 flex-shrink-0">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800/50 flex-shrink-0 border border-gray-600">
                         {gift.id && (
                           <img 
                             src={`https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
@@ -3658,22 +3661,29 @@ export const PortfolioTab: React.FC = () => {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-white font-medium truncate">{gift.name || 'Unknown Gift'}</div>
-                        <div className="text-gray-400 text-sm">Gift ID: {gift.id}</div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="text-white font-bold text-lg">{gift.count}x</div>
-                        {gift.price !== undefined && gift.price !== null && (
-                          <div className="flex items-center justify-end gap-1 mt-1">
-                            <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-3 h-3" />
-                            <span className="text-green-400 text-sm font-medium">
-                              {formatPrice(gift.price)}
-                            </span>
+                        <div className="text-white font-semibold text-base truncate">{gift.name || 'Unknown Gift'}</div>
+                        <div className="text-gray-400 text-xs mt-0.5">ID: {gift.id}</div>
+                        {unitPrice > 0 && (
+                          <div className="text-gray-500 text-xs mt-1">
+                            {formatPrice(unitPrice)} each
                           </div>
                         )}
                       </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-gray-400 text-sm">x{gift.count || 0}</span>
+                          <span className="text-gray-400">=</span>
+                          <div className="flex items-center gap-1">
+                            <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-4 h-4" />
+                            <span className="text-green-400 font-bold text-lg">
+                              {formatPrice(totalPrice)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ))}
+                  );
+                  })}
                   {(!selectedChannelGift.gifts_breakdown || selectedChannelGift.gifts_breakdown.length === 0) && (
                     <div className="text-center py-8 text-gray-400">
                       <p>No gifts found</p>
