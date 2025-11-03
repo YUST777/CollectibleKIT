@@ -1498,16 +1498,24 @@ export const PortfolioTab: React.FC = () => {
   };
 
   const handleSaveUnupgradeableGift = async () => {
-    if (!selectedUnupgradeableGift) {
-      toast.error('Please select a gift');
+    if (!selectedUnupgradeableGift || !ribbonNumber) {
+      toast.error('Please select a gift and enter quantity');
+      return;
+    }
+
+    const quantity = parseInt(ribbonNumber);
+    if (isNaN(quantity) || quantity <= 0) {
+      toast.error('Please enter a valid quantity');
       return;
     }
 
     const gift = selectedUnupgradeableGift;
+    const totalValue = gift.floorPrice > 0 ? quantity * gift.floorPrice : null;
+    
     const newGift: PortfolioGift = {
       slug: gift.shortName.toLowerCase().replace(/\s+/g, ''),
-      num: 0,
-      title: gift.name,
+      num: quantity,
+      title: `${gift.name} x${quantity}`,
       model_name: null,
       backdrop_name: null,
       pattern_name: null,
@@ -1519,7 +1527,7 @@ export const PortfolioTab: React.FC = () => {
       pattern_display: undefined,
       pinned: false,
       fragment_url: gift.imageUrl,
-      price: gift.floorPrice > 0 ? gift.floorPrice : null,
+      price: totalValue,
       priceError: undefined,
       availability_issued: null,
       availability_total: null,
@@ -1533,7 +1541,7 @@ export const PortfolioTab: React.FC = () => {
     // Add to gifts
     setGifts(prev => [...prev, newGift]);
     closeAddGiftDrawer();
-    toast.success('Gift added to portfolio!');
+    toast.success(`${quantity}x ${gift.name} added to portfolio!`);
 
     // Save to database via API for cross-device sync
     try {
@@ -3094,9 +3102,26 @@ export const PortfolioTab: React.FC = () => {
                 )}
               {selectedUnupgradeableGift && (
                 <div className="mt-6 pt-4 border-t border-gray-700 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Quantity</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={ribbonNumber}
+                      onChange={(e) => setRibbonNumber(e.target.value)}
+                      className="w-full px-4 py-2.5 backdrop-blur-sm bg-white/10 border border-[#242829] text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-400/50"
+                      placeholder="How many? (e.g. 15 or 100)"
+                    />
+                    {ribbonNumber && !isNaN(Number(ribbonNumber)) && Number(ribbonNumber) > 0 && selectedUnupgradeableGift.floorPrice > 0 && (
+                      <div className="mt-2 text-sm text-green-300">
+                        Total value: {formatPrice(Number(ribbonNumber) * selectedUnupgradeableGift.floorPrice)}
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={handleSaveUnupgradeableGift}
-                    className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 active:scale-95 transition-all"
+                    disabled={!ribbonNumber || isNaN(Number(ribbonNumber)) || Number(ribbonNumber) <= 0}
+                    className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                   >
                     Add Gift
                   </button>
