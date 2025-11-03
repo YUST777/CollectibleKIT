@@ -22,6 +22,18 @@ except ImportError:
     APORTALSMP_AVAILABLE = False
     # Silent - library not available is not an error for user
 
+# Import unupgradeable prices function
+try:
+    import sys
+    import os
+    bot_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, bot_dir)
+    from get_unupgradeable_prices import fetch_unupgradeable_prices
+    UNUPGRADEABLE_PRICES_AVAILABLE = True
+except ImportError as e:
+    print(f"DEBUG: Import failed: {e}", file=sys.stderr)
+    UNUPGRADEABLE_PRICES_AVAILABLE = False
+
 # Import config from gifts directory
 try:
     # Use hardcoded values from gifts/bot.py (same as working code)
@@ -179,20 +191,46 @@ async def get_profile_gifts(user_id=None):
             # Silently fail
             pass
         
+        # Fetch unupgradeable prices using imported function with shared client
+        if UNUPGRADEABLE_PRICES_AVAILABLE:
+            try:
+                unupgradeable_prices = await fetch_unupgradeable_prices(client)
+            except Exception as e:
+                # Fallback to static file
+                try:
+                    quant_file = '/root/01studio/CollectibleKIT/mrktandquantomapi/quant/clean_unique_gifts.json'
+                    with open(quant_file, 'r') as f:
+                        quant_data = json.load(f)
+                        for item in quant_data:
+                            gift_id = item.get('id')
+                            floor_price = item.get('floor_price', '0')
+                            try:
+                                price = float(floor_price)
+                                if price > 0:
+                                    unupgradeable_prices[str(gift_id)] = price
+                            except:
+                                pass
+                except:
+                    pass
+        
+        # Also load static prices to supplement live API data
         try:
-            import subprocess
-            result = subprocess.run(
-                ['python3', '/root/01studio/CollectibleKIT/bot/get_unupgradeable_prices.py'],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if result.returncode == 0:
-                prices_data = json.loads(result.stdout)
-                if prices_data.get('success'):
-                    unupgradeable_prices = prices_data.get('prices', {})
-        except Exception as e:
-            # Silently fail - prices will be None
+            quant_file = '/root/01studio/CollectibleKIT/mrktandquantomapi/quant/clean_unique_gifts.json'
+            with open(quant_file, 'r') as f:
+                quant_data = json.load(f)
+                for item in quant_data:
+                    gift_id = item.get('id')
+                    floor_price = item.get('floor_price', '0')
+                    gift_id_str = str(gift_id)
+                    # Only add if not already present in live prices
+                    if gift_id_str not in unupgradeable_prices:
+                        try:
+                            price = float(floor_price)
+                            if price > 0:
+                                unupgradeable_prices[gift_id_str] = price
+                        except:
+                            pass
+        except:
             pass
         
         # Process gifts (same as gifts/bot.py)

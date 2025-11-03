@@ -33,15 +33,17 @@ MRKT_ONLY_IDS = [
     "6003477390536213997",  # Durov's Figurine
 ]
 
-async def get_mrkt_init_data():
-    """Get MRKT initData"""
+async def get_mrkt_init_data(client=None):
+    """Get MRKT initData - optionally use provided client"""
+    use_provided_client = client is not None
     try:
-        # Use the working gifts session from the gifts directory
-        import os
-        gifts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gifts')
-        session_path = os.path.join(gifts_dir, f'{SESSION_NAME}.session')
-        client = TelegramClient(session_path, API_ID, API_HASH)
-        await client.connect()
+        if not use_provided_client:
+            # Use the working gifts session from the gifts directory
+            import os
+            gifts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gifts')
+            session_path = os.path.join(gifts_dir, f'{SESSION_NAME}.session')
+            client = TelegramClient(session_path, API_ID, API_HASH)
+            await client.connect()
         
         if not await client.is_user_authorized():
             return None
@@ -75,7 +77,8 @@ async def get_mrkt_init_data():
         print(f"ERROR: MRKT initData failed: {e}", file=sys.stderr)
         return None
     finally:
-        await client.disconnect()
+        if not use_provided_client and client:
+            await client.disconnect()
 
 def get_mrkt_token(init_data):
     """Get MRKT JWT token"""
@@ -119,15 +122,17 @@ def get_mrkt_prices(token):
         print(f"ERROR: MRKT prices failed: {e}", file=sys.stderr)
         return {}
 
-async def get_quant_init_data():
-    """Get Quant initData"""
+async def get_quant_init_data(client=None):
+    """Get Quant initData - optionally use provided client"""
+    use_provided_client = client is not None
     try:
-        # Use the working gifts session from the gifts directory
-        import os
-        gifts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gifts')
-        session_path = os.path.join(gifts_dir, f'{SESSION_NAME}.session')
-        client = TelegramClient(session_path, API_ID, API_HASH)
-        await client.connect()
+        if not use_provided_client:
+            # Use the working gifts session from the gifts directory
+            import os
+            gifts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gifts')
+            session_path = os.path.join(gifts_dir, f'{SESSION_NAME}.session')
+            client = TelegramClient(session_path, API_ID, API_HASH)
+            await client.connect()
         
         if not await client.is_user_authorized():
             return None
@@ -157,7 +162,8 @@ async def get_quant_init_data():
         print(f"ERROR: Quant initData failed: {e}", file=sys.stderr)
         return None
     finally:
-        await client.disconnect()
+        if not use_provided_client and client:
+            await client.disconnect()
 
 def get_quant_prices(init_data):
     """Get Quant prices for unupgradeable gifts"""
@@ -229,12 +235,54 @@ def get_quant_prices(init_data):
         print(f"ERROR: Quant file failed: {e}", file=sys.stderr)
         return {}, {}
 
+async def fetch_unupgradeable_prices(client=None):
+    """Async function to fetch unupgradeable prices - can be imported"""
+    try:
+        # Get MRKT prices
+        mrkt_init_data = await get_mrkt_init_data(client)
+        if mrkt_init_data:
+            mrkt_token = get_mrkt_token(mrkt_init_data)
+            if mrkt_token:
+                mrkt_prices = get_mrkt_prices(mrkt_token)
+            else:
+                mrkt_prices = {}
+        else:
+            mrkt_prices = {}
+        
+        # Get Quant prices as fallback
+        quant_init_data = await get_quant_init_data(client)
+        if quant_init_data:
+            quant_prices, quant_names = get_quant_prices(quant_init_data)
+        else:
+            quant_prices, quant_names = {}, {}
+        
+        # Merge prices - prefer MRKT for the 6 special IDs, otherwise use non-zero price
+        final_prices = {}
+        all_gift_ids = set(list(mrkt_prices.keys()) + list(quant_prices.keys()))
+        
+        for gift_id in all_gift_ids:
+            mrkt_price = mrkt_prices.get(gift_id, 0)
+            quant_price = quant_prices.get(gift_id, 0)
+            
+            # For MRKT-only IDs, always use MRKT
+            if gift_id in MRKT_ONLY_IDS:
+                final_prices[gift_id] = mrkt_price
+            else:
+                # Otherwise prefer non-zero price
+                final_prices[gift_id] = mrkt_price if mrkt_price > 0 else quant_price
+        
+        return final_prices
+        
+    except Exception as e:
+        print(f"Error fetching prices: {e}", file=sys.stderr)
+        return {}
+
 async def main():
     """Main function"""
     try:
         # Get MRKT prices
         print("Fetching MRKT prices...", file=sys.stderr)
-        mrkt_init_data = await get_mrkt_init_data()
+        mrkt_init_data = await get_mrkt_init_data(None)
         if mrkt_init_data:
             mrkt_token = get_mrkt_token(mrkt_init_data)
             if mrkt_token:
@@ -246,7 +294,7 @@ async def main():
         
         # Get Quant prices as fallback
         print("Fetching Quant prices...", file=sys.stderr)
-        quant_init_data = await get_quant_init_data()
+        quant_init_data = await get_quant_init_data(None)
         if quant_init_data:
             quant_prices, quant_names = get_quant_prices(quant_init_data)
         else:
