@@ -87,10 +87,18 @@ async def get_portal_market_price(slug, backdrop_name=None, model_name=None, sym
 
 async def get_account_gifts(account_username: str):
     """
-    Fetch all gifts (upgraded and unupgradeable) from a public user account
+    Fetch all gifts (upgraded and unupgradeable) from a user account
+    
+    NOTE: GetSavedStarGiftsRequest only works for:
+    - Your own profile (current authenticated user)
+    - Channels
+    
+    For other users, this will return 0 gifts. To track gifts from a secondary account,
+    you need to use a different Telegram session file for that account and use get_profile_gifts.py
     
     Args:
         account_username: The username of the account (e.g., 'username' or '@username')
+                         NOTE: This only works if account_username is YOUR OWN account
     
     Returns:
         Dictionary with gift counts and prices
@@ -113,6 +121,17 @@ async def get_account_gifts(account_username: str):
             print(json.dumps({
                 "success": False,
                 "error": f"Account not found: {account_username}. Make sure it's a public account."
+            }))
+            await client.disconnect()
+            return
+        
+        # Check if this is the current authenticated user's account
+        # GetSavedStarGiftsRequest only works for your own profile or channels
+        me = await client.get_me()
+        if user.id != me.id:
+            print(json.dumps({
+                "success": False,
+                "error": "GetSavedStarGiftsRequest only works for your own profile or channels. To track gifts from a secondary account, you need to use a different Telegram session for that account and use get_profile_gifts.py instead."
             }))
             await client.disconnect()
             return
