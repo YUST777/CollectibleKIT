@@ -2529,9 +2529,9 @@ export const PortfolioTab: React.FC = () => {
                           });
                           return (
                           <div key={giftIndex} className="relative aspect-square bg-gray-800/50 rounded-lg overflow-hidden">
-                            {gift.id && (
+                            {(gift.image_url || gift.id) && (
                               <img 
-                                src={`https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
+                                src={gift.image_url || `https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
                                 alt={gift.name || 'Gift'} 
                                 className="absolute inset-0 w-full h-full object-cover"
                                 onError={(e) => {
@@ -3752,9 +3752,9 @@ export const PortfolioTab: React.FC = () => {
                       className="flex items-center gap-4 p-4 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] transition-colors border border-gray-700"
                     >
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800/50 flex-shrink-0 border border-gray-600">
-                        {gift.id && (
+                        {(gift.image_url || gift.id) && (
                           <img 
-                            src={`https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
+                            src={gift.image_url || `https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
                             alt={gift.name || 'Gift'} 
                             className="w-full h-full object-cover"
                             onError={(e) => {
