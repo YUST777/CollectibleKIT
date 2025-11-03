@@ -447,6 +447,21 @@ class DatabaseService {
         // Column already exists, ignore error
       }
 
+      // Channel gifts table
+      await this.dbRun(`
+        CREATE TABLE IF NOT EXISTS portfolio_channel_gifts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          channel_username TEXT NOT NULL,
+          channel_id TEXT,
+          total_gifts INTEGER NOT NULL,
+          total_value REAL NOT NULL,
+          gifts_json TEXT NOT NULL,
+          created_at REAL NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users (user_id)
+        )
+      `);
+
       // Tasks table
       await this.dbRun(`
         CREATE TABLE IF NOT EXISTS tasks (
@@ -1742,6 +1757,59 @@ class DatabaseService {
       return true;
     } catch (error) {
       console.error('Error deleting custom sticker:', error);
+      return false;
+    }
+  }
+
+  // Channel gifts methods
+  async getChannelGifts(userId: number): Promise<any[]> {
+    try {
+      const rows = await this.dbAll(
+        `SELECT * FROM portfolio_channel_gifts WHERE user_id = ? ORDER BY created_at DESC`,
+        [userId]
+      );
+      return rows;
+    } catch (error) {
+      console.error('Error getting channel gifts:', error);
+      return [];
+    }
+  }
+
+  async addChannelGifts(userId: number, channelData: any): Promise<boolean> {
+    try {
+      const giftsJson = JSON.stringify(channelData.gifts || []);
+      console.log('💾 Saving channel gifts JSON:', giftsJson.substring(0, 200));
+      
+      await this.dbRun(
+        `INSERT INTO portfolio_channel_gifts (
+          user_id, channel_username, channel_id, total_gifts, total_value, gifts_json, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          channelData.channel_username || '',
+          channelData.channel_id || null,
+          channelData.total_gifts || 0,
+          channelData.total_value || 0,
+          giftsJson,
+          Date.now()
+        ]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error adding channel gifts:', error);
+      return false;
+    }
+  }
+
+  async deleteChannelGifts(userId: number, channelGiftsId: number): Promise<boolean> {
+    try {
+      await this.dbRun(
+        `DELETE FROM portfolio_channel_gifts WHERE id = ? AND user_id = ?`,
+        [channelGiftsId, userId]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error deleting channel gifts:', error);
       return false;
     }
   }

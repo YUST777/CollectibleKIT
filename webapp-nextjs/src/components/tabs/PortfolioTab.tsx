@@ -227,6 +227,7 @@ export const PortfolioTab: React.FC = () => {
   const [stickers, setStickers] = useState<StickerNFT[]>([]);
   const [stickerPortfolio, setStickerPortfolio] = useState<StickerPortfolio | null>(null);
   const [stickersLoading, setStickersLoading] = useState(false);
+  const [channelGifts, setChannelGifts] = useState<any[]>([]);
   const [duckLottieData, setDuckLottieData] = useState<any>(null);
   const [isGiftChartOpen, setIsGiftChartOpen] = useState(false);
   const [selectedGift, setSelectedGift] = useState<PortfolioGift | null>(null);
@@ -256,6 +257,11 @@ export const PortfolioTab: React.FC = () => {
   const [selectedGiftName, setSelectedGiftName] = useState<string | null>(null);
   const [filterSearchTerm, setFilterSearchTerm] = useState('');
   const [ribbonNumber, setRibbonNumber] = useState<string>('');
+  
+  // Channel gifts state
+  const [addGiftTab, setAddGiftTab] = useState<'custom' | 'channel'>('custom');
+  const [channelUsername, setChannelUsername] = useState('');
+  const [isLoadingChannel, setIsLoadingChannel] = useState(false);
 
   // Add Sticker drawer state
   const [isAddStickerDrawerOpen, setIsAddStickerDrawerOpen] = useState(false);
@@ -715,15 +721,20 @@ export const PortfolioTab: React.FC = () => {
     
     setIsLoading(true);
     
-    // Load both auto and custom gifts in parallel
-    const [autoGiftsResponse, customGiftsResponse] = await Promise.all([
+    // Load auto, custom, and channel gifts in parallel
+    const [autoGiftsResponse, customGiftsResponse, channelGiftsResponse] = await Promise.all([
       loadAutoGifts(),
-      loadCustomGiftsFromDBAPI()
+      loadCustomGiftsFromDBAPI(),
+      loadChannelGiftsFromDBAPI()
     ]);
     
     // Merge results
     const allGifts = [...(autoGiftsResponse?.gifts || []), ...(customGiftsResponse?.gifts || [])];
-    const totalValue = (autoGiftsResponse?.totalValue || 0) + (customGiftsResponse?.totalValue || 0);
+    const channelGiftsValue = (channelGiftsResponse || []).reduce((sum: number, cg: any) => sum + (cg.total_value || 0), 0);
+    const totalValue = (autoGiftsResponse?.totalValue || 0) + (customGiftsResponse?.totalValue || 0) + channelGiftsValue;
+    
+    // Set channel gifts separately
+    setChannelGifts(channelGiftsResponse || []);
     
     setGifts(allGifts);
     setTotalValue(totalValue);
@@ -935,6 +946,52 @@ export const PortfolioTab: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading custom gifts from database:', error);
+    }
+    
+    return null;
+  };
+
+  const loadChannelGiftsFromDBAPI = async () => {
+    if (!user?.user_id) return null;
+    
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      const response = await fetch('/api/portfolio/channel-gifts-db', {
+        headers
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.gifts && data.gifts.length > 0) {
+          console.log('✅ Loaded', data.gifts.length, 'channel gifts from database');
+          
+          // Parse the channel gifts
+          const channelGiftsFromDB = data.gifts.map((cg: any) => {
+            const giftsList = JSON.parse(cg.gifts_json || '[]');
+            console.log('📦 Channel gift parsed:', {
+              username: cg.channel_username,
+              gifts_breakdown: giftsList,
+              first_gift: giftsList[0]
+            });
+            return {
+              is_channel: true,
+              channel_username: cg.channel_username,
+              channel_id: cg.id, // Use database ID
+              total_gifts: cg.total_gifts,
+              total_value: cg.total_value,
+              gifts_breakdown: giftsList,
+              created_at: cg.created_at
+            };
+          });
+          
+          console.log('✅ Channel gifts loaded from DB:', channelGiftsFromDB);
+          return channelGiftsFromDB;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading channel gifts from database:', error);
     }
     
     return null;
@@ -1247,6 +1304,39 @@ export const PortfolioTab: React.FC = () => {
     }
   };
 
+  const handleDeleteChannelGifts = async (channelGift: any) => {
+    hapticFeedback('impact', 'light', webApp || undefined);
+    
+    // Show confirmation
+    const confirmed = webApp?.showConfirm?.('Are you sure you want to remove this channel from your portfolio?');
+    
+    if (!confirmed && !window.confirm('Are you sure you want to remove this channel from your portfolio?')) {
+      return;
+    }
+    
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      // Delete channel gifts
+      const response = await fetch(`/api/portfolio/channel-gifts-db?id=${channelGift.channel_id}`, {
+        method: 'DELETE',
+        headers
+      });
+      
+      if (response.ok) {
+        toast.success('Channel gifts removed');
+        // Reload portfolio
+        loadPortfolio();
+      } else {
+        toast.error('Failed to remove channel gifts');
+      }
+    } catch (error) {
+      console.error('Error deleting channel gifts:', error);
+      toast.error('Failed to remove channel gifts');
+    }
+  };
+
   const handleDeleteSticker = async (sticker: StickerNFT, index: number) => {
     hapticFeedback('impact', 'light', webApp || undefined);
     
@@ -1512,6 +1602,66 @@ export const PortfolioTab: React.FC = () => {
     }
   };
 
+  // Fetch channel gifts
+  const fetchChannelGifts = async () => {
+    if (!channelUsername.trim()) {
+      toast.error('Please enter a channel username');
+      return;
+    }
+    
+    setIsLoadingChannel(true);
+    try {
+      const response = await fetch(`/api/portfolio/channel-gifts?channel=${encodeURIComponent(channelUsername.trim())}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Save channel gifts to database
+        console.log('📦 Raw channel gifts data from Python:', data.gifts);
+        console.log('📦 First gift ID:', data.gifts?.[0]?.id);
+        
+        const { getAuthHeaders } = await import('@/lib/apiClient');
+        const headers = getAuthHeaders();
+        
+        const saveResponse = await fetch('/api/portfolio/channel-gifts-db', {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            channelData: {
+              channel_username: data.channel_username,
+              channel_id: data.channel_id?.toString(),
+              total_gifts: data.total_gifts,
+              total_value: data.total_value,
+              gifts: data.gifts
+            }
+          })
+        });
+        
+        const saveResult = await saveResponse.json();
+        
+        if (saveResult.success) {
+          console.log('Channel gifts saved:', saveResult);
+          toast.success(`Added ${data.total_gifts} gifts worth $${data.total_value.toFixed(2)}!`);
+          // Close drawer and refresh
+          closeAddGiftDrawer();
+          // Reload portfolio to show new channel gifts
+          loadPortfolio();
+        } else {
+          toast.error('Failed to save channel gifts');
+        }
+      } else {
+        toast.error(data.error || 'Failed to fetch channel gifts');
+      }
+    } catch (error) {
+      console.error('Error fetching channel gifts:', error);
+      toast.error('Failed to fetch channel gifts');
+    } finally {
+      setIsLoadingChannel(false);
+    }
+  };
+  
   // Add Sticker drawer functions
   const openAddStickerDrawer = async () => {
     setSelectedCollection(null);
@@ -2200,6 +2350,112 @@ export const PortfolioTab: React.FC = () => {
                 </div>
                 );
               })}
+              
+              {/* Channel Gifts */}
+              {channelGifts.map((cg, cgIndex) => {
+                console.log('🎁 Rendering channel gift:', {
+                  username: cg.channel_username,
+                  gifts_breakdown: cg.gifts_breakdown,
+                  gifts_count: cg.gifts_breakdown?.length
+                });
+                return (
+                <div
+                  key={`channel-gifts-${cg.channel_id}-${cgIndex}`}
+                  onClick={() => {
+                    // TODO: Open channel gifts breakdown drawer
+                    console.log('Channel gifts clicked:', cg);
+                  }}
+                  className="rounded-2xl p-3 cursor-pointer hover:scale-105 transition-transform relative z-0 overflow-hidden group backdrop-blur-xl bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-[#242829] shadow-lg shadow-black/20"
+                >
+                  {/* Channel Gifts Preview Grid */}
+                  <div className="relative z-10 mb-2">
+                    <div className="aspect-square w-full rounded-xl overflow-hidden bg-gray-900/30 backdrop-blur-sm border border-[#242829] relative">
+                      <div className="grid grid-cols-2 gap-1 p-2 h-full">
+                        {cg.gifts_breakdown?.slice(0, 4).map((gift: any, giftIndex: number) => {
+                          console.log('🖼️ Rendering gift preview:', {
+                            gift,
+                            id: gift.id,
+                            name: gift.name,
+                            count: gift.count,
+                            url: `https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`
+                          });
+                          return (
+                          <div key={giftIndex} className="relative aspect-square bg-gray-800/50 rounded-lg overflow-hidden">
+                            {gift.id && (
+                              <img 
+                                src={`https://cdn.changes.tg/gifts/originals/${gift.id}/Original.png`} 
+                                alt={gift.name || 'Gift'} 
+                                className="absolute inset-0 w-full h-full object-cover"
+                                onError={(e) => {
+                                  console.error('❌ Image failed to load:', e);
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                                onLoad={() => console.log('✅ Image loaded successfully')}
+                              />
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-blue-600/90 text-white text-xs font-bold text-center py-0.5">
+                              x{gift.count}
+                            </div>
+                          </div>
+                        )})}
+                        {cg.gifts_breakdown?.length === 0 && (
+                          <div className="col-span-2 flex items-center justify-center text-gray-400 text-xs">
+                            No gifts
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Channel Info */}
+                  <div className="relative z-10 space-y-1">
+                    <h4 className="font-bold text-white text-sm truncate">@{cg.channel_username}</h4>
+                    <p className="text-xs text-blue-200">{cg.total_gifts} gifts</p>
+                    
+                    <div className="flex items-center gap-1 text-xs text-white mt-2">
+                      <span className="text-blue-200">Total value</span>
+                      <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-3 h-3" />
+                      <span className="font-semibold">
+                        {cg.total_value?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#242829]">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback('impact', 'light', webApp || undefined);
+                        }}
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                      >
+                        <PaperAirplaneIcon className="w-4 h-4 text-white/80" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback('impact', 'light', webApp || undefined);
+                        }}
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                      >
+                        <StarIcon className="w-4 h-4 text-white/80" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteChannelGifts(cg);
+                        }}
+                        className="p-1.5 hover:bg-red-500/20 rounded-lg transition-all backdrop-blur-sm"
+                        title="Delete channel gifts"
+                      >
+                        <XMarkIcon className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                );
+              })}
+              
               {/* Add Gift Box */}
               <div
                 onClick={openAddGiftDrawer}
@@ -2607,6 +2863,31 @@ export const PortfolioTab: React.FC = () => {
               </button>
             </div>
             
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setAddGiftTab('custom')}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  addGiftTab === 'custom'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-[#424242] text-gray-300 hover:bg-[#4a4a4a]'
+                }`}
+              >
+                Custom Gift
+              </button>
+              <button
+                onClick={() => setAddGiftTab('channel')}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  addGiftTab === 'channel'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-[#424242] text-gray-300 hover:bg-[#4a4a4a]'
+                }`}
+              >
+                Channel Gifts
+              </button>
+            </div>
+            
+            {addGiftTab === 'custom' ? (
             <div className="space-y-3">
               {/* Search Bar */}
               <div className="relative">
@@ -2700,10 +2981,38 @@ export const PortfolioTab: React.FC = () => {
                     className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all"
                   >
                     Add Gift
-                  </button>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Channel Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Channel Username</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span>
+                    <input
+                      type="text"
+                      value={channelUsername}
+                      onChange={(e) => setChannelUsername(e.target.value)}
+                      placeholder="Enter channel username"
+                      className="w-full px-4 py-2.5 pl-9 backdrop-blur-sm bg-white/10 border border-[#242829] text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Enter a public Telegram channel username</p>
                 </div>
-              )}
-            </div>
+                
+                {/* Add Button */}
+                <button
+                  onClick={fetchChannelGifts}
+                  disabled={isLoadingChannel || !channelUsername.trim()}
+                  className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                >
+                  {isLoadingChannel ? 'Loading...' : 'Add Channel Gifts'}
+                </button>
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
