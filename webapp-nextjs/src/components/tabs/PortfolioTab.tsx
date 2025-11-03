@@ -2851,16 +2851,8 @@ export const PortfolioTab: React.FC = () => {
           
           <div className="p-6 pb-20">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6">
               <h2 className="text-2xl font-bold text-white">Add Gift</h2>
-              <button
-                onClick={closeAddGiftDrawer}
-                className="text-white/70 hover:text-white p-2 bg-black/30 rounded-full backdrop-blur-sm"
-              >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </button>
             </div>
             
             {/* Tabs */}
@@ -2946,7 +2938,20 @@ export const PortfolioTab: React.FC = () => {
                         onClick={() => selectGiftName(gift)}
                       >
                         <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden bg-transparent">
-                          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                          <img 
+                            src={getCollectionImageUrl(gift)}
+                            alt={gift}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Fallback to gradient if image fails
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling;
+                              if (fallback) {
+                                (fallback as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold" style={{ display: 'none' }}>
                             {gift.charAt(0)}
                           </div>
                         </div>
