@@ -67,13 +67,27 @@ async def get_portal_market_price(slug, backdrop_name=None, model_name=None, sym
         return None
     
     try:
-        results = search_gifts(
-            slug=slug,
-            backdrop_name=backdrop_name,
-            model_name=model_name,
-            symbol_name=symbol_name,
+        # Parse slug to get collection name (e.g., "JollyChimp-38859" -> "JollyChimp")
+        collection_name = slug.split('-')[0] if '-' in slug else slug
+        
+        results = await search_gifts(
+            sort="price_asc",
+            limit=1,
+            gift_name=collection_name,
+            backdrop=backdrop_name,
+            model=model_name,
             authData=portal_auth_data
         )
+        
+        # If no results with model, fallback to backdrop only
+        if not results and backdrop_name:
+            results = await search_gifts(
+                sort="price_asc",
+                limit=1,
+                gift_name=collection_name,
+                backdrop=backdrop_name,
+                authData=portal_auth_data
+            )
         
         if results and len(results) > 0:
             # Return the first result's price (lowest)
@@ -125,17 +139,7 @@ async def get_account_gifts(account_username: str):
             await client.disconnect()
             return
         
-        # Check if this is the current authenticated user's account
-        # GetSavedStarGiftsRequest only works for your own profile or channels
-        me = await client.get_me()
-        if user.id != me.id:
-            print(json.dumps({
-                "success": False,
-                "error": "GetSavedStarGiftsRequest only works for your own profile or channels. To track gifts from a secondary account, you need to use a different Telegram session for that account and use get_profile_gifts.py instead."
-            }))
-            await client.disconnect()
-            return
-        
+
         # Initialize Portal Market auth for upgraded gifts
         portal_auth_data = None
         if APORTALSMP_AVAILABLE:
