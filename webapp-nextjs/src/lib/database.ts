@@ -447,7 +447,7 @@ class DatabaseService {
         // Column already exists, ignore error
       }
 
-      // Channel gifts table
+      // Channel gifts table (also used for account gifts)
       await this.dbRun(`
         CREATE TABLE IF NOT EXISTS portfolio_channel_gifts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -457,10 +457,18 @@ class DatabaseService {
           total_gifts INTEGER NOT NULL,
           total_value REAL NOT NULL,
           gifts_json TEXT NOT NULL,
+          type TEXT DEFAULT 'channel',
           created_at REAL NOT NULL,
           FOREIGN KEY (user_id) REFERENCES users (user_id)
         )
       `);
+      
+      // Add type column if it doesn't exist (migration)
+      await this.dbRun(`
+        ALTER TABLE portfolio_channel_gifts ADD COLUMN type TEXT DEFAULT 'channel'
+      `).catch(() => {
+        // Column already exists, ignore
+      });
 
       // Tasks table
       await this.dbRun(`
@@ -1761,36 +1769,46 @@ class DatabaseService {
     }
   }
 
-  // Channel gifts methods
-  async getChannelGifts(userId: number): Promise<any[]> {
+  // Channel gifts methods (also handles account gifts via type parameter)
+  async getChannelGifts(userId: number, type?: 'channel' | 'account'): Promise<any[]> {
     try {
-      const rows = await this.dbAll(
-        `SELECT * FROM portfolio_channel_gifts WHERE user_id = ? ORDER BY created_at DESC`,
-        [userId]
-      );
-      return rows;
+      if (type) {
+        const rows = await this.dbAll(
+          `SELECT * FROM portfolio_channel_gifts WHERE user_id = ? AND type = ? ORDER BY created_at DESC`,
+          [userId, type]
+        );
+        return rows;
+      } else {
+        // Return all (both channel and account)
+        const rows = await this.dbAll(
+          `SELECT * FROM portfolio_channel_gifts WHERE user_id = ? ORDER BY created_at DESC`,
+          [userId]
+        );
+        return rows;
+      }
     } catch (error) {
       console.error('Error getting channel gifts:', error);
       return [];
     }
   }
 
-  async addChannelGifts(userId: number, channelData: any): Promise<boolean> {
+  async addChannelGifts(userId: number, channelData: any, type: 'channel' | 'account' = 'channel'): Promise<boolean> {
     try {
       const giftsJson = JSON.stringify(channelData.gifts || []);
-      console.log('💾 Saving channel gifts JSON:', giftsJson.substring(0, 200));
+      console.log('💾 Saving gifts JSON:', giftsJson.substring(0, 200));
       
       await this.dbRun(
         `INSERT INTO portfolio_channel_gifts (
-          user_id, channel_username, channel_id, total_gifts, total_value, gifts_json, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          user_id, channel_username, channel_id, total_gifts, total_value, gifts_json, type, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           userId,
-          channelData.channel_username || '',
-          channelData.channel_id || null,
+          channelData.channel_username || channelData.account_username || '',
+          channelData.channel_id || channelData.account_id || null,
           channelData.total_gifts || 0,
           channelData.total_value || 0,
           giftsJson,
+          type,
           Date.now()
         ]
       );

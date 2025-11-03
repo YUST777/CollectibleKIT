@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const channelData = body.channelData;
+    const type = body.type || 'channel'; // 'channel' or 'account'
 
     if (!channelData) {
       return NextResponse.json(
@@ -57,14 +58,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('💾 Adding channel gifts:', {
-      username: channelData.channel_username,
+    console.log('💾 Adding gifts:', {
+      type,
+      username: channelData.channel_username || channelData.account_username,
       total_gifts: channelData.total_gifts,
       total_value: channelData.total_value,
       gifts_sample: channelData.gifts?.[0]
     });
 
-    const success = await db.addChannelGifts(user.id, channelData);
+    const success = await db.addChannelGifts(user.id, channelData, type);
 
     if (success) {
       return NextResponse.json({

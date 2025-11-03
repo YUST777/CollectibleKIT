@@ -261,8 +261,10 @@ export const PortfolioTab: React.FC = () => {
   const [ribbonNumber, setRibbonNumber] = useState<string>('');
   
   // Channel gifts state
-  const [addGiftTab, setAddGiftTab] = useState<'custom' | 'channel'>('custom');
+  const [addGiftTab, setAddGiftTab] = useState<'custom' | 'channel' | 'account'>('custom');
   const [channelUsername, setChannelUsername] = useState('');
+  const [accountUsername, setAccountUsername] = useState('');
+  const [isLoadingAccount, setIsLoadingAccount] = useState(false);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const [isChannelGiftDrawerOpen, setIsChannelGiftDrawerOpen] = useState(false);
   const [selectedChannelGift, setSelectedChannelGift] = useState<any>(null);
@@ -984,18 +986,21 @@ export const PortfolioTab: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.gifts && data.gifts.length > 0) {
-          console.log('✅ Loaded', data.gifts.length, 'channel gifts from database');
+          console.log('✅ Loaded', data.gifts.length, 'gifts from database');
           
-          // Parse the channel gifts
-          const channelGiftsFromDB = data.gifts.map((cg: any) => {
+          // Parse the gifts (both channel and account)
+          const giftsFromDB = data.gifts.map((cg: any) => {
             const giftsList = JSON.parse(cg.gifts_json || '[]');
-            console.log('📦 Channel gift parsed:', {
+            const isAccount = cg.type === 'account';
+            console.log('📦 Gift parsed:', {
+              type: cg.type,
               username: cg.channel_username,
               gifts_breakdown: giftsList,
               first_gift: giftsList[0]
             });
             return {
-              is_channel: true,
+              is_channel: !isAccount,
+              is_account: isAccount,
               channel_username: cg.channel_username,
               channel_id: cg.id, // Use database ID
               total_gifts: cg.total_gifts,
@@ -1005,12 +1010,12 @@ export const PortfolioTab: React.FC = () => {
             };
           });
           
-          console.log('✅ Channel gifts loaded from DB:', channelGiftsFromDB);
-          return channelGiftsFromDB;
+          console.log('✅ Gifts loaded from DB:', giftsFromDB);
+          return giftsFromDB;
         }
       }
     } catch (error) {
-      console.error('Error loading channel gifts from database:', error);
+      console.error('Error loading gifts from database:', error);
     }
     
     return null;
@@ -1744,6 +1749,67 @@ export const PortfolioTab: React.FC = () => {
       toast.error('Failed to fetch channel gifts');
     } finally {
       setIsLoadingChannel(false);
+    }
+  };
+  
+  // Fetch account gifts
+  const fetchAccountGifts = async () => {
+    if (!accountUsername.trim()) {
+      toast.error('Please enter an account username');
+      return;
+    }
+    
+    setIsLoadingAccount(true);
+    try {
+      const response = await fetch(`/api/portfolio/account-gifts?account=${encodeURIComponent(accountUsername.trim())}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Save account gifts to database
+        console.log('📦 Raw account gifts data from Python:', data.gifts);
+        console.log('📦 First gift ID:', data.gifts?.[0]?.id);
+        
+        const { getAuthHeaders } = await import('@/lib/apiClient');
+        const headers = getAuthHeaders();
+        
+        const saveResponse = await fetch('/api/portfolio/channel-gifts-db', {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            type: 'account',
+            channelData: {
+              account_username: data.account_username,
+              account_id: data.account_id?.toString(),
+              total_gifts: data.total_gifts,
+              total_value: data.total_value,
+              gifts: data.gifts
+            }
+          })
+        });
+        
+        const saveResult = await saveResponse.json();
+        
+        if (saveResult.success) {
+          console.log('Account gifts saved:', saveResult);
+          toast.success(`Added ${data.total_gifts} gifts worth $${data.total_value.toFixed(2)}!`);
+          // Close drawer and refresh
+          closeAddGiftDrawer();
+          // Reload portfolio to show new account gifts
+          loadPortfolio();
+        } else {
+          toast.error('Failed to save account gifts');
+        }
+      } else {
+        toast.error(data.error || 'Failed to fetch account gifts');
+      }
+    } catch (error) {
+      console.error('Error fetching account gifts:', error);
+      toast.error('Failed to fetch account gifts');
+    } finally {
+      setIsLoadingAccount(false);
     }
   };
   
@@ -2936,7 +3002,17 @@ export const PortfolioTab: React.FC = () => {
                     : 'bg-[#424242] text-gray-300 hover:bg-[#4a4a4a]'
                 }`}
               >
-                Channel Gifts
+                Channel
+              </button>
+              <button
+                onClick={() => setAddGiftTab('account')}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  addGiftTab === 'account'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-[#424242] text-gray-300 hover:bg-[#4a4a4a]'
+                }`}
+              >
+                Account
               </button>
             </div>
             
@@ -3131,7 +3207,7 @@ export const PortfolioTab: React.FC = () => {
                 </div>
               )}
               </div>
-            ) : (
+            ) : addGiftTab === 'channel' ? (
               <div className="space-y-6">
                 {/* Channel Input */}
                 <div>
@@ -3156,6 +3232,33 @@ export const PortfolioTab: React.FC = () => {
                   className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                 >
                   {isLoadingChannel ? 'Loading...' : 'Add Channel Gifts'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Account Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Account Username</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span>
+                    <input
+                      type="text"
+                      value={accountUsername}
+                      onChange={(e) => setAccountUsername(e.target.value)}
+                      placeholder="Enter account username"
+                      className="w-full px-4 py-2.5 pl-9 backdrop-blur-sm bg-white/10 border border-[#242829] text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Enter a public Telegram account username</p>
+                </div>
+                
+                {/* Add Button */}
+                <button
+                  onClick={fetchAccountGifts}
+                  disabled={isLoadingAccount || !accountUsername.trim()}
+                  className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                >
+                  {isLoadingAccount ? 'Loading...' : 'Add Account Gifts'}
                 </button>
               </div>
             )}
