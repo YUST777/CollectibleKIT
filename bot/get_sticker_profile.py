@@ -18,12 +18,12 @@ logging.basicConfig(level=logging.ERROR)
 # Configuration
 API_BASE = 'https://api.stickerdom.store'
 PRICING_API = 'https://stickers.tools/api/stats-new'
-BOT_USERNAME = 'StickerDomStoreBot'  # The stickerdom bot
+BOT_USERNAME = 'sticker_nft_bot'  # The stickerdom bot
 
 # Use same credentials as gifts script
 API_ID = 22307634
 API_HASH = '7ab906fc6d065a2047a84411c1697593'
-SESSION_NAME = ' sticker0.2/gifts_session'  # Use authorized user session
+SESSION_NAME = 'gifts_session'  # Use authorized user session
 
 # Global variables for auth
 current_jwt_token = None
@@ -93,20 +93,12 @@ async def get_fresh_init_data() -> str:
             init_data_encoded = fragment.split('tgWebAppData=')[1]
             if '&' in init_data_encoded:
                 init_data_encoded = init_data_encoded.split('&')[0]
-            # Decode twice if needed (sometimes double-encoded)
+            # Decode once only (URL-encoded in fragment)
             init_data = urllib.parse.unquote(init_data_encoded)
-            if init_data.startswith('query_id='):
-                # Still encoded, decode again
-                init_data = urllib.parse.unquote(init_data)
             
             print(f"DEBUG: Extracted initData from fragment", file=sys.stderr)
             print(f"DEBUG: Format: query_id={init_data.startswith('query_id=')}, user={init_data.startswith('user=')}", file=sys.stderr)
             print(f"DEBUG: First 100 chars: {init_data[:100]}", file=sys.stderr)
-            
-            # ⚠️ WARNING: Do NOT convert query_id= format!
-            # The hash is cryptographically signed and includes query_id.
-            # Removing it invalidates the hash signature.
-            # API will reject this format - use MANUAL_INIT_DATA from browser instead
             
             return init_data
         
@@ -127,8 +119,8 @@ def get_jwt_token(init_data: str) -> str:
         }
         
         print(f"DEBUG: Sending initData to auth API (length: {len(init_data)})", file=sys.stderr)
-        # Try decoded format first (ensure UTF-8 encoding)
-        response = requests.post(f"{API_BASE}/api/v1/auth", headers=headers, data=init_data.encode('utf-8'), timeout=15)
+        # Try decoded format first - requests handles UTF-8 encoding automatically
+        response = requests.post(f"{API_BASE}/api/v1/auth", headers=headers, data=init_data, timeout=15)
         
         print(f"DEBUG: Auth response status: {response.status_code}", file=sys.stderr)
         
@@ -214,8 +206,9 @@ def calculate_portfolio_value(profile_data: dict) -> dict:
     if not pricing_data:
         pricing_data = get_pricing_data()
     
-    if not pricing_data:
-        return None
+    # If pricing fails, we still want to return the portfolio with 0 prices
+    # rather than returning None and showing nothing to the user
+    use_pricing = pricing_data is not None
     
     try:
         meta = profile_data.get('meta', {})
@@ -228,6 +221,7 @@ def calculate_portfolio_value(profile_data: dict) -> dict:
                 'username': meta.get('username', 'N/A')
             },
             'collections': [],
+            'items': [],  # List of individual sticker NFTs
             'totals': {
                 'nfts': 0,
                 'stickers': 0,
@@ -238,7 +232,7 @@ def calculate_portfolio_value(profile_data: dict) -> dict:
             }
         }
         
-        collections_pricing = pricing_data.get('collections', {})
+        collections_pricing = pricing_data.get('collections', {}) if pricing_data else {}
         
         for collection in collections:
             coll_info = collection.get('collection', {})
@@ -256,45 +250,58 @@ def calculate_portfolio_value(profile_data: dict) -> dict:
                 'items': []
             }
             
-            # Find matching collection in pricing
+            # Find matching collection in pricing (if available)
             matching_coll_id = None
-            for coll_id, coll_pricing in collections_pricing.items():
-                if coll_pricing.get('name', '').lower() == coll_name.lower():
-                    matching_coll_id = coll_id
-                    break
+            if use_pricing:
+                for coll_id, coll_pricing in collections_pricing.items():
+                    if coll_pricing.get('name', '').lower() == coll_name.lower():
+                        matching_coll_id = coll_id
+                        break
             
-            if matching_coll_id:
-                stickers_pricing = collections_pricing[matching_coll_id].get('stickers', {})
-                
-                for character in characters:
-                    if character.get('token_id'):
-                        char_name = character.get('name', 'Unknown')
-                        token_id = character.get('token_id')
-                        sticker_count = len(character.get('stickers', []))
-                        
-                        # Find pricing for this character
-                        init_price = 0
-                        current_price = 0
-                        
+            # Process characters (with or without pricing)
+            for character in characters:
+                if character.get('token_id'):
+                    char_name = character.get('name', 'Unknown')
+                    token_id = character.get('token_id')
+                    sticker_list = character.get('stickers', [])
+                    sticker_count = len(sticker_list)
+                    
+                    # Find pricing for this character (if available)
+                    init_price = 0
+                    current_price = 0
+                    
+                    if matching_coll_id:
+                        stickers_pricing = collections_pricing[matching_coll_id].get('stickers', {})
                         for sticker_id, sticker_data in stickers_pricing.items():
                             if sticker_data.get('name', '').lower() == char_name.lower():
                                 init_price = sticker_data.get('init_price_usd', 0)
                                 current_price = sticker_data.get('current', {}).get('price', {}).get('floor', {}).get('usd', 0)
                                 break
-                        
-                        coll_data['nfts'] += 1
-                        coll_data['stickers'] += sticker_count
-                        coll_data['init_value'] += init_price
-                        coll_data['current_value'] += current_price
-                        
-                        coll_data['items'].append({
-                            'name': char_name,
-                            'token_id': token_id,
-                            'stickers': sticker_count,
-                            'rarity': character.get('rarity', 'Common'),
-                            'init_price': init_price,
-                            'current_price': current_price
-                        })
+                    
+                    coll_data['nfts'] += 1
+                    coll_data['stickers'] += sticker_count
+                    coll_data['init_value'] += init_price
+                    coll_data['current_value'] += current_price
+                    
+                    coll_data['items'].append({
+                        'name': char_name,
+                        'token_id': token_id,
+                        'stickers': sticker_count,
+                        'rarity': character.get('rarity', 'Common'),
+                        'init_price': init_price,
+                        'current_price': current_price
+                    })
+                    
+                    # Also add to flat list of items
+                    result['items'].append({
+                        'collection': coll_name,
+                        'character': char_name,
+                        'token_id': token_id,
+                        'sticker_ids': sticker_list,  # List of sticker IDs
+                        'sticker_count': sticker_count,
+                        'init_price_usd': init_price,
+                        'current_price_usd': current_price
+                    })
             
             if coll_data['nfts'] > 0:
                 coll_data['pnl'] = coll_data['current_value'] - coll_data['init_value']
@@ -427,7 +434,7 @@ async def main():
     # Output result
     output = {
         'success': True,
-        'stickers': portfolio_data['collections'],
+        'stickers': portfolio_data['items'],  # List of individual sticker NFTs
         'portfolio_value': {
             'collections': portfolio_data['collections'],
             'total_init': portfolio_data['totals']['init_value'],

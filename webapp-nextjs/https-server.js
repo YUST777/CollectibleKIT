@@ -21,9 +21,9 @@ app.prepare().then(() => {
 
   // Always use HTTP - nginx handles HTTPS termination
   console.log('Starting HTTP server on port 3000 (HTTPS handled by nginx)');
-  server.listen(3000, '0.0.0.0', () => {
-    console.log('✅ HTTP server running on port 3000');
-  });
+    server.listen(3000, '0.0.0.0', () => {
+      console.log('✅ HTTP server running on port 3000');
+    });
 }).catch((ex) => {
   console.error('Failed to start server:', ex);
   process.exit(1);

@@ -115,13 +115,13 @@ export default function RootLayout({
             __html: `
               function initTelegramAnalytics() {
                 try {
-                  if (window.telegramAnalytics && typeof window.telegramAnalytics.init === 'function') {
-                    window.telegramAnalytics.init({
+                if (window.telegramAnalytics && typeof window.telegramAnalytics.init === 'function') {
+                  window.telegramAnalytics.init({
                       token: 'eyJhcHBfbmFtZSI6ImNvbGxlY3RpYmxla2l0IiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9Db2xsZWN0aWJsZUtJVGJvdCIsImFwcF9kb21haW4iOiJodHRwczovL2NvbGxlY3RhYmxla2l0LjAxc3R1ZGlvLnh5ei8ifQ==!aODcv1DuHmG28etfMO7o0WiKyjdobSR8WcKrZuWKBBc=',
-                      appName: 'collectiblekit',
-                    });
-                    console.log('✅ Telegram Analytics initialized');
-                  } else {
+                    appName: 'collectiblekit',
+                  });
+                  console.log('✅ Telegram Analytics initialized');
+                } else {
                     console.warn('⚠️ Telegram Analytics not loaded yet, retrying in 2s...');
                     setTimeout(initTelegramAnalytics, 2000);
                   }

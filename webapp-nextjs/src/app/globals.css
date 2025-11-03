@@ -211,8 +211,8 @@
 
 /* Mobile: more padding for status bar */
 @media (max-width: 430px) {
-  .safe-area-top {
-    padding-top: max(60px, env(safe-area-inset-top, 60px));
+.safe-area-top {
+  padding-top: max(60px, env(safe-area-inset-top, 60px));
   }
 }
 
@@ -223,9 +223,9 @@
   }
 }
 
-.safe-area-bottom {
-  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
-}
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
 
   /* Collection Tab Styles */
   .gift-slot {

@@ -127,6 +127,19 @@ const getCollectionImageUrl = (giftName: string): string => {
   return `/assets/Gift Collection Images/${filename}.png`;
 };
 
+// Helper function to get sticker image URL
+const getStickerImageUrl = (collection: string, character: string, filename?: string): string => {
+  // Convert collection and character to lowercase snake_case
+  const collectionPath = collection.toLowerCase().replace(/\s+/g, '_');
+  const characterPath = character.toLowerCase().replace(/\s+/g, '_');
+  
+  // Use provided filename or default to 1_png
+  const file = filename || '1_png';
+  
+  // Return path to local sticker file
+  return `/sticker_collections/${collectionPath}/${characterPath}/${file}`;
+};
+
 interface PortfolioGift {
   slug: string;
   num: number | null;
@@ -163,13 +176,16 @@ interface StickerNFT {
   collection: string;
   character: string;
   token_id: string;
-  sticker_ids: string[];
+  sticker_ids: number[];
   sticker_count: number;
   init_price_usd?: number;
   current_price_usd?: number;
   collection_id?: number;
   sticker_preview_url?: string;
   sticker_thumbnail_url?: string;
+  is_custom?: boolean;
+  sticker_id?: number;
+  filename?: string;
 }
 
 interface StickerPortfolio {
@@ -239,6 +255,16 @@ export const PortfolioTab: React.FC = () => {
   const [filterSearchTerm, setFilterSearchTerm] = useState('');
   const [ribbonNumber, setRibbonNumber] = useState<string>('');
 
+  // Add Sticker drawer state
+  const [isAddStickerDrawerOpen, setIsAddStickerDrawerOpen] = useState(false);
+  const [stickerCollections, setStickerCollections] = useState<Array<{name: string, samplePack: string, sampleFilename: string}>>([]);
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
+  const [stickerPacks, setStickerPacks] = useState<Array<{name: string, filename: string}>>([]);
+  const [selectedPack, setSelectedPack] = useState<{name: string, filename: string} | null>(null);
+  const [stickerSearchTerm, setStickerSearchTerm] = useState('');
+  const [stickerPackSearchTerm, setStickerPackSearchTerm] = useState('');
+  const [showStickerSettings, setShowStickerSettings] = useState(false);
+
   // Load currency preference from localStorage
   useEffect(() => {
     const savedCurrency = localStorage.getItem('portfolio_currency') as 'TON' | 'USD' | null;
@@ -251,26 +277,26 @@ export const PortfolioTab: React.FC = () => {
   useEffect(() => {
     const fetchTonPrice = async () => {
       try {
-        // Try to fetch from CoinGecko (free tier)
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd');
+        // Try to fetch from our cached API endpoint (1 hour cache)
+        const response = await fetch('/api/ton-price');
         if (response.ok) {
           const data = await response.json();
-          if (data['the-open-network']?.usd) {
-            const rate = data['the-open-network'].usd;
-            setTonToUsdRate(rate);
-            localStorage.setItem('ton_to_usd_rate', rate.toString());
-            console.log('✅ Fetched TON price:', rate);
+          if (data.success && data.rate) {
+            setTonToUsdRate(data.rate);
+            localStorage.setItem('ton_to_usd_rate', data.rate.toString());
+            console.log('✅ TON price loaded:', data.rate, data.cached ? '(cached)' : '(fresh)');
             return;
           }
         }
       } catch (error) {
-        console.error('Failed to fetch TON price from CoinGecko:', error);
+        console.error('Failed to fetch TON price from API:', error);
       }
       
       // Fallback: use a cached rate or default
       const cachedRate = localStorage.getItem('ton_to_usd_rate');
       if (cachedRate) {
         setTonToUsdRate(parseFloat(cachedRate));
+        console.log('✅ TON price from localStorage:', cachedRate);
       }
     };
     
@@ -304,7 +330,7 @@ export const PortfolioTab: React.FC = () => {
     loadAllGifts();
   }, []);
 
-  // Helper function to format price based on currency preference
+  // Helper function to format price based on currency preference (for TON prices)
   const formatPrice = (priceInTon: number | null | undefined): string => {
     if (priceInTon === null || priceInTon === undefined) {
       return 'N/A';
@@ -315,6 +341,19 @@ export const PortfolioTab: React.FC = () => {
     }
     
     return priceInTon.toFixed(2);
+  };
+
+  // Helper function to format price based on currency preference (for USD prices like stickers)
+  const formatUsdPrice = (priceInUsd: number | null | undefined): string => {
+    if (priceInUsd === null || priceInUsd === undefined) {
+      return 'N/A';
+    }
+    
+    if (currency === 'TON') {
+      return (priceInUsd / tonToUsdRate).toFixed(2);
+    }
+    
+    return priceInUsd.toFixed(2);
   };
 
   // Helper to get currency icon and symbol
@@ -723,9 +762,9 @@ export const PortfolioTab: React.FC = () => {
       console.log('📊 loadAutoGifts: Response status:', response.status);
       
       if (response.ok) {
-        const responseText = await response.text();
+      const responseText = await response.text();
         console.log('📊 loadAutoGifts: Response body (first 500 chars):', responseText.substring(0, 500));
-        
+      
         try {
           const data = JSON.parse(responseText);
           console.log('📊 loadAutoGifts: Parsed data:', { 
@@ -764,7 +803,7 @@ export const PortfolioTab: React.FC = () => {
             
             console.log('✅ Auto gifts loaded:', normalizedGifts.length);
             return {
-              gifts: normalizedGifts,
+                gifts: normalizedGifts,
               totalValue: data.total_value || 0
             };
           } else {
@@ -790,7 +829,7 @@ export const PortfolioTab: React.FC = () => {
   const loadCustomGiftsFromDBAPI = async () => {
     if (!user?.user_id) return null;
     
-    try {
+        try {
       const { getAuthHeaders } = await import('@/lib/apiClient');
       const headers = getAuthHeaders();
       
@@ -844,6 +883,45 @@ export const PortfolioTab: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading custom gifts from database:', error);
+    }
+    
+    return null;
+  };
+
+  const loadCustomStickersFromDBAPI = async () => {
+    if (!user?.user_id) return null;
+    
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      const response = await fetch('/api/portfolio/custom-stickers', {
+        headers
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.stickers && data.stickers.length > 0) {
+          console.log('✅ Loaded', data.stickers.length, 'custom stickers from database');
+          
+          const customStickersFromDB: StickerNFT[] = data.stickers.map((s: any) => ({
+            collection: s.collection || '',
+            character: s.character || '',
+            token_id: s.token_id || `CUSTOM-${s.id}`,
+            sticker_ids: [],
+            sticker_count: 1,
+            init_price_usd: s.init_price_usd || undefined,
+            current_price_usd: s.current_price_usd || undefined,
+            is_custom: true,
+            sticker_id: s.id,
+            filename: s.filename || undefined
+          }));
+          
+          return customStickersFromDB;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading custom stickers from database:', error);
     }
     
     return null;
@@ -986,8 +1064,33 @@ export const PortfolioTab: React.FC = () => {
         });
         
         if (data.success) {
-          setStickers(data.stickers || []);
-          setStickerPortfolio(data);
+          // Load and merge custom stickers
+          const customStickers = await loadCustomStickersFromDBAPI();
+          const allStickers = [...(data.stickers || []), ...(customStickers || [])];
+          
+          // Calculate totals including custom stickers
+          let totalInit = data.portfolio_value?.total_init || 0;
+          let totalCurrent = data.portfolio_value?.total_current || 0;
+          
+          // Add custom sticker values
+          customStickers?.forEach(sticker => {
+            totalInit += sticker.init_price_usd || 0;
+            totalCurrent += sticker.current_price_usd || 0;
+          });
+          
+          const totalPnl = totalCurrent - totalInit;
+          
+          // Update portfolio with combined totals
+          setStickers(allStickers);
+          setStickerPortfolio({
+            ...data,
+            portfolio_value: {
+              ...data.portfolio_value,
+              total_init: totalInit,
+              total_current: totalCurrent,
+              total_pnl: totalPnl
+            }
+          });
         } else {
           toast.error(data.error || 'Failed to load sticker portfolio');
         }
@@ -1089,6 +1192,47 @@ export const PortfolioTab: React.FC = () => {
     } catch (error) {
       console.error('Error deleting gift:', error);
       toast.error('Failed to remove gift');
+    }
+  };
+
+  const handleDeleteSticker = async (sticker: StickerNFT, index: number) => {
+    hapticFeedback('impact', 'light', webApp || undefined);
+    
+    // Show confirmation
+    const confirmed = webApp?.showConfirm?.('Are you sure you want to remove this sticker from your portfolio?');
+    
+    if (!confirmed && !window.confirm('Are you sure you want to remove this sticker from your portfolio?')) {
+      return;
+    }
+    
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      if (sticker.is_custom && sticker.sticker_id) {
+        // Delete from custom stickers API
+        const response = await fetch(`/api/portfolio/custom-stickers?id=${sticker.sticker_id}`, {
+          method: 'DELETE',
+          headers
+        });
+        
+        if (response.ok) {
+          toast.success('Custom sticker removed');
+          // Reload stickers
+          loadStickers();
+        } else {
+          toast.error('Failed to remove custom sticker');
+        }
+      } else {
+        // For now, we can't delete auto stickers from Telegram
+        // Just remove from local state
+        const newStickers = stickers.filter((_, i) => i !== index);
+        setStickers(newStickers);
+        toast.success('Sticker removed from view');
+      }
+    } catch (error) {
+      console.error('Error deleting sticker:', error);
+      toast.error('Failed to remove sticker');
     }
   };
 
@@ -1335,6 +1479,144 @@ export const PortfolioTab: React.FC = () => {
     } catch (error) {
       console.error('❌ Error saving custom gift to database:', error);
       // Don't show error to user as the gift is already added locally
+    }
+  };
+
+  // Add Sticker drawer functions
+  const openAddStickerDrawer = async () => {
+    setSelectedCollection(null);
+    setSelectedPack(null);
+    setStickerSearchTerm('');
+    setStickerPackSearchTerm('');
+    hapticFeedback('selection');
+    // Load sticker collections before opening
+    await loadStickerCollections();
+    setIsAddStickerDrawerOpen(true);
+  };
+
+  const closeAddStickerDrawer = () => {
+    setIsAddStickerDrawerOpen(false);
+    setSelectedCollection(null);
+    setSelectedPack(null);
+    setStickerSearchTerm('');
+    setStickerPackSearchTerm('');
+  };
+
+  const loadStickerCollections = async () => {
+    try {
+      console.log('Loading sticker collections...');
+      const response = await fetch('/api/portfolio/sticker-collections');
+      console.log('Collections response:', response.status, response.ok);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Collections data:', data);
+        if (data.success && data.collections) {
+          console.log('Setting collections:', data.collections.length);
+          setStickerCollections(data.collections);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading sticker collections:', error);
+    }
+  };
+
+  const selectCollection = (collection: string) => {
+    setSelectedCollection(collection);
+    setStickerSearchTerm('');
+    setSelectedPack(null);
+    setStickerPackSearchTerm('');
+    // Load sticker packs for this collection
+    loadStickerPacks(collection);
+    hapticFeedback('impact');
+  };
+
+  const loadStickerPacks = async (collection: string) => {
+    try {
+      const response = await fetch(`/api/portfolio/sticker-packs?collection=${encodeURIComponent(collection)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.packs) {
+          setStickerPacks(data.packs);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading sticker packs:', error);
+    }
+  };
+
+  const selectPack = (pack: {name: string, filename: string}) => {
+    setSelectedPack(pack);
+    hapticFeedback('impact');
+  };
+
+  const handleSaveSticker = async () => {
+    if (!selectedCollection || !selectedPack) {
+      toast.error('Please select a collection and sticker pack');
+      return;
+    }
+
+    const loadingToast = toast.loading('Fetching sticker price...');
+
+    let initPrice = undefined;
+    let currentPrice = undefined;
+
+    try {
+      // Fetch price from stickers.tools API
+      const collectionFormatted = selectedCollection.toLowerCase().replace(/\s+/g, '_');
+      const packFormatted = selectedPack.name.toLowerCase().replace(/\s+/g, '_');
+      const response = await fetch(`/api/portfolio/sticker-price?collection=${encodeURIComponent(collectionFormatted)}&pack=${encodeURIComponent(packFormatted)}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          initPrice = data.init_price_usd || undefined;
+          currentPrice = data.current_price_usd || undefined;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching sticker price:', error);
+    }
+
+    const newSticker: StickerNFT = {
+      collection: selectedCollection,
+      character: selectedPack.name,
+      token_id: `CUSTOM-${Date.now()}`,
+      sticker_ids: [],
+      sticker_count: 1,
+      init_price_usd: initPrice,
+      current_price_usd: currentPrice,
+      filename: selectedPack.filename
+    };
+
+    // Add to stickers
+    setStickers(prev => [...prev, newSticker]);
+    closeAddStickerDrawer();
+    toast.dismiss(loadingToast);
+    toast.success('Sticker added to portfolio!');
+
+    // Save to database via API for cross-device sync
+    try {
+      const { getAuthHeaders } = await import('@/lib/apiClient');
+      const headers = getAuthHeaders();
+      
+      const response = await fetch('/api/portfolio/custom-stickers', {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sticker: newSticker })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Custom sticker saved to database:', result);
+      } else {
+        console.error('⚠️ Failed to save custom sticker to database:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error saving custom sticker to database:', error);
+      // Don't show error to user as the sticker is already added locally
     }
   };
 
@@ -1858,19 +2140,19 @@ export const PortfolioTab: React.FC = () => {
                         <StarIcon className="w-4 h-4 text-white/80" />
                       </button>
                       {gift.is_custom && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Open drawer with this gift's info to edit
-                            setSelectedGiftName(gift.title);
-                            setRibbonNumber(gift.num?.toString() || '');
-                            setIsAddGiftDrawerOpen(true);
-                            hapticFeedback('selection');
-                          }}
-                          className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
-                          title="Edit gift"
-                        >
-                          <Cog6ToothIcon className="w-4 h-4 text-white/80" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Open drawer with this gift's info to edit
+                          setSelectedGiftName(gift.title);
+                          setRibbonNumber(gift.num?.toString() || '');
+                          setIsAddGiftDrawerOpen(true);
+                          hapticFeedback('selection');
+                        }}
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                        title="Edit gift"
+                      >
+                        <Cog6ToothIcon className="w-4 h-4 text-white/80" />
                         </button>
                       )}
                       <button
@@ -1912,31 +2194,249 @@ export const PortfolioTab: React.FC = () => {
       )}
 
       {activeTab === 'stickers' && (
-        <div className="text-center py-16 px-4">
-          <div className="mx-auto max-w-md">
-            <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center">
-              {duckLottieData ? (
-                <Lottie
-                  animationData={duckLottieData}
-                  loop={true}
-                  autoplay={true}
-                  style={{ width: 192, height: 192 }}
+        <>
+          {/* Portfolio Summary Card - Glassy Design */}
+          <div className="mx-4 rounded-2xl p-4 backdrop-blur-xl bg-[#1c1d1f]/40 border border-gray-700/50 shadow-lg shadow-black/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-400">
+                  <span className="text-blue-400">{stickers.length} NFT{stickers.length !== 1 ? 's' : ''}</span>
+                </span>
+                <span className="text-gray-600">·</span>
+                <button
+                  onClick={() => loadStickers()}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-end justify-between relative">
+              <div>
+                <div className="flex items-center gap-1 text-3xl font-semibold text-white leading-tight">
+                  <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-5 h-5" />
+                  {formatUsdPrice(stickerPortfolio?.portfolio_value?.total_current || 0)}
+                </div>
+                <div className={`text-sm font-medium mt-1 ${(stickerPortfolio?.portfolio_value?.total_pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {(stickerPortfolio?.portfolio_value?.total_pnl || 0) >= 0 ? '+' : ''}
+                  {formatUsdPrice(stickerPortfolio?.portfolio_value?.total_pnl || 0)}
+                  {' '}
+                  <span className="opacity-70">
+                    ({stickerPortfolio?.portfolio_value?.total_pnl && stickerPortfolio?.portfolio_value?.total_init
+                      ? `${((stickerPortfolio.portfolio_value.total_pnl / stickerPortfolio.portfolio_value.total_init) * 100).toFixed(2)}%`
+                      : '0%'})
+                  </span>
+                </div>
+              </div>
+              
+              {/* Settings Icon */}
+              <button
+                onClick={() => setShowStickerSettings(!showStickerSettings)}
+                className="absolute bottom-0 right-0 p-1.5 bg-gray-700/80 hover:bg-gray-700 rounded-full transition-colors"
+                title="Settings"
+              >
+                <Cog6ToothIcon className="w-3.5 h-3.5 text-gray-300" />
+              </button>
+            </div>
+
+            {/* Settings Panel */}
+            {showStickerSettings && (
+              <>
+                <div 
+                  className="fixed inset-0 z-[5]" 
+                  onClick={() => setShowStickerSettings(false)}
                 />
-              ) : (
-                <div className="animate-bounce text-6xl">🎨</div>
-              )}
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-2">Coming Soon</h3>
-            <p className="text-gray-400 text-lg mb-6">
-              Sticker portfolio tracking is on its way!
-            </p>
-            <div className="rounded-2xl p-6 backdrop-blur-xl bg-[#1c1d1f]/40 border border-gray-700/50">
-              <p className="text-gray-300 text-sm">
-                Track your sticker collection, view prices, and manage your portfolio all in one place.
-              </p>
-            </div>
+                <div className="absolute bottom-8 right-0 bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl z-[10] min-w-[200px]">
+                  <div className="mb-3">
+                    <div className="text-xs text-gray-400 mb-2">Currency</div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setCurrency('TON');
+                          localStorage.setItem('portfolio_currency', 'TON');
+                          setShowStickerSettings(false);
+                        }}
+                        className={`px-3 py-1.5 text-xs rounded flex items-center gap-1 ${currency === 'TON' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-300'}`}
+                      >
+                        <img src="/icons/toncoin.svg" alt="TON" className="w-3 h-3" />
+                        TON
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCurrency('USD');
+                          localStorage.setItem('portfolio_currency', 'USD');
+                          setShowStickerSettings(false);
+                        }}
+                        className={`px-3 py-1.5 text-xs rounded flex items-center gap-1 ${currency === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-300'}`}
+                      >
+                        <img src="/icons/dollar.svg" alt="USD" className="w-3 h-3" />
+                        USD
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+
+          {/* Stickers Grid */}
+          {stickersLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-gray-400 mt-4">Loading stickers...</p>
+            </div>
+          ) : stickers.length === 0 ? (
+            <div className="text-center py-16 px-4">
+              <div className="mx-auto max-w-md">
+                <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center">
+                  {duckLottieData ? (
+                    <Lottie
+                      animationData={duckLottieData}
+                      loop={true}
+                      autoplay={true}
+                      style={{ width: 192, height: 192 }}
+                    />
+                  ) : (
+                    <div className="animate-bounce text-6xl">🎨</div>
+                  )}
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">No Stickers Found</h3>
+                <p className="text-gray-400 text-lg mb-6">
+                  You don't have any stickers in your portfolio yet.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
+              {stickers.map((sticker, index) => (
+                <div
+                  key={`${sticker.collection}-${sticker.token_id}-${index}`}
+                  className="rounded-2xl p-3 cursor-pointer hover:scale-105 transition-transform relative z-0 overflow-hidden group backdrop-blur-xl bg-[#1c1d1f]/40 border border-[#242829] shadow-lg shadow-black/20"
+                >
+                  {/* Sticker Image */}
+                  <div className="relative z-10 mb-2">
+                    <div 
+                      className="aspect-square w-full rounded-xl overflow-hidden bg-gradient-to-br from-blue-900/30 to-purple-900/30 backdrop-blur-sm border border-[#242829] relative flex items-center justify-center"
+                      onClick={() => {
+                        setSelectedSticker(sticker);
+                        setIsStickerDrawerOpen(true);
+                        hapticFeedback('impact', 'light', webApp || undefined);
+                      }}
+                    >
+                      <img 
+                        src={getStickerImageUrl(sticker.collection, sticker.character, sticker.filename)}
+                        alt={sticker.character}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          // Fallback to palette emoji if image fails to load
+                          e.currentTarget.style.display = 'none';
+                          if (e.currentTarget.parentElement) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'text-gray-400 text-2xl absolute';
+                            fallback.textContent = '🎨';
+                            e.currentTarget.parentElement.appendChild(fallback);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sticker Info */}
+                  <div className="relative z-10 space-y-1" style={{ position: 'relative' }}>
+                    <h4 className="font-bold text-white text-sm truncate" style={{ position: 'relative', zIndex: 10 }}>{sticker.collection}</h4>
+                    <p className="text-xs text-blue-200 truncate" style={{ position: 'relative', zIndex: 10 }}>{sticker.character}</p>
+                    
+                    <div className="flex items-center gap-1 text-xs text-white mt-2">
+                      <span className="text-blue-200">Price</span>
+                      <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-3 h-3" />
+                      <span className="font-semibold">
+                        {formatUsdPrice(sticker.current_price_usd || 0)}
+                      </span>
+                    </div>
+
+                    {sticker.init_price_usd && sticker.current_price_usd && (
+                      <div className="flex items-center gap-1 text-xs">
+                        <span className={`${
+                          (sticker.current_price_usd - sticker.init_price_usd) >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {(sticker.current_price_usd - sticker.init_price_usd) >= 0 ? '+' : ''}
+                          {formatUsdPrice(sticker.current_price_usd - sticker.init_price_usd)}
+                          {' '}
+                          ({(((sticker.current_price_usd - sticker.init_price_usd) / sticker.init_price_usd) * 100).toFixed(2)}%)
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#242829]">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback('impact', 'light', webApp || undefined);
+                        }}
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                      >
+                        <PaperAirplaneIcon className="w-4 h-4 text-white/80" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback('impact', 'light', webApp || undefined);
+                        }}
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                      >
+                        <StarIcon className="w-4 h-4 text-white/80" />
+                      </button>
+                      {sticker.is_custom && sticker.sticker_id && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              hapticFeedback('selection');
+                            }}
+                            className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                            title="Edit sticker"
+                          >
+                            <Cog6ToothIcon className="w-4 h-4 text-white/80" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSticker(sticker, index);
+                            }}
+                            className="p-1.5 hover:bg-red-500/20 rounded-lg transition-all backdrop-blur-sm"
+                            title="Delete sticker"
+                          >
+                            <XMarkIcon className="w-4 h-4 text-red-400" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Add Sticker Box */}
+              <div
+                onClick={openAddStickerDrawer}
+                className="rounded-2xl p-3 cursor-pointer hover:scale-105 transition-transform relative z-0 overflow-hidden group backdrop-blur-xl bg-[#1c1d1f]/40 border border-[#242829] shadow-lg shadow-black/20 border-dashed"
+              >
+                <div className="relative z-10 mb-2">
+                  <div className="aspect-square w-full rounded-xl overflow-hidden bg-gray-900/30 backdrop-blur-sm border border-[#242829] relative flex items-center justify-center">
+                    <div className="text-gray-400 flex flex-col items-center gap-2">
+                      <PlusIcon className="w-12 h-12" />
+                      <span className="text-xs font-medium">Add Sticker</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="relative z-10 space-y-1">
+                  <h4 className="font-bold text-gray-400 text-sm truncate">Custom Sticker</h4>
+                  <p className="text-xs text-gray-500">Click to add</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Sticker Detail Drawer */}
@@ -1968,21 +2468,19 @@ export const PortfolioTab: React.FC = () => {
               </div>
 
               {/* Sticker Image */}
-              {selectedSticker.sticker_preview_url && (
-                <div className="relative w-full max-w-xs mx-auto mt-12 mb-4 px-4">
-                  <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl">
-                    <img
-                      src={selectedSticker.sticker_preview_url}
-                      alt={selectedSticker.collection}
-                      className="absolute inset-0 w-full h-full object-contain p-4"
-                      onError={(e) => {
-                        // Hide image if it fails to load
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
+              <div className="relative w-full max-w-xs mx-auto mt-12 mb-4 px-4">
+                <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl">
+                  <img
+                    src={getStickerImageUrl(selectedSticker.collection, selectedSticker.character, selectedSticker.filename)}
+                    alt={selectedSticker.collection}
+                    className="absolute inset-0 w-full h-full object-contain p-4"
+                    onError={(e) => {
+                      // Hide image if it fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                 </div>
-              )}
+              </div>
 
               {/* Sticker Header */}
               <div className="text-center px-4 pt-4 pb-6">
@@ -1993,58 +2491,29 @@ export const PortfolioTab: React.FC = () => {
               {/* Sticker Details Section */}
               <div className="px-4 pt-6 pb-8">
                 <div className="space-y-4">
-                  {/* Token ID */}
+                  {/* Collection */}
                   <div className="flex items-center justify-between py-3 border-b border-gray-800">
-                    <span className="text-white text-sm">Token ID</span>
-                    <span className="text-white text-sm font-medium">#{selectedSticker.token_id}</span>
+                    <span className="text-white text-sm">Collection</span>
+                    <span className="text-white text-sm font-medium">{selectedSticker.collection}</span>
                   </div>
 
-                  {/* Character */}
+                  {/* Sticker Pack */}
                   <div className="flex items-center justify-between py-3 border-b border-gray-800">
-                    <span className="text-white text-sm">Character</span>
+                    <span className="text-white text-sm">Sticker Pack</span>
                     <span className="text-white text-sm font-medium">{selectedSticker.character}</span>
                   </div>
 
-                  {/* Sticker Count */}
-                  <div className="flex items-center justify-between py-3 border-b border-gray-800">
-                    <span className="text-white text-sm">Stickers</span>
-                    <span className="text-white text-sm font-medium">{selectedSticker.sticker_count}</span>
-                  </div>
-
-                  {/* Sticker IDs */}
-                  {selectedSticker.sticker_ids && selectedSticker.sticker_ids.length > 0 && (
-                    <div className="py-3 border-b border-gray-800">
-                      <span className="text-white text-sm block mb-2">Sticker IDs</span>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedSticker.sticker_ids.map((id, idx) => (
-                          <span key={idx} className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded">
-                            {id}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Initial Price */}
-                  {selectedSticker.init_price_usd !== undefined && selectedSticker.init_price_usd > 0 && (
+                  {/* Initial Price → Current Price */}
+                  {selectedSticker.init_price_usd !== undefined && selectedSticker.current_price_usd !== undefined && (
                     <div className="flex items-center justify-between py-3 border-b border-gray-800">
-                      <span className="text-white text-sm">Initial Price</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-white text-sm font-medium">
-                          ${selectedSticker.init_price_usd.toFixed(2)}
+                      <span className="text-white text-sm">Price</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">
+                          {formatUsdPrice(selectedSticker.init_price_usd)}
                         </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Current Price */}
-                  {selectedSticker.current_price_usd !== undefined && selectedSticker.current_price_usd > 0 && (
-                    <div className="flex items-center justify-between py-3 border-b border-gray-800">
-                      <span className="text-white text-sm">Current Price</span>
-                      <div className="flex items-center gap-1">
-                        <img src="/icons/dollar.svg" alt="USD" className="w-4 h-4" />
+                        <span className="text-gray-600">→</span>
                         <span className="text-white text-sm font-medium">
-                          ${selectedSticker.current_price_usd.toFixed(2)}
+                          {formatUsdPrice(selectedSticker.current_price_usd)}
                         </span>
                       </div>
                     </div>
@@ -2061,7 +2530,7 @@ export const PortfolioTab: React.FC = () => {
                             : 'text-red-400'
                         }`}>
                           {(selectedSticker.current_price_usd - selectedSticker.init_price_usd) >= 0 ? '+' : ''}
-                          ${(selectedSticker.current_price_usd - selectedSticker.init_price_usd).toFixed(2)}
+                          {formatUsdPrice(selectedSticker.current_price_usd - selectedSticker.init_price_usd)}
                         </span>
                         <span className={`text-xs ${
                           (selectedSticker.current_price_usd - selectedSticker.init_price_usd) >= 0 
@@ -2073,12 +2542,6 @@ export const PortfolioTab: React.FC = () => {
                       </div>
                     </div>
                   )}
-
-                  {/* Collection Info */}
-                  <div className="flex items-center justify-between py-3 border-b border-gray-800">
-                    <span className="text-white text-sm">Collection</span>
-                    <span className="text-white text-sm font-medium">{selectedSticker.collection}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -2215,6 +2678,231 @@ export const PortfolioTab: React.FC = () => {
         </SheetContent>
       </Sheet>
 
+      {/* Add Sticker Drawer */}
+      <Sheet open={isAddStickerDrawerOpen} onOpenChange={setIsAddStickerDrawerOpen}>
+        <SheetContent 
+          className="bg-[#1c1d1f] rounded-t-3xl p-0" 
+          style={{ 
+            height: '90vh', 
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
+          <SheetTitle className="sr-only">Add Sticker</SheetTitle>
+          
+          <div className="p-6 pb-20">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Add Sticker</h2>
+              <button
+                onClick={closeAddStickerDrawer}
+                className="text-white/70 hover:text-white p-2 bg-black/30 rounded-full backdrop-blur-sm"
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Collection Selection */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">Select Collection</h3>
+                {/* Search Bar */}
+                <div className="relative mb-3">
+                  <input
+                    type="text"
+                    value={stickerSearchTerm}
+                    onChange={(e) => setStickerSearchTerm(e.target.value)}
+                    placeholder="Search collections..."
+                    className="w-full px-4 py-2.5 pl-10 backdrop-blur-sm bg-white/10 border border-[#242829] text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50"
+                  />
+                  <svg 
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {stickerSearchTerm && (
+                    <button
+                      onClick={() => setStickerSearchTerm('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Collections List */}
+                <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+                  {stickerCollections.filter(collection => {
+                    if (!stickerSearchTerm) return true;
+                    return collection.name.toLowerCase().includes(stickerSearchTerm.toLowerCase());
+                  }).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                      <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <p className="text-sm">No results found</p>
+                      <p className="text-xs mt-1">Try a different search term</p>
+                    </div>
+                  ) : (
+                    stickerCollections
+                      .filter(collection => {
+                        if (!stickerSearchTerm) return true;
+                        return collection.name.toLowerCase().includes(stickerSearchTerm.toLowerCase());
+                      })
+                      .map((collection, index) => (
+                        <div
+                          key={index}
+                          className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
+                            collection.name === selectedCollection ? 'ring-2 ring-blue-500' : ''
+                          }`}
+                          onClick={() => selectCollection(collection.name)}
+                        >
+                          <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={getStickerImageUrl(collection.name, collection.samplePack, collection.sampleFilename)}
+                              alt={collection.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                if (e.currentTarget.parentElement) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'w-full h-full bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold';
+                                  fallback.textContent = collection.name.charAt(0);
+                                  e.currentTarget.parentElement.appendChild(fallback);
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-white">{collection.name}</div>
+                          </div>
+                          {collection.name === selectedCollection && (
+                            <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+
+              {/* Sticker Pack Selection */}
+              {selectedCollection && (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Select Sticker Pack</h3>
+                  {/* Search Bar */}
+                  <div className="relative mb-3">
+                    <input
+                      type="text"
+                      value={stickerPackSearchTerm}
+                      onChange={(e) => setStickerPackSearchTerm(e.target.value)}
+                      placeholder="Search sticker packs..."
+                      className="w-full px-4 py-2.5 pl-10 backdrop-blur-sm bg-white/10 border border-[#242829] text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50"
+                    />
+                    <svg 
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    {stickerPackSearchTerm && (
+                      <button
+                        onClick={() => setStickerPackSearchTerm('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Sticker Packs List */}
+                  <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+                    {stickerPacks.filter(pack => {
+                      if (!stickerPackSearchTerm) return true;
+                      return pack.name.toLowerCase().includes(stickerPackSearchTerm.toLowerCase());
+                    }).length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                        <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <p className="text-sm">No packs found</p>
+                        <p className="text-xs mt-1">Try a different search term</p>
+                      </div>
+                    ) : (
+                      stickerPacks
+                        .filter(pack => {
+                          if (!stickerPackSearchTerm) return true;
+                          return pack.name.toLowerCase().includes(stickerPackSearchTerm.toLowerCase());
+                        })
+                        .map((pack, index) => (
+                          <div
+                            key={index}
+                            className={`flex items-center p-3 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] cursor-pointer transition-colors ${
+                              selectedPack && pack.name === selectedPack.name ? 'ring-2 ring-blue-500' : ''
+                            }`}
+                            onClick={() => selectPack(pack)}
+                          >
+                            <div className="w-12 h-12 rounded-lg mr-3 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={getStickerImageUrl(selectedCollection || '', pack.name, pack.filename)}
+                                alt={pack.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  if (e.currentTarget.parentElement) {
+                                    const fallback = document.createElement('div');
+                                    fallback.className = 'w-full h-full bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold';
+                                    fallback.textContent = pack.name.charAt(0);
+                                    e.currentTarget.parentElement.appendChild(fallback);
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-white">{pack.name}</div>
+                            </div>
+                            {selectedPack && pack.name === selectedPack.name && (
+                              <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* OK Button */}
+              {selectedPack && (
+                <div className="mt-6 pt-4 border-t border-gray-700">
+                  <button
+                    onClick={handleSaveSticker}
+                    className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all"
+                  >
+                    Add Sticker
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Gift Detail Drawer - Single Scrollable Container */}
       <Sheet open={isGiftChartOpen} onOpenChange={setIsGiftChartOpen}>
         <SheetContent 
@@ -2296,8 +2984,8 @@ export const PortfolioTab: React.FC = () => {
                 <div className="space-y-4">
                   {/* Owner */}
                   {selectedGift.owner_username && (
-                    <div className="flex items-center justify-between py-3 border-b border-gray-800">
-                      <span className="text-white text-sm">Owner</span>
+                  <div className="flex items-center justify-between py-3 border-b border-gray-800">
+                    <span className="text-white text-sm">Owner</span>
                       <a
                         href={`https://t.me/${selectedGift.owner_username}`}
                         target="_blank"
@@ -2308,11 +2996,11 @@ export const PortfolioTab: React.FC = () => {
                           hapticFeedback('selection');
                         }}
                       >
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500"></div>
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500"></div>
                         <span className="text-white text-sm font-medium">{selectedGift.owner_name || selectedGift.owner_username}</span>
                         <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                        </svg>
+                      </svg>
                       </a>
                     </div>
                   )}

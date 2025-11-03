@@ -18,8 +18,8 @@ const ToolDrawer: React.FC = () => {
       setNavigationLevel('main');
       setCurrentSubTab('portfolio');
     } else {
-      setNavigationLevel('tools');
-      setCurrentSubTab(tab);
+    setNavigationLevel('tools');
+    setCurrentSubTab(tab);
     }
     // sensible tertiary defaults
     if (tab === 'collection') setCurrentTertiaryTab('creation');

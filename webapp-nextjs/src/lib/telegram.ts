@@ -216,7 +216,7 @@ export async function getUserFromTelegram(request: Request): Promise<{ id: numbe
       
       if (userParam) {
         try {
-          const userData = JSON.parse(decodeURIComponent(userParam));
+        const userData = JSON.parse(decodeURIComponent(userParam));
           console.log('✅ Extracted user from header:', {
             id: userData.id,
             username: userData.username,
@@ -225,14 +225,14 @@ export async function getUserFromTelegram(request: Request): Promise<{ id: numbe
           
           // Validate user ID is a real Telegram user ID (should be >= 100000)
           if (userData.id && userData.id >= 100000) {
-            return {
-              id: userData.id,
-              first_name: userData.first_name,
-              last_name: userData.last_name,
-              username: userData.username,
+        return {
+          id: userData.id,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          username: userData.username,
               is_premium: userData.is_premium,
               photo_url: userData.photo_url
-            };
+        };
           } else {
             console.error('❌ Invalid user ID:', userData.id);
             return null;
@@ -258,18 +258,18 @@ export async function getUserFromTelegram(request: Request): Promise<{ id: numbe
       
       if (userParam) {
         try {
-          const userData = JSON.parse(decodeURIComponent(userParam));
+        const userData = JSON.parse(decodeURIComponent(userParam));
           console.log('📱 Extracted user from Telegram WebApp URL:', {
             id: userData.id,
             username: userData.username
           });
           
           if (userData.id && userData.id >= 100000) {
-            return {
-              id: userData.id,
-              first_name: userData.first_name,
-              last_name: userData.last_name,
-              username: userData.username,
+        return {
+          id: userData.id,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          username: userData.username,
               is_premium: userData.is_premium,
               photo_url: userData.photo_url
             };

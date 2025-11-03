@@ -423,6 +423,30 @@ class DatabaseService {
         )
       `);
 
+      // Portfolio: Custom stickers table
+      await this.dbRun(`
+        CREATE TABLE IF NOT EXISTS portfolio_custom_stickers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          collection TEXT NOT NULL,
+          character TEXT NOT NULL,
+          token_id TEXT,
+          filename TEXT,
+          init_price_usd REAL,
+          current_price_usd REAL,
+          created_at REAL NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users (user_id)
+        )
+      `);
+
+      // Migration: Add filename column to portfolio_custom_stickers if it doesn't exist
+      try {
+        await this.dbRun(`ALTER TABLE portfolio_custom_stickers ADD COLUMN filename TEXT`);
+        console.log(`✅ Added column to portfolio_custom_stickers: filename`);
+      } catch (err) {
+        // Column already exists, ignore error
+      }
+
       // Tasks table
       await this.dbRun(`
         CREATE TABLE IF NOT EXISTS tasks (
@@ -1667,6 +1691,57 @@ class DatabaseService {
       return true;
     } catch (error) {
       console.error('Error deleting custom gift:', error);
+      return false;
+    }
+  }
+
+  // Custom stickers methods
+  async getCustomStickers(userId: number): Promise<any[]> {
+    try {
+      const rows = await this.dbAll(
+        `SELECT * FROM portfolio_custom_stickers WHERE user_id = ? ORDER BY created_at DESC`,
+        [userId]
+      );
+      return rows;
+    } catch (error) {
+      console.error('Error getting custom stickers:', error);
+      return [];
+    }
+  }
+
+  async addCustomSticker(userId: number, stickerData: any): Promise<boolean> {
+    try {
+      await this.dbRun(
+        `INSERT INTO portfolio_custom_stickers (
+          user_id, collection, character, token_id, filename, init_price_usd, current_price_usd, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          stickerData.collection || '',
+          stickerData.character || '',
+          stickerData.token_id || null,
+          stickerData.filename || null,
+          stickerData.init_price_usd || null,
+          stickerData.current_price_usd || null,
+          Date.now()
+        ]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error adding custom sticker:', error);
+      return false;
+    }
+  }
+
+  async deleteCustomSticker(userId: number, stickerId: number): Promise<boolean> {
+    try {
+      await this.dbRun(
+        `DELETE FROM portfolio_custom_stickers WHERE id = ? AND user_id = ?`,
+        [stickerId, userId]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error deleting custom sticker:', error);
       return false;
     }
   }
