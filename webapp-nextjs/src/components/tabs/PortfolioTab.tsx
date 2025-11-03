@@ -2226,10 +2226,6 @@ export const PortfolioTab: React.FC = () => {
               <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-gray-400 mt-4">Loading portfolio...</p>
             </div>
-          ) : gifts.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-400">No gifts found in your profile</p>
-            </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
               {gifts.map((gift, index) => {
@@ -2572,27 +2568,6 @@ export const PortfolioTab: React.FC = () => {
               <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-gray-400 mt-4">Loading stickers...</p>
             </div>
-          ) : stickers.length === 0 ? (
-        <div className="text-center py-16 px-4">
-          <div className="mx-auto max-w-md">
-            <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center">
-              {duckLottieData ? (
-                <Lottie
-                  animationData={duckLottieData}
-                  loop={true}
-                  autoplay={true}
-                  style={{ width: 192, height: 192 }}
-                />
-              ) : (
-                <div className="animate-bounce text-6xl">🎨</div>
-              )}
-            </div>
-                <h3 className="text-2xl font-bold text-white mb-2">No Stickers Found</h3>
-            <p className="text-gray-400 text-lg mb-6">
-                  You don't have any stickers in your portfolio yet.
-              </p>
-            </div>
-          </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
               {stickers.map((sticker, index) => (

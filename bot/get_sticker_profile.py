@@ -168,7 +168,8 @@ def get_user_portfolio(user_id: str) -> dict:
         if response.status_code == 200:
             data = response.json()
             if data.get('ok'):
-                return data.get('data')
+                profile = data.get('data')
+                return profile
             else:
                 print(f"DEBUG: API returned ok=False: {data}", file=sys.stderr)
         else:
@@ -408,7 +409,8 @@ async def main():
         }), flush=True)
         return
     
-    print(f"DEBUG: Got profile data with {len(profile_data.get('collections', []))} collections", file=sys.stderr)
+    collections_count = len(profile_data.get('collections') or [])
+    print(f"DEBUG: Got profile data with {collections_count} collections", file=sys.stderr)
     
     # Calculate portfolio value
     portfolio_data = calculate_portfolio_value(profile_data)
