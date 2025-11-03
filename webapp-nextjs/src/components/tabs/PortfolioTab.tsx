@@ -2317,26 +2317,26 @@ export const PortfolioTab: React.FC = () => {
               <p className="text-gray-400 mt-4">Loading stickers...</p>
             </div>
           ) : stickers.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="mx-auto max-w-md">
-                <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center">
-                  {duckLottieData ? (
-                    <Lottie
-                      animationData={duckLottieData}
-                      loop={true}
-                      autoplay={true}
-                      style={{ width: 192, height: 192 }}
-                    />
-                  ) : (
-                    <div className="animate-bounce text-6xl">🎨</div>
-                  )}
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-2">No Stickers Found</h3>
-                <p className="text-gray-400 text-lg mb-6">
-                  You don't have any stickers in your portfolio yet.
-                </p>
-              </div>
+        <div className="text-center py-16 px-4">
+          <div className="mx-auto max-w-md">
+            <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center">
+              {duckLottieData ? (
+                <Lottie
+                  animationData={duckLottieData}
+                  loop={true}
+                  autoplay={true}
+                  style={{ width: 192, height: 192 }}
+                />
+              ) : (
+                <div className="animate-bounce text-6xl">🎨</div>
+              )}
             </div>
+                <h3 className="text-2xl font-bold text-white mb-2">No Stickers Found</h3>
+            <p className="text-gray-400 text-lg mb-6">
+                  You don't have any stickers in your portfolio yet.
+              </p>
+            </div>
+          </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
               {stickers.map((sticker, index) => (
@@ -2395,7 +2395,7 @@ export const PortfolioTab: React.FC = () => {
                           {' '}
                           ({(((sticker.current_price_usd - sticker.init_price_usd) / sticker.init_price_usd) * 100).toFixed(2)}%)
                         </span>
-                      </div>
+        </div>
                     )}
 
                     {/* Action Buttons */}
@@ -2498,19 +2498,19 @@ export const PortfolioTab: React.FC = () => {
               </div>
 
               {/* Sticker Image */}
-              <div className="relative w-full max-w-xs mx-auto mt-12 mb-4 px-4">
-                <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl">
-                  <img
+                <div className="relative w-full max-w-xs mx-auto mt-12 mb-4 px-4">
+                  <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl">
+                    <img
                     src={getStickerImageUrl(selectedSticker.collection, selectedSticker.character, selectedSticker.filename)}
-                    alt={selectedSticker.collection}
-                    className="absolute inset-0 w-full h-full object-contain p-4"
-                    onError={(e) => {
-                      // Hide image if it fails to load
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
+                      alt={selectedSticker.collection}
+                      className="absolute inset-0 w-full h-full object-contain p-4"
+                      onError={(e) => {
+                        // Hide image if it fails to load
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
 
               {/* Sticker Header */}
               <div className="text-center px-4 pt-4 pb-6">
@@ -2535,12 +2535,12 @@ export const PortfolioTab: React.FC = () => {
 
                   {/* Initial Price → Current Price */}
                   {selectedSticker.init_price_usd !== undefined && selectedSticker.current_price_usd !== undefined && (
-                    <div className="flex items-center justify-between py-3 border-b border-gray-800">
+                  <div className="flex items-center justify-between py-3 border-b border-gray-800">
                       <span className="text-white text-sm">Price</span>
                       <div className="flex items-center gap-2">
                         <span className="text-gray-400 text-sm">
                           {formatUsdPrice(selectedSticker.init_price_usd)}
-                        </span>
+                          </span>
                         <span className="text-gray-600">→</span>
                         <span className="text-white text-sm font-medium">
                           {formatUsdPrice(selectedSticker.current_price_usd)}

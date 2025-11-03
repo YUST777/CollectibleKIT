@@ -161,6 +161,24 @@ async def get_profile_gifts(user_id=None):
         # Fetch ALL saved gifts with pagination using the working method
         all_gifts, total_count = await fetch_all_gifts(client, target_user)
         
+        # Fetch unupgradeable gift prices once at the start
+        unupgradeable_prices = {}
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['python3', '/root/01studio/CollectibleKIT/bot/get_unupgradeable_prices.py'],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode == 0:
+                prices_data = json.loads(result.stdout)
+                if prices_data.get('success'):
+                    unupgradeable_prices = prices_data.get('prices', {})
+        except Exception as e:
+            # Silently fail - prices will be None
+            pass
+        
         # Process gifts (same as gifts/bot.py)
         processed_gifts = []
         for sg in all_gifts:
@@ -261,11 +279,15 @@ async def get_profile_gifts(user_id=None):
                     
                     # For unupgradeable gifts, use original.png URL
                     original_image_url = None
+                    price = None
                     if gift_id and is_unupgradeable:
                         original_image_url = f'https://cdn.changes.tg/gifts/originals/{gift_id}/Original.png'
+                        # Get price from unupgradeable_prices dict
+                        gift_id_str = str(gift_id)
+                        if gift_id_str in unupgradeable_prices:
+                            price = unupgradeable_prices[gift_id_str]
                     
                     # For unupgraded gifts, try to get base floor price (no attributes)
-                    price = None
                     if is_unupgraded and portal_auth_data:
                         # Try to get floor price for this gift type (no specific attributes)
                         # We need the title/slug to search for it
