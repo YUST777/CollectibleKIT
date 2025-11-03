@@ -36,7 +36,11 @@ MRKT_ONLY_IDS = [
 async def get_mrkt_init_data():
     """Get MRKT initData"""
     try:
-        client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+        # Use the working gifts session from the gifts directory
+        import os
+        gifts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gifts')
+        session_path = os.path.join(gifts_dir, f'{SESSION_NAME}.session')
+        client = TelegramClient(session_path, API_ID, API_HASH)
         await client.connect()
         
         if not await client.is_user_authorized():
@@ -118,7 +122,11 @@ def get_mrkt_prices(token):
 async def get_quant_init_data():
     """Get Quant initData"""
     try:
-        client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+        # Use the working gifts session from the gifts directory
+        import os
+        gifts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gifts')
+        session_path = os.path.join(gifts_dir, f'{SESSION_NAME}.session')
+        client = TelegramClient(session_path, API_ID, API_HASH)
         await client.connect()
         
         if not await client.is_user_authorized():
@@ -152,30 +160,46 @@ async def get_quant_init_data():
         await client.disconnect()
 
 def get_quant_prices(init_data):
-    """Get Quant prices for unupgradeable gifts - use static file as API is unreliable"""
+    """Get Quant prices for unupgradeable gifts"""
     try:
-        # Try API first
+        # Try new Quant API first
         import cloudscraper
-        scraper = cloudscraper.create_scraper()
-        headers = {'Authorization': f'tma {init_data}'}
-        response = scraper.get(f"{QUANT_API_BASE}/api/gifts", headers=headers, timeout=20)
+        scraper = cloudscraper.create_scraper(
+            browser={'browser': 'chrome', 'platform': 'ios', 'mobile': True}
+        )
+        headers = {
+            'Authorization': f'Bearer {init_data}',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+            'Origin': QUANT_API_BASE,
+            'Referer': f'{QUANT_API_BASE}/',
+        }
+        response = scraper.get(f"{QUANT_API_BASE}/api/gifts/gifts", headers=headers, timeout=30)
         
         if response.status_code == 200:
             data = response.json()
             prices = {}
+            names = {}
             
-            for item in data:
+            # New API returns gifts in data['gifts']
+            gifts = data.get('gifts', []) if isinstance(data, dict) else data
+            
+            for item in gifts:
                 gift_id = item.get('id')
                 floor_price = item.get('floor_price', '0')
+                full_name = item.get('full_name', '')
                 try:
                     price = float(floor_price)
-                    if price > 0:
-                        prices[gift_id] = price
+                    if price > 0 and gift_id:
+                        prices[str(gift_id)] = price
+                        if full_name:
+                            names[str(gift_id)] = full_name
                 except:
                     pass
             
             if prices:
-                return prices
+                return prices, names
     except Exception as e:
         print(f"ERROR: Quant API failed: {e}", file=sys.stderr)
     
@@ -186,20 +210,24 @@ def get_quant_prices(init_data):
             data = json.load(f)
         
         prices = {}
+        names = {}
         for item in data:
             gift_id = item.get('id')
             floor_price = item.get('floor_price', '0')
+            full_name = item.get('full_name', '')
             try:
                 price = float(floor_price)
                 if price > 0:
-                    prices[gift_id] = price
+                    prices[str(gift_id)] = price
+                    if full_name:
+                        names[str(gift_id)] = full_name
             except:
                 pass
         
-        return prices
+        return prices, names
     except Exception as e:
         print(f"ERROR: Quant file failed: {e}", file=sys.stderr)
-        return {}
+        return {}, {}
 
 async def main():
     """Main function"""
@@ -219,7 +247,10 @@ async def main():
         # Get Quant prices as fallback
         print("Fetching Quant prices...", file=sys.stderr)
         quant_init_data = await get_quant_init_data()
-        quant_prices = get_quant_prices(quant_init_data) if quant_init_data else {}
+        if quant_init_data:
+            quant_prices, quant_names = get_quant_prices(quant_init_data)
+        else:
+            quant_prices, quant_names = {}, {}
         
         # Merge prices - prefer MRKT for the 6 special IDs, otherwise use non-zero price
         final_prices = {}
