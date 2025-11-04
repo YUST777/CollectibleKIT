@@ -25,9 +25,11 @@ import { Modal } from './ui/Modal';
 import { Drawer } from './ui/Drawer';
 import { getTelegramWebApp } from '@/lib/telegram';
 import OnboardingTrailer from './OnboardingTrailer';
+import { ChannelSubscribeDrawer } from './ChannelSubscribeDrawer';
 
 export const MainApp: React.FC = () => {
   const [showTrailer, setShowTrailer] = useState(false);
+  const [showChannelDrawer, setShowChannelDrawer] = useState(false);
   const currentTab = useCurrentTab();
   const navigationLevel = useNavigationLevel();
   const currentSubTab = useCurrentSubTab();
@@ -233,8 +235,26 @@ export const MainApp: React.FC = () => {
     const hasSeenTrailer = localStorage.getItem('hasSeenOnboardingTrailer');
     if (!hasSeenTrailer) {
       setShowTrailer(true);
+    } else {
+      // User has seen trailer, show channel drawer after app loads
+      setTimeout(() => {
+        setShowChannelDrawer(true);
+      }, 1500);
     }
   }, []);
+
+  // Show channel subscription drawer every time user enters the app (after trailer completes or if no trailer)
+  useEffect(() => {
+    if (showTrailer) return; // Don't show if trailer is showing
+    
+    // Show drawer after a short delay to ensure app is loaded
+    const timer = setTimeout(() => {
+      console.log('🔔 Showing channel subscription drawer');
+      setShowChannelDrawer(true);
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, [showTrailer]);
 
   const renderTabContent = () => {
     // If we're at main level, show either Home or Profile or Portfolio based on currentSubTab
@@ -268,6 +288,10 @@ export const MainApp: React.FC = () => {
   const handleTrailerComplete = () => {
     localStorage.setItem('hasSeenOnboardingTrailer', 'true');
     setShowTrailer(false);
+    // Show channel drawer after trailer completes
+    setTimeout(() => {
+      setShowChannelDrawer(true);
+    }, 1000);
   };
 
   // Show trailer if needed
@@ -311,6 +335,12 @@ export const MainApp: React.FC = () => {
       {/* Side Drawers */}
       <ToolDrawer />
       <GameDrawer />
+      
+      {/* Channel Subscribe Drawer - Shows every time user enters */}
+      <ChannelSubscribeDrawer 
+        isOpen={showChannelDrawer}
+        onClose={() => setShowChannelDrawer(false)}
+      />
     </div>
   );
 };
