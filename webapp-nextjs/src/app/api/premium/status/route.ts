@@ -1,46 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/database';
 import { getUserFromTelegram } from '@/lib/telegram';
+import { db } from '@/lib/database';
 
+/**
+ * Get premium status
+ */
 export async function GET(request: NextRequest) {
   try {
-    // Get user from Telegram
     const user = await getUserFromTelegram(request);
-    
     if (!user) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'User not authenticated' 
-      }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const userId = user.id;
-    
-    // Get user data with premium expiration
-    const userData = await db.getUser(userId);
-    
+    const userData = await db.getUser(user.id);
     if (!userData) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'User not found' 
-      }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
     }
 
-    const isPremium = userData.user_type === 'premium';
-    const expiresAt = userData.premium_expires_at || null;
-    const isExpired = expiresAt ? Date.now() > expiresAt : false;
-    
+    const now = Date.now();
+    const isPremium = userData.premium_expires_at && userData.premium_expires_at > now;
+    const isVip = userData.user_type === 'vip';
+
     return NextResponse.json({
       success: true,
-      isPremium: isPremium && !isExpired,
-      expiresAt,
-      isExpired,
+      isPremium: isPremium || isVip,
+      premiumExpiresAt: userData.premium_expires_at,
+      userType: userData.user_type
     });
+
   } catch (error) {
-    console.error('Error fetching premium status:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch premium status'
-    }, { status: 500 });
+    console.error('❌ Premium status error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      },
+      { status: 500 }
+    );
   }
 }

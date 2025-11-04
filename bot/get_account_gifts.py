@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
-Get all gifts (upgraded and unupgradeable) from a Telegram user account
+Get unupgradeable gifts from a Telegram user account
 This script fetches all star gifts from a public user account and returns their counts and prices
 """
 
 import asyncio
 import json
 import sys
-import re
 from pathlib import Path
 
 # Add parent directory to path for imports
@@ -16,18 +15,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from telethon import TelegramClient, types
 from telethon.tl.functions.payments import GetSavedStarGiftsRequest
 
-# Try to import aportalsmp for Portal Market API
-try:
-    from aportalsmp import search as search_gifts
-    from aportalsmp import update_auth
-    APORTALSMP_AVAILABLE = True
-except ImportError:
-    APORTALSMP_AVAILABLE = False
-
 # Configuration
 API_ID = 24443096
 API_HASH = "0f26b0fb9d39e04b0cd5ec08eb9e7f76"
 SESSION_FILE = "/root/01studio/CollectibleKIT/gifts/gifts_session.session"
+
+# Import unupgradeable prices function
+try:
+    from get_unupgradeable_prices import fetch_unupgradeable_prices
+    UNUPGRADEABLE_PRICES_AVAILABLE = True
+except ImportError as e:
+    print(f"DEBUG: Import failed: {e}", file=sys.stderr)
+    UNUPGRADEABLE_PRICES_AVAILABLE = False
 
 def load_static_prices():
     """Load static prices from clean_unique_gifts.json"""
@@ -61,72 +60,54 @@ def load_static_prices():
         print(f"Warning: Could not load static prices: {e}", file=sys.stderr)
         return {}, {}
 
-async def get_portal_market_price(slug, backdrop_name=None, model_name=None, symbol_name=None, portal_auth_data=None):
-    """Get price from Portal Market API"""
-    if not APORTALSMP_AVAILABLE or not portal_auth_data:
-        return None
+async def load_unupgradeable_prices(client=None):
+    """Load unupgradeable gift prices - try live API first, then fallback to static file"""
+    prices = {}
     
-    try:
-        # Parse slug to get collection name (e.g., "JollyChimp-38859" -> "JollyChimp")
-        collection_name = slug.split('-')[0] if '-' in slug else slug
-        
-        results = await search_gifts(
-            sort="price_asc",
-            limit=1,
-            gift_name=collection_name,
-            backdrop=backdrop_name,
-            model=model_name,
-            authData=portal_auth_data
-        )
-        
-        # If no results with model, fallback to backdrop only
-        if not results and backdrop_name:
-            results = await search_gifts(
-                sort="price_asc",
-                limit=1,
-                gift_name=collection_name,
-                backdrop=backdrop_name,
-                authData=portal_auth_data
-            )
-        
-        if results and len(results) > 0:
-            # Return the first result's price (lowest)
-            price_nano = results[0].get('price')
-            if price_nano:
-                return price_nano / 1e9  # Convert from nanoTON to TON
-        return None
-    except Exception as e:
-        print(f"Error fetching Portal price for {slug}: {e}", file=sys.stderr)
-        return None
+    # Try to fetch live prices from MRKT/Quant APIs
+    if UNUPGRADEABLE_PRICES_AVAILABLE:
+        try:
+            live_prices = await fetch_unupgradeable_prices(client)
+            if live_prices:
+                # Convert gift ID keys to strings to match format
+                for gift_id, price in live_prices.items():
+                    prices[str(gift_id)] = float(price) if price else 0
+        except Exception as e:
+            print(f"DEBUG: Failed to fetch live prices: {e}", file=sys.stderr)
+    
+    # Fallback to static file for any missing prices
+    static_prices, _ = load_static_prices()
+    for gift_id, price in static_prices.items():
+        if gift_id not in prices or prices[gift_id] == 0:
+            # Only use static price if live price is missing or zero
+            if price > 0:
+                prices[gift_id] = price
+    
+    return prices
 
 async def get_account_gifts(account_username: str):
     """
-    Fetch all gifts (upgraded and unupgradeable) from a user account
-    
-    NOTE: GetSavedStarGiftsRequest only works for:
-    - Your own profile (current authenticated user)
-    - Channels
-    
-    For other users, this will return 0 gifts. To track gifts from a secondary account,
-    you need to use a different Telegram session file for that account and use get_profile_gifts.py
+    Fetch all unupgradeable gifts from a public user account
     
     Args:
         account_username: The username of the account (e.g., 'username' or '@username')
-                         NOTE: This only works if account_username is YOUR OWN account
     
     Returns:
-        Dictionary with gift counts and prices
+        Dictionary with gift_id as key and count as value
     """
     # Remove @ if present
     if account_username.startswith('@'):
         account_username = account_username[1:]
     
-    # Load static prices and names for unupgradeable gifts
-    static_prices, static_names = load_static_prices()
-    
     try:
         client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
         await client.start()
+        
+        # Load unupgradeable prices (try live API first, then static file)
+        unupgradeable_prices = await load_unupgradeable_prices(client)
+        
+        # Load static names for unupgradeable gifts
+        _, static_names = load_static_prices()
         
         # Get user entity
         try:
@@ -139,25 +120,8 @@ async def get_account_gifts(account_username: str):
             await client.disconnect()
             return
         
-
-        # Initialize Portal Market auth for upgraded gifts
-        portal_auth_data = None
-        if APORTALSMP_AVAILABLE:
-            try:
-                # Get the gifts directory path (same as get_profile_gifts.py)
-                gifts_dir = str(Path(SESSION_FILE).parent)
-                portal_auth_data = await update_auth(
-                    api_id=API_ID,
-                    api_hash=API_HASH,
-                    session_name="portals_session",
-                    session_path=gifts_dir
-                )
-            except Exception as e:
-                print(f"Warning: Could not initialize Portal auth: {e}", file=sys.stderr)
-        
         # Fetch all gifts from the account using GetSavedStarGiftsRequest
-        unupgradeable_counts = {}  # {gift_id: count}
-        upgraded_gifts = []  # List of upgraded gift objects
+        gift_counts = {}
         
         async def fetch_all_account_gifts(client, peer):
             """Fetch all star gifts for a user peer"""
@@ -181,17 +145,13 @@ async def get_account_gifts(account_username: str):
         # Fetch gifts
         saved_gifts = await fetch_all_account_gifts(client, user)
         
-        # Process all gifts - separate upgraded and unupgradeable
+        # Count gifts by ID (only count unupgradeable gifts)
         for sg in saved_gifts:
             gift = sg.gift
-            
+            # Check if it's an unupgradeable gift (StarGift, not StarGiftUnique)
             if isinstance(gift, types.StarGift):
-                # Unupgradeable gift - count by ID
                 gift_id = gift.id
-                unupgradeable_counts[gift_id] = unupgradeable_counts.get(gift_id, 0) + 1
-            elif isinstance(gift, types.StarGiftUnique):
-                # Upgraded gift - store for processing
-                upgraded_gifts.append(gift)
+                gift_counts[gift_id] = gift_counts.get(gift_id, 0) + 1
         
         await client.disconnect()
         
@@ -199,9 +159,8 @@ async def get_account_gifts(account_username: str):
         gifts = []
         total_value = 0
         
-        # Process unupgradeable gifts
-        for gift_id, count in unupgradeable_counts.items():
-            price = static_prices.get(str(gift_id), 0)
+        for gift_id, count in gift_counts.items():
+            price = unupgradeable_prices.get(str(gift_id), 0)
             gift_name = static_names.get(str(gift_id), f'Gift {gift_id}')
             gift_value = price * count
             
@@ -210,103 +169,7 @@ async def get_account_gifts(account_username: str):
                 "name": gift_name,
                 "count": count,
                 "price_per_unit": price,
-                "total_value": gift_value,
-                "is_upgraded": False
-            })
-            
-            total_value += gift_value
-        
-        # Process upgraded gifts - group by slug
-        upgraded_by_slug = {}
-        for gift in upgraded_gifts:
-            slug = getattr(gift, 'slug', 'N/A')
-            if slug == 'N/A':
-                continue
-            
-            if slug not in upgraded_by_slug:
-                upgraded_by_slug[slug] = {
-                    'gifts': [],
-                    'count': 0
-                }
-            upgraded_by_slug[slug]['gifts'].append(gift)
-            upgraded_by_slug[slug]['count'] += 1
-        
-        # Fetch prices and calculate totals for upgraded gifts
-        for slug, data in upgraded_by_slug.items():
-            # Get average price from Portal API
-            # Use first gift's attributes as representative
-            first_gift = data['gifts'][0]
-            attributes = getattr(first_gift, 'attributes', [])
-            backdrop_name = None
-            model_name = None
-            pattern_name = None
-            
-            for attr in attributes:
-                if isinstance(attr, types.StarGiftAttributeBackdrop):
-                    backdrop_name = attr.name
-                elif isinstance(attr, types.StarGiftAttributeModel):
-                    model_name = attr.name
-                elif isinstance(attr, types.StarGiftAttributePattern):
-                    pattern_name = attr.name
-            
-            # Try to get price from Portal API
-            price = await get_portal_market_price(
-                slug,
-                backdrop_name=backdrop_name,
-                model_name=model_name,
-                symbol_name=pattern_name,
-                portal_auth_data=portal_auth_data
-            )
-            
-            # If no price from Portal, try to calculate average from all gifts
-            if price is None:
-                # Fetch prices for all gifts in this slug and average them
-                prices = []
-                for gift_item in data['gifts']:
-                    attrs = getattr(gift_item, 'attributes', [])
-                    bd_name = None
-                    md_name = None
-                    pt_name = None
-                    for attr in attrs:
-                        if isinstance(attr, types.StarGiftAttributeBackdrop):
-                            bd_name = attr.name
-                        elif isinstance(attr, types.StarGiftAttributeModel):
-                            md_name = attr.name
-                        elif isinstance(attr, types.StarGiftAttributePattern):
-                            pt_name = attr.name
-                    
-                    p = await get_portal_market_price(
-                        slug,
-                        backdrop_name=bd_name,
-                        model_name=md_name,
-                        symbol_name=pt_name,
-                        portal_auth_data=portal_auth_data
-                    )
-                    if p is not None:
-                        prices.append(p)
-                
-                if prices:
-                    price = sum(prices) / len(prices)
-                else:
-                    price = 0  # No price available
-            
-            count = data['count']
-            gift_value = price * count
-            
-            # Get image URL for upgraded gift - format: https://nft.fragment.com/gift/{collection}-{number}.medium.jpg
-            # The slug is already in the format "Collection-Number" (e.g., "TamaGadget-65287")
-            slug_lower = slug.lower().replace(' ', '')
-            image_url = f'https://nft.fragment.com/gift/{slug_lower}.medium.jpg'
-            
-            gifts.append({
-                "id": slug,  # Use slug as ID for upgraded gifts
-                "slug": slug,
-                "name": slug,  # Use slug as name
-                "count": count,
-                "price_per_unit": price,
-                "total_value": gift_value,
-                "is_upgraded": True,
-                "image_url": image_url
+                "total_value": gift_value
             })
             
             total_value += gift_value
@@ -318,8 +181,8 @@ async def get_account_gifts(account_username: str):
             "success": True,
             "account_username": account_username,
             "account_id": user.id if hasattr(user, 'id') else None,
-            "total_gifts": len(saved_gifts),
-            "unique_gifts": len(unupgradeable_counts) + len(upgraded_by_slug),
+            "total_gifts": sum(gift_counts.values()),
+            "unique_gifts": len(gift_counts),
             "gifts": gifts,
             "total_value": total_value
         }, ensure_ascii=False))

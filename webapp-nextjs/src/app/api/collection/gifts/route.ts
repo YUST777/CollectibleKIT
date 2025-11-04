@@ -1,30 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
-export async function GET(request: NextRequest) {
+/**
+ * Get all available gift collection names
+ * Returns an array of gift names from cdn_links.json
+ */
+export async function GET() {
   try {
-    console.log('🎁 Loading gift catalog data...');
+    // Read from public/cdn_links.json
+    const filePath = path.join(process.cwd(), 'public', 'cdn_links.json');
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    const data = JSON.parse(fileContent);
     
-    // Load gift ID to name mapping
-    const idToNameResponse = await fetch('https://cdn.changes.tg/gifts/id-to-name.json');
-    if (!idToNameResponse.ok) {
-      throw new Error(`Failed to fetch id-to-name data: ${idToNameResponse.status}`);
-    }
-    const idToNameData = await idToNameResponse.json();
-    
-    // Get unique gift names (these are the gift types)
-    const giftNames = Object.values(idToNameData);
-    const uniqueGifts = Array.from(new Set(giftNames)).sort();
-    
-    console.log(`✅ Loaded ${uniqueGifts.length} unique gifts`);
+    // Extract gift names from the gifts array
+    const giftNames = (data.gifts || []).map((gift: any) => gift.name);
     
     return NextResponse.json({
       success: true,
-      gifts: uniqueGifts
+      gifts: giftNames
     });
   } catch (error) {
-    console.error('❌ Error loading gift catalog:', error);
+    console.error('Error loading gifts:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to load gifts' },
+      { success: false, error: 'Failed to load gifts' },
       { status: 500 }
     );
   }

@@ -20,6 +20,14 @@ API_ID = 24443096
 API_HASH = "0f26b0fb9d39e04b0cd5ec08eb9e7f76"
 SESSION_FILE = "/root/01studio/CollectibleKIT/gifts/gifts_session.session"
 
+# Import unupgradeable prices function
+try:
+    from get_unupgradeable_prices import fetch_unupgradeable_prices
+    UNUPGRADEABLE_PRICES_AVAILABLE = True
+except ImportError as e:
+    print(f"DEBUG: Import failed: {e}", file=sys.stderr)
+    UNUPGRADEABLE_PRICES_AVAILABLE = False
+
 def load_static_prices():
     """Load static prices from clean_unique_gifts.json"""
     static_file = "/root/01studio/CollectibleKIT/mrktandquantomapi/quant/clean_unique_gifts.json"
@@ -52,6 +60,31 @@ def load_static_prices():
         print(f"Warning: Could not load static prices: {e}", file=sys.stderr)
         return {}, {}
 
+async def load_unupgradeable_prices(client=None):
+    """Load unupgradeable gift prices - try live API first, then fallback to static file"""
+    prices = {}
+    
+    # Try to fetch live prices from MRKT/Quant APIs
+    if UNUPGRADEABLE_PRICES_AVAILABLE:
+        try:
+            live_prices = await fetch_unupgradeable_prices(client)
+            if live_prices:
+                # Convert gift ID keys to strings to match format
+                for gift_id, price in live_prices.items():
+                    prices[str(gift_id)] = float(price) if price else 0
+        except Exception as e:
+            print(f"DEBUG: Failed to fetch live prices: {e}", file=sys.stderr)
+    
+    # Fallback to static file for any missing prices
+    static_prices, _ = load_static_prices()
+    for gift_id, price in static_prices.items():
+        if gift_id not in prices or prices[gift_id] == 0:
+            # Only use static price if live price is missing or zero
+            if price > 0:
+                prices[gift_id] = price
+    
+    return prices
+
 async def get_channel_gifts(channel_username: str):
     """
     Fetch all unupgradeable gifts from a public channel
@@ -66,12 +99,15 @@ async def get_channel_gifts(channel_username: str):
     if channel_username.startswith('@'):
         channel_username = channel_username[1:]
     
-    # Load static prices and names for unupgradeable gifts
-    static_prices, static_names = load_static_prices()
-    
     try:
         client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
         await client.start()
+        
+        # Load unupgradeable prices (try live API first, then static file)
+        unupgradeable_prices = await load_unupgradeable_prices(client)
+        
+        # Load static names for unupgradeable gifts
+        _, static_names = load_static_prices()
         
         # Get channel entity
         try:
@@ -124,7 +160,7 @@ async def get_channel_gifts(channel_username: str):
         total_value = 0
         
         for gift_id, count in gift_counts.items():
-            price = static_prices.get(str(gift_id), 0)
+            price = unupgradeable_prices.get(str(gift_id), 0)
             gift_name = static_names.get(str(gift_id), f'Gift {gift_id}')
             gift_value = price * count
             

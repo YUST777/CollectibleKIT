@@ -239,7 +239,8 @@ export const CollectionTab: React.FC = () => {
           { name: 'Orange', centerColor: 0, edgeColor: 0, patternColor: 0, textColor: 0, rarityPermille: 0, hex: { centerColor: '#f59e0b', edgeColor: '#d97706', patternColor: '#f59e0b', textColor: '#ffffff' } }
         ]);
         
-        toast.error('Using offline mode - limited features available');
+        // Silently use fallback data - no need to alarm the user
+        console.log('Using fallback data due to request timeout');
       } finally {
         setIsLoading(false);
       }
@@ -1390,46 +1391,6 @@ export const CollectionTab: React.FC = () => {
 
   return (
     <div className="space-y-6 py-4 lg:py-0 animate-fade-in">
-      {/* Header with Profile Picture */}
-      <div className="flex items-center justify-between px-4 mb-4">
-        {/* Profile Picture */}
-        <button
-          onClick={() => {
-            setNavigationLevel('main');
-            setCurrentSubTab('profile');
-            setCurrentTertiaryTab(null);
-            hapticFeedback('selection', 'light', webApp);
-          }}
-          className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
-        >
-          {telegramUser?.photo_url ? (
-            <img
-              src={telegramUser.photo_url}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-              {telegramUser?.first_name?.charAt(0) || user?.first_name?.charAt(0) || 'U'}
-            </div>
-          )}
-        </button>
-
-        {/* Hamburger Menu */}
-        <button 
-          onClick={() => {
-            const { openDrawer } = useAppStore.getState();
-            openDrawer();
-            hapticFeedback('selection', 'light', webApp);
-          }}
-          className="w-6 h-6 flex flex-col justify-center space-y-1 hover:bg-gray-800/50 rounded p-1 transition-colors"
-        >
-          <div className="w-full h-0.5 bg-gray-400"></div>
-          <div className="w-full h-0.5 bg-gray-400"></div>
-          <div className="w-full h-0.5 bg-gray-400"></div>
-        </button>
-      </div>
-
       {/* Ads Banner */}
       <AdsBanner />
 

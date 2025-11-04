@@ -9,9 +9,11 @@ import { useUser } from '@/store/useAppStore';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { hapticFeedback } from '@/lib/telegram';
 import { getGiftPrice } from '@/lib/portalMarketService';
-import { PaperAirplaneIcon, StarIcon, Cog6ToothIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, StarIcon, Cog6ToothIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { getBuyPriceInStars, starsToUsd } from '@/lib/unupgradeableGiftPrices';
+import { cacheUtils } from '@/lib/cache';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 const ModelThumbnail = dynamic(() => import('@/components/ModelThumbnail').then(mod => ({ default: mod.ModelThumbnail })), { ssr: false });
@@ -142,7 +144,7 @@ const getStickerImageUrl = (collection: string, character: string, filename?: st
 
 // Helper function to get gift image URL - handles both upgraded (slug format) and unupgradeable (numeric ID) gifts
 const getGiftImageUrl = (gift: { image_url?: string | null; id?: string | number | null }): string | null => {
-  // Use image_url if provided
+  // Use image_url if provided (should already be correct)
   if (gift.image_url) {
     return gift.image_url;
   }
@@ -279,11 +281,20 @@ export const PortfolioTab: React.FC = () => {
   // Add Gift filter drawer state
   const [isAddGiftDrawerOpen, setIsAddGiftDrawerOpen] = useState(false);
   const [allGifts, setAllGifts] = useState<string[]>([]);
-  const [unupgradeableGifts, setUnupgradeableGifts] = useState<Array<{id: string, name: string, shortName: string, floorPrice: number, imageUrl: string, supply: number}>>([]);
+  const [unupgradeableGifts, setUnupgradeableGifts] = useState<Array<{id: string, name: string, shortName: string, floorPrice: number, imageUrl: string, supply: number, buyPriceStars?: number}>>([]);
   const [selectedGiftName, setSelectedGiftName] = useState<string | null>(null);
-  const [selectedUnupgradeableGift, setSelectedUnupgradeableGift] = useState<{id: string, name: string, shortName: string, floorPrice: number, imageUrl: string, supply: number} | null>(null);
+  const [selectedUnupgradeableGift, setSelectedUnupgradeableGift] = useState<{id: string, name: string, shortName: string, floorPrice: number, imageUrl: string, supply: number, buyPriceStars?: number} | null>(null);
   const [filterSearchTerm, setFilterSearchTerm] = useState('');
   const [ribbonNumber, setRibbonNumber] = useState<string>('');
+  const [useFirstHandPrice, setUseFirstHandPrice] = useState<boolean>(false); // Toggle between first-hand (stars) and second-hand (market) prices
+
+  // Reset toggle when selected gift changes
+  useEffect(() => {
+    if (selectedUnupgradeableGift) {
+      // Default to second-hand price (false) if available, otherwise first-hand
+      setUseFirstHandPrice(!selectedUnupgradeableGift.floorPrice && !!selectedUnupgradeableGift.buyPriceStars);
+    }
+  }, [selectedUnupgradeableGift]);
   
   // Channel gifts state
   const [addGiftTab, setAddGiftTab] = useState<'custom' | 'channel' | 'account'>('custom');
@@ -303,6 +314,93 @@ export const PortfolioTab: React.FC = () => {
   const [stickerSearchTerm, setStickerSearchTerm] = useState('');
   const [stickerPackSearchTerm, setStickerPackSearchTerm] = useState('');
   const [showStickerSettings, setShowStickerSettings] = useState(false);
+
+  // Hidden items state management (stored in localStorage)
+  const getHiddenItemsKey = () => `portfolio_hidden_items_${user?.user_id || 'default'}`;
+  
+  const getHiddenItems = (): Set<string> => {
+    try {
+      const key = getHiddenItemsKey();
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        return new Set(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('Error reading hidden items:', e);
+    }
+    return new Set<string>();
+  };
+
+  const setHiddenItems = (hiddenSet: Set<string>) => {
+    try {
+      const key = getHiddenItemsKey();
+      localStorage.setItem(key, JSON.stringify(Array.from(hiddenSet)));
+    } catch (e) {
+      console.warn('Error saving hidden items:', e);
+    }
+  };
+
+  const recalculateTotalValue = () => {
+    const hidden = getHiddenItems();
+    
+    // Calculate channel gifts value excluding hidden ones
+    const channelGiftsValue = channelGifts.reduce((sum: number, cg: any) => {
+      const isHidden = hidden.has(`channel_${cg.channel_id}`);
+      return sum + (isHidden ? 0 : (cg.total_value || 0));
+    }, 0);
+    
+    // Calculate custom gifts value excluding hidden ones
+    const customGiftsValue = gifts.filter(g => g.is_custom).reduce((sum: number, g: any) => {
+      const giftId = `custom_${g.slug || g.title}_${g.num || ''}`;
+      const isHidden = hidden.has(giftId);
+      return sum + (isHidden ? 0 : (g.price || 0));
+    }, 0);
+    
+    // Calculate auto gifts value excluding hidden ones
+    const autoGiftsValue = gifts.filter(g => !g.is_custom).reduce((sum: number, g: any) => {
+      const giftId = `auto_${g.slug || g.title}_${g.num || ''}`;
+      const isHidden = hidden.has(giftId);
+      return sum + (isHidden ? 0 : (g.price || 0));
+    }, 0);
+    
+    const newTotalValue = autoGiftsValue + customGiftsValue + channelGiftsValue;
+    setTotalValue(newTotalValue);
+  };
+
+  const toggleGiftHidden = (giftId: string) => {
+    const hidden = getHiddenItems();
+    if (hidden.has(giftId)) {
+      hidden.delete(giftId);
+    } else {
+      hidden.add(giftId);
+    }
+    setHiddenItems(hidden);
+    // Immediately recalculate total value
+    recalculateTotalValue();
+    return !hidden.has(giftId);
+  };
+
+  const toggleChannelGiftHidden = (channelId: string) => {
+    const giftId = `channel_${channelId}`;
+    return toggleGiftHidden(giftId);
+  };
+
+  const toggleStickerHidden = (stickerId: string) => {
+    const giftId = `sticker_${stickerId}`;
+    return toggleGiftHidden(giftId);
+  };
+
+  const isGiftHidden = (giftId: string): boolean => {
+    return getHiddenItems().has(giftId);
+  };
+
+  const isChannelGiftHidden = (channelId: string): boolean => {
+    return isGiftHidden(`channel_${channelId}`);
+  };
+
+  const isStickerHidden = (stickerId: string): boolean => {
+    return isGiftHidden(`sticker_${stickerId}`);
+  };
 
   // Load currency preference from localStorage
   useEffect(() => {
@@ -354,15 +452,13 @@ export const PortfolioTab: React.FC = () => {
   useEffect(() => {
     const loadAllGifts = async () => {
       try {
-        const response = await fetch('/api/collection/gifts');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setAllGifts(data.gifts || []);
-          }
-        }
+        // Use cacheUtils which handles caching and API calls
+        const gifts = await cacheUtils.getGifts();
+        setAllGifts(gifts || []);
       } catch (error) {
         console.error('Failed to load gifts:', error);
+        // Set empty array on error to prevent undefined issues
+        setAllGifts([]);
       }
     };
     
@@ -372,7 +468,12 @@ export const PortfolioTab: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            setUnupgradeableGifts(data.gifts || []);
+            // Add buy prices to each gift
+            const giftsWithBuyPrices = (data.gifts || []).map((gift: any) => ({
+              ...gift,
+              buyPriceStars: getBuyPriceInStars(gift.id)
+            }));
+            setUnupgradeableGifts(giftsWithBuyPrices);
           }
         }
       } catch (error) {
@@ -776,8 +877,29 @@ export const PortfolioTab: React.FC = () => {
     
     // Merge results
     const allGifts = [...(autoGiftsResponse?.gifts || []), ...(customGiftsResponse?.gifts || [])];
-    const channelGiftsValue = (channelGiftsResponse || []).reduce((sum: number, cg: any) => sum + (cg.total_value || 0), 0);
-    const totalValue = (autoGiftsResponse?.totalValue || 0) + (customGiftsResponse?.totalValue || 0) + channelGiftsValue;
+    const hidden = getHiddenItems();
+    
+    // Calculate channel gifts value excluding hidden ones
+    const channelGiftsValue = (channelGiftsResponse || []).reduce((sum: number, cg: any) => {
+      const isHidden = hidden.has(`channel_${cg.channel_id}`);
+      return sum + (isHidden ? 0 : (cg.total_value || 0));
+    }, 0);
+    
+    // Calculate custom gifts value excluding hidden ones
+    const customGiftsValue = (customGiftsResponse?.gifts || []).reduce((sum: number, g: any) => {
+      const giftId = `custom_${g.slug || g.title}_${g.num || ''}`;
+      const isHidden = hidden.has(giftId);
+      return sum + (isHidden ? 0 : (g.price || 0));
+    }, 0);
+    
+    // Calculate auto gifts value excluding hidden ones
+    const autoGiftsValue = (autoGiftsResponse?.gifts || []).reduce((sum: number, g: any) => {
+      const giftId = `auto_${g.title}_${g.num || ''}`;
+      const isHidden = hidden.has(giftId);
+      return sum + (isHidden ? 0 : (g.price || 0));
+    }, 0);
+    
+    const totalValue = autoGiftsValue + customGiftsValue + channelGiftsValue;
     
     // Set channel gifts separately
     setChannelGifts(channelGiftsResponse || []);
@@ -952,21 +1074,8 @@ export const PortfolioTab: React.FC = () => {
           console.log('✅ Loaded', data.gifts.length, 'custom gifts from database');
           
           const customGiftsFromDB = data.gifts.map((g: any) => {
-            // Use fragment_url from database if it exists, otherwise construct it
-            let fragmentUrl = g.fragment_url || null;
             const slugLower = (g.slug || '').toLowerCase().replace(/\s+/g, '');
-            
-            if (!fragmentUrl && g.slug) {
-              // Check if slug already contains the number (upgraded gift format: "Collection-Number")
-              // e.g., "TamaGadget-65287" should be used directly as "tamagadget-65287.medium.jpg"
-              if (slugLower.includes('-') && /^[a-zA-Z]/.test(slugLower)) {
-                // Slug already has the number, use it directly
-                fragmentUrl = `https://nft.fragment.com/gift/${slugLower}.medium.jpg`;
-              } else if (g.num) {
-                // Regular gift format: construct as "collection-number.medium.jpg"
-                fragmentUrl = `https://nft.fragment.com/gift/${slugLower}-${g.num}.medium.jpg`;
-              }
-            }
+            const fragmentUrl = slugLower && g.num ? `https://nft.fragment.com/gift/${slugLower}-${g.num}.medium.jpg` : null;
             
             return {
               slug: g.slug || '',
@@ -1366,13 +1475,50 @@ export const PortfolioTab: React.FC = () => {
     }
   };
 
-  const handleDeleteChannelGifts = async (channelGift: any) => {
+  const handleDeleteChannelGifts = async (channelGift: any, event?: React.MouseEvent) => {
+    // Stop event propagation immediately to prevent parent onClick
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    
+    // Also prevent the drawer from opening by closing it immediately if it's opening
+    setIsChannelGiftDrawerOpen(false);
+    
     hapticFeedback('impact', 'light', webApp || undefined);
     
-    // Show confirmation
-    const confirmed = webApp?.showConfirm?.('Are you sure you want to remove this channel from your portfolio?');
+    // Show confirmation - try Telegram WebApp first, then fallback to window.confirm
+    let confirmed = false;
+    const confirmMessage = 'Are you sure you want to remove this channel from your portfolio?';
     
-    if (!confirmed && !window.confirm('Are you sure you want to remove this channel from your portfolio?')) {
+        try {
+      if (webApp?.showConfirm && typeof webApp.showConfirm === 'function') {
+        try {
+          const result: any = webApp.showConfirm(confirmMessage);
+          // WebApp.showConfirm can return a promise or boolean
+          if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
+            confirmed = await (result as Promise<boolean>);
+          } else if (typeof result === 'boolean') {
+            confirmed = result;
+          } else {
+            // If result is void/undefined, use window.confirm as fallback
+            confirmed = window.confirm(confirmMessage);
+          }
+        } catch (e) {
+          console.log('WebApp confirm failed, using window.confirm:', e);
+          confirmed = window.confirm(confirmMessage);
+        }
+      } else {
+        // Desktop fallback - always use window.confirm
+        confirmed = window.confirm(confirmMessage);
+      }
+    } catch (e) {
+      console.error('Error showing confirmation:', e);
+      // Fallback to window.confirm
+      confirmed = window.confirm(confirmMessage);
+    }
+    
+    if (!confirmed) {
       return;
     }
     
@@ -1623,17 +1769,7 @@ export const PortfolioTab: React.FC = () => {
 
     // Generate fragment URL
     const slugLower = selectedGiftName.toLowerCase().replace(/\s+/g, '');
-    
-    // Check if the gift name is already a full slug (upgraded gift format: "Collection-Number")
-    // e.g., "TamaGadget-65287" should be used directly as "tamagadget-65287.medium.jpg"
-    let fragmentUrl: string;
-    if (slugLower.includes('-') && /^[a-zA-Z]/.test(slugLower)) {
-      // Gift name is already a full slug, use it directly
-      fragmentUrl = `https://nft.fragment.com/gift/${slugLower}.medium.jpg`;
-    } else {
-      // Regular gift format: construct as "collection-number.medium.jpg"
-      fragmentUrl = `https://nft.fragment.com/gift/${slugLower}-${ribbonNum}.medium.jpg`;
-    }
+    const fragmentUrl = `https://nft.fragment.com/gift/${slugLower}-${ribbonNum}.medium.jpg`;
 
     // Fetch metadata first
     let modelName = null;
@@ -2280,7 +2416,7 @@ export const PortfolioTab: React.FC = () => {
                 className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 text-sm font-medium"
               >
                 Share
-                <PaperAirplaneIcon className="w-4 h-4" />
+<EyeIcon className="w-4 h-4" />
               </button>
             </div>
 
@@ -2429,11 +2565,16 @@ export const PortfolioTab: React.FC = () => {
             <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
               {gifts.map((gift, index) => {
                 console.log('🎁 Rendering gift:', { index, gift: { title: gift.title, slug: gift.slug, num: gift.num } });
+                // Determine gift ID based on whether it's custom or auto
+                const giftId = gift.is_custom 
+                  ? `custom_${gift.slug || gift.title}_${gift.num || ''}`
+                  : `auto_${gift.slug || gift.title}_${gift.num || ''}`;
+                const isHidden = isGiftHidden(giftId);
                 return (
                 <div
                   key={`${gift.slug || 'gift'}-${gift.num || index}-${index}`}
                   onClick={() => handleGiftClick(gift)}
-                  className="rounded-2xl p-3 cursor-pointer hover:scale-105 transition-transform relative z-0 overflow-hidden group backdrop-blur-xl bg-[#1c1d1f]/40 border border-[#242829] shadow-lg shadow-black/20"
+                  className={`rounded-2xl p-3 cursor-pointer hover:scale-105 transition-all relative z-0 overflow-hidden group backdrop-blur-xl bg-[#1c1d1f]/40 border border-[#242829] shadow-lg shadow-black/20 ${isHidden ? 'opacity-60 blur-sm' : ''}`}
                 >
 
                   {/* Gift Image - using fragment.com URL like Collection tab */}
@@ -2499,11 +2640,18 @@ export const PortfolioTab: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          // Use the same giftId that was determined above for blur effect
+                          toggleGiftHidden(giftId);
                           hapticFeedback('impact', 'light', webApp || undefined);
                         }}
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                        title={isHidden ? "Show in portfolio" : "Hide from portfolio"}
                       >
-                        <PaperAirplaneIcon className="w-4 h-4 text-white/80" />
+                        {isHidden ? (
+                          <EyeSlashIcon className="w-4 h-4 text-white/80" />
+                        ) : (
+                          <EyeIcon className="w-4 h-4 text-white/80" />
+                        )}
                       </button>
                       <button
                         onClick={(e) => {
@@ -2553,33 +2701,44 @@ export const PortfolioTab: React.FC = () => {
                   gifts_breakdown: cg.gifts_breakdown,
                   gifts_count: cg.gifts_breakdown?.length
                 });
+                const isHidden = isChannelGiftHidden(cg.channel_id);
                 return (
                 <div
                   key={`channel-gifts-${cg.channel_id}-${cgIndex}`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    // Don't open drawer if clicking on a button or button container
+                    const target = e.target as HTMLElement;
+                    const isButton = target.closest('button') !== null;
+                    const isActionContainer = target.closest('[data-action-container]') !== null;
+                    
+                    if (isButton || isActionContainer) {
+                      return;
+                    }
+                    
                     setSelectedChannelGift(cg);
                     setIsChannelGiftDrawerOpen(true);
                     hapticFeedback('impact', 'light', webApp || undefined);
                   }}
-                  className="rounded-2xl p-3 cursor-pointer hover:scale-105 transition-transform relative z-0 overflow-hidden group backdrop-blur-xl bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-[#242829] shadow-lg shadow-black/20"
+                  className={`rounded-2xl p-3 cursor-pointer hover:scale-105 transition-all relative z-0 overflow-hidden group backdrop-blur-xl bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-[#242829] shadow-lg shadow-black/20 ${isHidden ? 'opacity-60 blur-sm' : ''}`}
                 >
                   {/* Channel Gifts Preview Grid */}
                   <div className="relative z-10 mb-2">
                     <div className="aspect-square w-full rounded-xl overflow-hidden bg-gray-900/30 backdrop-blur-sm border border-[#242829] relative">
                       <div className="grid grid-cols-2 gap-1 p-2 h-full">
                         {cg.gifts_breakdown?.slice(0, 4).map((gift: any, giftIndex: number) => {
+                          const imageUrl = getGiftImageUrl(gift);
                           console.log('🖼️ Rendering gift preview:', {
                             gift,
                             id: gift.id,
                             name: gift.name,
                             count: gift.count,
-                            url: getGiftImageUrl(gift)
+                            url: imageUrl
                           });
                           return (
                           <div key={giftIndex} className="relative aspect-square bg-gray-800/50 rounded-lg overflow-hidden">
-                            {getGiftImageUrl(gift) && (
+                            {imageUrl && (
                               <img 
-                                src={getGiftImageUrl(gift) || ''} 
+                                src={imageUrl} 
                                 alt={gift.name || 'Gift'} 
                                 className="absolute inset-0 w-full h-full object-cover"
                                 onError={(e) => {
@@ -2617,15 +2776,35 @@ export const PortfolioTab: React.FC = () => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#242829]">
+                    <div 
+                      data-action-container="true"
+                      className="flex items-center gap-2 mt-2 pt-2 border-t border-[#242829] relative z-50"
+                      onClick={(e) => {
+                        // Stop all clicks in this container from bubbling to parent
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onMouseDown={(e) => {
+                        // Also stop mousedown events (desktop issue)
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                    >
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
+                          toggleChannelGiftHidden(cg.channel_id);
                           hapticFeedback('impact', 'light', webApp || undefined);
                         }}
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                        title={isChannelGiftHidden(cg.channel_id) ? "Show in portfolio" : "Hide from portfolio"}
                       >
-                        <PaperAirplaneIcon className="w-4 h-4 text-white/80" />
+                        {isChannelGiftHidden(cg.channel_id) ? (
+                          <EyeSlashIcon className="w-4 h-4 text-white/80" />
+                        ) : (
+                          <EyeIcon className="w-4 h-4 text-white/80" />
+                        )}
                       </button>
                       <button
                         onClick={(e) => {
@@ -2637,14 +2816,30 @@ export const PortfolioTab: React.FC = () => {
                         <StarIcon className="w-4 h-4 text-white/80" />
                       </button>
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteChannelGifts(cg);
+                          e.preventDefault();
+                          // Use setTimeout to ensure this runs after any parent handlers
+                          setTimeout(() => {
+                            handleDeleteChannelGifts(cg, e);
+                          }, 0);
                         }}
-                        className="p-1.5 hover:bg-red-500/20 rounded-lg transition-all backdrop-blur-sm"
+                        onMouseDown={(e) => {
+                          // Prevent parent onClick on mousedown too (desktop issue)
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                        onMouseUp={(e) => {
+                          // Also prevent on mouseup
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                        className="p-1.5 hover:bg-red-500/20 rounded-lg transition-all backdrop-blur-sm cursor-pointer"
+                        style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
                         title="Delete channel gifts"
                       >
-                        <XMarkIcon className="w-4 h-4 text-red-400" />
+                        <XMarkIcon className="w-4 h-4 text-red-400 pointer-events-none" />
                       </button>
                     </div>
                   </div>
@@ -2770,10 +2965,12 @@ export const PortfolioTab: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
-              {stickers.map((sticker, index) => (
+              {stickers.map((sticker, index) => {
+                const isHidden = sticker.sticker_id ? isStickerHidden(sticker.sticker_id.toString()) : false;
+                return (
                 <div
                   key={`${sticker.collection}-${sticker.token_id}-${index}`}
-                  className="rounded-2xl p-3 cursor-pointer hover:scale-105 transition-transform relative z-0 overflow-hidden group backdrop-blur-xl bg-[#1c1d1f]/40 border border-[#242829] shadow-lg shadow-black/20"
+                  className={`rounded-2xl p-3 cursor-pointer hover:scale-105 transition-all relative z-0 overflow-hidden group backdrop-blur-xl bg-[#1c1d1f]/40 border border-[#242829] shadow-lg shadow-black/20 ${isHidden ? 'opacity-60 blur-sm' : ''}`}
                 >
                   {/* Sticker Image */}
                   <div className="relative z-10 mb-2">
@@ -2834,11 +3031,19 @@ export const PortfolioTab: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (sticker.sticker_id) {
+                            toggleStickerHidden(sticker.sticker_id.toString());
+                          }
                           hapticFeedback('impact', 'light', webApp || undefined);
                         }}
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
+                        title={sticker.sticker_id && isStickerHidden(sticker.sticker_id.toString()) ? "Show in portfolio" : "Hide from portfolio"}
                       >
-                        <PaperAirplaneIcon className="w-4 h-4 text-white/80" />
+                        {sticker.sticker_id && isStickerHidden(sticker.sticker_id.toString()) ? (
+                          <EyeSlashIcon className="w-4 h-4 text-white/80" />
+                        ) : (
+                          <EyeIcon className="w-4 h-4 text-white/80" />
+                        )}
                       </button>
                       <button
                         onClick={(e) => {
@@ -2854,6 +3059,7 @@ export const PortfolioTab: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              // TODO: Implement edit sticker functionality
                               hapticFeedback('selection');
                             }}
                             className="p-1.5 hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm"
@@ -2872,11 +3078,12 @@ export const PortfolioTab: React.FC = () => {
                             <XMarkIcon className="w-4 h-4 text-red-400" />
                           </button>
                         </>
-              )}
-            </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {/* Add Sticker Box */}
               <div
                 onClick={openAddStickerDrawer}
@@ -3189,8 +3396,8 @@ export const PortfolioTab: React.FC = () => {
                           <div className="flex-1">
                             <div className="font-medium text-white">{gift.name}</div>
                             {gift.floorPrice > 0 && (
-                              <div className="text-xs text-green-300">
-                                {formatPrice(gift.floorPrice)} TON
+                              <div className="text-xs text-green-300 mt-0.5">
+                                Sale: {formatPrice(gift.floorPrice)} {getCurrencyDisplay().label}
                               </div>
                             )}
                           </div>
@@ -3229,6 +3436,60 @@ export const PortfolioTab: React.FC = () => {
               )}
               {selectedUnupgradeableGift && (
                 <div className="mt-6 pt-4 border-t border-gray-700 space-y-3">
+                  {/* Price Toggle Switch */}
+                  {((selectedUnupgradeableGift.buyPriceStars && typeof selectedUnupgradeableGift.buyPriceStars === 'number') || (selectedUnupgradeableGift.floorPrice && selectedUnupgradeableGift.floorPrice > 0)) && (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-gray-800/30 border border-gray-700">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-300">
+                          {useFirstHandPrice ? '1st Hand Price' : '2nd Hand Price'}
+                        </span>
+                        <span className="text-xs text-gray-400 mt-0.5">
+                          {useFirstHandPrice ? 'Official Telegram market' : 'MRKT/Quant market'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUseFirstHandPrice(!useFirstHandPrice)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                          useFirstHandPrice ? 'bg-blue-600' : 'bg-gray-600'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            useFirstHandPrice ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Price Display */}
+                  <div className="p-3 rounded-lg bg-gray-800/30 border border-gray-700">
+                    {useFirstHandPrice ? (
+                      selectedUnupgradeableGift.buyPriceStars && typeof selectedUnupgradeableGift.buyPriceStars === 'number' ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300 text-sm">Price:</span>
+                          <span className="text-blue-300 font-medium text-sm">
+                            {selectedUnupgradeableGift.buyPriceStars} ⭐ = ${starsToUsd(selectedUnupgradeableGift.buyPriceStars).toFixed(2)}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-400">First-hand price not available</div>
+                      )
+                    ) : (
+                      selectedUnupgradeableGift.floorPrice > 0 ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300 text-sm">Price:</span>
+                          <span className="text-green-300 font-medium text-sm">
+                            {formatPrice(selectedUnupgradeableGift.floorPrice)} {getCurrencyDisplay().label}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-400">Second-hand price not available</div>
+                      )
+                    )}
+                  </div>
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Quantity</label>
                     <input
@@ -3239,9 +3500,21 @@ export const PortfolioTab: React.FC = () => {
                       className="w-full px-4 py-2.5 backdrop-blur-sm bg-white/10 border border-[#242829] text-white rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-400/50"
                       placeholder="How many? (e.g. 15 or 100)"
                     />
-                    {ribbonNumber && !isNaN(Number(ribbonNumber)) && Number(ribbonNumber) > 0 && selectedUnupgradeableGift.floorPrice > 0 && (
-                      <div className="mt-2 text-sm text-green-300">
-                        Total value: {formatPrice(Number(ribbonNumber) * selectedUnupgradeableGift.floorPrice)}
+                    {ribbonNumber && !isNaN(Number(ribbonNumber)) && Number(ribbonNumber) > 0 && (
+                      <div className="mt-2 text-sm space-y-1">
+                        {useFirstHandPrice ? (
+                          selectedUnupgradeableGift.buyPriceStars && typeof selectedUnupgradeableGift.buyPriceStars === 'number' ? (
+                            <div className="text-blue-300">
+                              Total value: {Number(ribbonNumber) * selectedUnupgradeableGift.buyPriceStars} ⭐ = ${(starsToUsd(selectedUnupgradeableGift.buyPriceStars) * Number(ribbonNumber)).toFixed(2)}
+                            </div>
+                          ) : null
+                        ) : (
+                          selectedUnupgradeableGift.floorPrice > 0 ? (
+                            <div className="text-green-300">
+                              Total value: {formatPrice(Number(ribbonNumber) * selectedUnupgradeableGift.floorPrice)} {getCurrencyDisplay().label}
+                            </div>
+                          ) : null
+                        )}
                       </div>
                     )}
                   </div>
@@ -3765,6 +4038,7 @@ export const PortfolioTab: React.FC = () => {
       {/* Channel Gift Breakdown Drawer */}
       <Sheet open={isChannelGiftDrawerOpen} onOpenChange={setIsChannelGiftDrawerOpen}>
         <SheetContent className="h-[80vh] bg-[#1a1b1e] border-t border-gray-800 overflow-y-auto">
+          <SheetTitle className="sr-only">Channel Gifts Breakdown</SheetTitle>
           <div className="p-6 pb-20">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-white">{selectedChannelGift?.channel_username && `@${selectedChannelGift.channel_username}`}</h2>
@@ -3797,9 +4071,9 @@ export const PortfolioTab: React.FC = () => {
                     return (
                     <div
                       key={index}
-                      className="flex items-center gap-4 p-4 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] transition-colors border border-gray-700"
+                      className="flex items-start gap-3 p-4 rounded-xl bg-[#424242] hover:bg-[#4a4a4a] transition-colors border border-gray-700"
                     >
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800/50 flex-shrink-0 border border-gray-600">
+                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-800/50 flex-shrink-0 border border-gray-600">
                         {getGiftImageUrl(gift) && (
                           <img 
                             src={getGiftImageUrl(gift) || ''} 
@@ -3811,24 +4085,39 @@ export const PortfolioTab: React.FC = () => {
                           />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-white font-semibold text-base truncate">{gift.name || 'Unknown Gift'}</div>
-                        {unitPrice > 0 && (
-                          <div className="text-gray-500 text-xs mt-1">
-                            {formatPrice(unitPrice)} each
-                          </div>
-                        )}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                        <div className="text-white font-semibold text-sm break-words">{gift.name || 'Unknown Gift'}</div>
+                        <div className="text-xs space-y-0.5">
+                          {/* Show buy price for unupgradeable gifts if available */}
+                          {gift.id && (() => {
+                            const buyPriceStars = getBuyPriceInStars(gift.id.toString());
+                            if (buyPriceStars && typeof buyPriceStars === 'number') {
+                              return (
+                                <div className="text-blue-300 text-xs break-words">
+                                  Buy: {buyPriceStars} ⭐ = ${starsToUsd(buyPriceStars).toFixed(2)}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                          {/* Show sale price if available */}
+                          {unitPrice > 0 && (
+                            <div className="text-green-300 text-xs break-words">
+                              Sale: {formatPrice(unitPrice)} {getCurrencyDisplay().label} each
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-gray-400 text-sm">x{gift.count || 0}</span>
-                          <span className="text-gray-400">=</span>
-                          <div className="flex items-center gap-1">
-                            <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-4 h-4" />
-                            <span className="text-green-400 font-bold text-lg">
-                              {formatPrice(totalPrice)}
-                            </span>
-                          </div>
+                      <div className="text-right flex-shrink-0 flex flex-col items-end justify-center gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-xs">x{gift.count || 0}</span>
+                          <span className="text-gray-400 text-xs">=</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <img src={getCurrencyDisplay().icon} alt={getCurrencyDisplay().label} className="w-4 h-4" />
+                          <span className="text-green-400 font-bold text-base whitespace-nowrap">
+                            {formatPrice(totalPrice)}
+                          </span>
                         </div>
                       </div>
                     </div>

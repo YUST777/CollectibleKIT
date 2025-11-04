@@ -1,41 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/database';
 import { getUserFromTelegram } from '@/lib/telegram';
+import { db } from '@/lib/database';
 
-// GET: Get user information including credits and TON balance
+/**
+ * Get user information
+ */
 export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromTelegram(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    console.log(`👤 Getting user info for user ${user.id}`);
-    
     const userData = await db.getUser(user.id);
-    
     if (!userData) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
-      user_id: userData.user_id,
-      username: userData.username,
-      first_name: userData.first_name,
-      user_type: userData.user_type,
-      credits: userData.credits || 0,
-      ton_balance: userData.ton_balance || 0,
-      first_win_claimed: userData.first_win_claimed || false,
-      daily_wins_count: userData.daily_wins_count || 0,
-      last_win_date: userData.last_win_date,
-      streak_days: userData.streak_days || 0,
-      streak_completed: userData.streak_completed || false
+      success: true,
+      user: {
+        id: userData.user_id,
+        username: userData.username,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        credits: userData.credits,
+        free_uses: userData.free_uses,
+        user_type: userData.user_type,
+        premium_expires_at: userData.premium_expires_at,
+        streak_days: userData.streak_days,
+        streak_completed: userData.streak_completed
+      }
     });
+
   } catch (error) {
-    console.error('Error getting user info:', error);
-    return NextResponse.json({ 
-      error: 'Failed to get user info', 
-      details: (error as Error).message 
-    }, { status: 500 });
+    console.error('❌ User info error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      },
+      { status: 500 }
+    );
   }
 }

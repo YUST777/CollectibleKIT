@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Get prices for unupgradeable gifts from MRKT and Quant APIs
+With 1-hour cache fallback for when gifts aren't listed
 """
 
 import sys
@@ -8,6 +9,8 @@ import json
 import requests
 import asyncio
 import urllib.parse
+import os
+import time
 from telethon import TelegramClient, functions
 
 # Use same credentials as other scripts
@@ -32,6 +35,46 @@ MRKT_ONLY_IDS = [
     "6001425315291727333",  # Durov's Coat
     "6003477390536213997",  # Durov's Figurine
 ]
+
+# Cache file for prices (1 hour TTL)
+CACHE_FILE = '/root/01studio/CollectibleKIT/bot/unupgradeable_prices_cache.json'
+CACHE_TTL = 3600  # 1 hour in seconds
+
+def load_cache():
+    """Load price cache from file"""
+    try:
+        if os.path.exists(CACHE_FILE):
+            with open(CACHE_FILE, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"DEBUG: Failed to load cache: {e}", file=sys.stderr)
+    return {}
+
+def save_cache(cache):
+    """Save price cache to file"""
+    try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
+        with open(CACHE_FILE, 'w') as f:
+            json.dump(cache, f, indent=2)
+    except Exception as e:
+        print(f"DEBUG: Failed to save cache: {e}", file=sys.stderr)
+
+def is_cache_valid(cache_entry):
+    """Check if cache entry is still valid (within TTL)"""
+    if not cache_entry:
+        return False
+    timestamp = cache_entry.get('timestamp', 0)
+    current_time = time.time()
+    age = current_time - timestamp
+    return age < CACHE_TTL
+
+def get_cached_price(gift_id, cache):
+    """Get cached price for a gift ID if valid"""
+    cache_entry = cache.get(str(gift_id))
+    if cache_entry and is_cache_valid(cache_entry):
+        return cache_entry.get('price', 0)
+    return None
 
 async def get_mrkt_init_data(client=None):
     """Get MRKT initData - optionally use provided client"""
@@ -236,26 +279,76 @@ def get_quant_prices(init_data):
         return {}, {}
 
 async def fetch_unupgradeable_prices(client=None):
-    """Async function to fetch unupgradeable prices - can be imported"""
+    """Async function to fetch unupgradeable prices - can be imported
+    Uses real-time API prices when available, falls back to 1-hour cache if gift not listed
+    """
     try:
-        # Get MRKT prices
+        # Load cache
+        cache = load_cache()
+        current_time = time.time()
+        
+        # Load static file to map MRKT names to gift IDs
+        name_to_id_map = {}
+        id_to_name_map = {}
+        try:
+            quant_file = '/root/01studio/CollectibleKIT/mrktandquantomapi/quant/clean_unique_gifts.json'
+            with open(quant_file, 'r') as f:
+                quant_data = json.load(f)
+                for item in quant_data:
+                    gift_id = str(item.get('id', ''))
+                    short_name = item.get('short_name', '').lower()
+                    full_name = item.get('full_name', '').lower()
+                    if gift_id:
+                        # Map both short_name and full_name to gift ID
+                        if short_name:
+                            name_to_id_map[short_name] = gift_id
+                        if full_name:
+                            name_to_id_map[full_name] = gift_id
+                        id_to_name_map[gift_id] = short_name or full_name
+        except Exception as e:
+            print(f"DEBUG: Failed to load name mapping: {e}", file=sys.stderr)
+        
+        # Get MRKT prices (keyed by collection name)
+        mrkt_prices_by_name = {}
         mrkt_init_data = await get_mrkt_init_data(client)
         if mrkt_init_data:
             mrkt_token = get_mrkt_token(mrkt_init_data)
             if mrkt_token:
-                mrkt_prices = get_mrkt_prices(mrkt_token)
-            else:
-                mrkt_prices = {}
-        else:
-            mrkt_prices = {}
+                mrkt_prices_by_name = get_mrkt_prices(mrkt_token)
         
-        # Get Quant prices as fallback
+        # Convert MRKT prices from name-based to ID-based
+        mrkt_prices = {}
+        for name, price in mrkt_prices_by_name.items():
+            name_lower = name.lower()
+            gift_id = name_to_id_map.get(name_lower)
+            if gift_id and price > 0:
+                mrkt_prices[gift_id] = price
+                # Update cache with fresh price
+                cache[gift_id] = {
+                    'price': price,
+                    'timestamp': current_time,
+                    'source': 'mrkt'
+                }
+        
+        # Get Quant prices (already keyed by gift ID)
         quant_init_data = await get_quant_init_data(client)
         if quant_init_data:
             quant_prices, quant_names = get_quant_prices(quant_init_data)
         else:
             quant_prices, quant_names = {}, {}
         
+        # Update cache with Quant prices
+        for gift_id, price in quant_prices.items():
+            if price > 0:
+                gift_id_str = str(gift_id)
+                # Only update cache if we don't have a newer MRKT price
+                if gift_id_str not in mrkt_prices:
+                    cache[gift_id_str] = {
+                        'price': price,
+                        'timestamp': current_time,
+                        'source': 'quant'
+                    }
+        
         # Merge prices - prefer MRKT for the 6 special IDs, otherwise use non-zero price
         final_prices = {}
         all_gift_ids = set(list(mrkt_prices.keys()) + list(quant_prices.keys()))
@@ -266,55 +359,61 @@ async def fetch_unupgradeable_prices(client=None):
             
             # For MRKT-only IDs, always use MRKT
             if gift_id in MRKT_ONLY_IDS:
-                final_prices[gift_id] = mrkt_price
+                if mrkt_price > 0:
+                    final_prices[gift_id] = mrkt_price
+                else:
+                    # Try cache if API doesn't have price
+                    cached_price = get_cached_price(gift_id, cache)
+                    if cached_price:
+                        final_prices[gift_id] = cached_price
             else:
-                # Otherwise prefer non-zero price
-                final_prices[gift_id] = mrkt_price if mrkt_price > 0 else quant_price
+                # Otherwise prefer non-zero price (MRKT first, then Quant)
+                if mrkt_price > 0:
+                    final_prices[gift_id] = mrkt_price
+                elif quant_price > 0:
+                    final_prices[gift_id] = quant_price
+                else:
+                    # Try cache if APIs don't have price
+                    cached_price = get_cached_price(gift_id, cache)
+                    if cached_price:
+                        final_prices[gift_id] = cached_price
+        
+        # Also check cache for any gift IDs that might not be in APIs but were cached before
+        # (only for gifts we have in our static file)
+        for gift_id in id_to_name_map.keys():
+            gift_id_str = str(gift_id)
+            if gift_id_str not in final_prices:
+                cached_price = get_cached_price(gift_id_str, cache)
+                if cached_price:
+                    final_prices[gift_id_str] = cached_price
+        
+        # Save updated cache
+        save_cache(cache)
         
         return final_prices
         
     except Exception as e:
         print(f"Error fetching prices: {e}", file=sys.stderr)
-        return {}
+        # On error, try to use cache for all known gifts
+        cache = load_cache()
+        fallback_prices = {}
+        try:
+            quant_file = '/root/01studio/CollectibleKIT/mrktandquantomapi/quant/clean_unique_gifts.json'
+            with open(quant_file, 'r') as f:
+                quant_data = json.load(f)
+                for item in quant_data:
+                    gift_id = str(item.get('id', ''))
+                    cached_price = get_cached_price(gift_id, cache)
+                    if cached_price:
+                        fallback_prices[gift_id] = cached_price
+        except:
+            pass
+        return fallback_prices
 
 async def main():
-    """Main function"""
+    """Main function - uses the same caching logic as fetch_unupgradeable_prices"""
     try:
-        # Get MRKT prices
-        print("Fetching MRKT prices...", file=sys.stderr)
-        mrkt_init_data = await get_mrkt_init_data(None)
-        if mrkt_init_data:
-            mrkt_token = get_mrkt_token(mrkt_init_data)
-            if mrkt_token:
-                mrkt_prices = get_mrkt_prices(mrkt_token)
-            else:
-                mrkt_prices = {}
-        else:
-            mrkt_prices = {}
-        
-        # Get Quant prices as fallback
-        print("Fetching Quant prices...", file=sys.stderr)
-        quant_init_data = await get_quant_init_data(None)
-        if quant_init_data:
-            quant_prices, quant_names = get_quant_prices(quant_init_data)
-        else:
-            quant_prices, quant_names = {}, {}
-        
-        # Merge prices - prefer MRKT for the 6 special IDs, otherwise use non-zero price
-        final_prices = {}
-        all_gift_ids = set(list(mrkt_prices.keys()) + list(quant_prices.keys()))
-        
-        for gift_id in all_gift_ids:
-            mrkt_price = mrkt_prices.get(gift_id, 0)
-            quant_price = quant_prices.get(gift_id, 0)
-            
-            # For MRKT-only IDs, always use MRKT
-            if gift_id in MRKT_ONLY_IDS:
-                final_prices[gift_id] = mrkt_price
-            else:
-                # Otherwise prefer non-zero price
-                final_prices[gift_id] = mrkt_price if mrkt_price > 0 else quant_price
-        
+        final_prices = await fetch_unupgradeable_prices(None)
         output = {"success": True, "prices": final_prices}
         print(json.dumps(output))
         
