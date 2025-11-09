@@ -133,15 +133,28 @@ export const cacheUtils = {
     }
 
     console.log(`🎁 Loading models for ${giftName} from API...`);
-    const response = await fetch(`/api/collection/gifts/${encodeURIComponent(giftName)}/models`);
-    const data = await response.json();
-    
-    if (data.success) {
-      memoryCache.set(cacheKey, data.models, GIFT_MODELS_TTL);
-      return data.models;
+    try {
+      const response = await fetch(`/api/collection/gifts/${encodeURIComponent(giftName)}/models`);
+      
+      if (!response.ok) {
+        console.error(`❌ Failed to load models for ${giftName}: ${response.status} ${response.statusText}`);
+        return [];
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && Array.isArray(data.models)) {
+        memoryCache.set(cacheKey, data.models, GIFT_MODELS_TTL);
+        return data.models;
+      }
+      
+      // If no models found, return empty array instead of throwing
+      console.log(`⚠️ No models found for ${giftName}`);
+      return [];
+    } catch (error) {
+      console.error(`❌ Error loading models for ${giftName}:`, error);
+      return [];
     }
-    
-    throw new Error(`Failed to load models for ${giftName}`);
   },
 
   // Gift patterns cache

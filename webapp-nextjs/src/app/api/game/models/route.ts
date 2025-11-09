@@ -3,7 +3,7 @@ import { emojiGameService } from '@/lib/emojiGameService';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🎨 Getting models for gift');
+    console.log('🎨 Getting models for gift (emoji game service)');
 
     // Get gift name from query params
     const url = new URL(request.url);
@@ -11,29 +11,37 @@ export async function GET(request: NextRequest) {
 
     if (!giftName) {
       return NextResponse.json({
-        success: false,
-        error: 'Gift name is required'
-      }, { status: 400 });
+        success: true,
+        models: []
+      });
     }
 
-    const models = await emojiGameService.getModelsForGift(giftName);
+    try {
+      const models = await emojiGameService.getModelsForGift(giftName);
 
-    console.log(`✅ Retrieved ${models.length} models for ${giftName}`);
+      console.log(`✅ Retrieved ${models.length} models for ${giftName} from emoji game service`);
 
-    return NextResponse.json({
-      success: true,
-      models: models
-    });
+      return NextResponse.json({
+        success: true,
+        models: models || []
+      });
+    } catch (serviceError) {
+      console.error(`❌ Emoji game service error for ${giftName}:`, serviceError);
+      // Return empty array instead of error to prevent UI crashes
+      return NextResponse.json({
+        success: true,
+        models: []
+      });
+    }
 
   } catch (error) {
     console.error('❌ Get models error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    // Return empty array instead of error to prevent UI crashes
+    return NextResponse.json({
+      success: true,
+      models: [],
+      error: error instanceof Error ? error.message : 'Internal server error'
+    });
   }
 }
 
