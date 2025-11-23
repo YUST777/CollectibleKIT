@@ -15,8 +15,13 @@ from telethon.tl.functions.payments import GetSavedStarGiftsRequest
 from telethon.errors import SessionPasswordNeededError, UsernameNotOccupiedError, PeerIdInvalidError, UsernameInvalidError
 
 # Import cache helpers
+import sys
+import os
+bot_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, bot_root)
+
 try:
-    from get_portfolio_cache import get_cached_portfolio, set_cached_portfolio, set_fetching_status, is_fetching
+    from utils.get_portfolio_cache import get_cached_portfolio, set_cached_portfolio, set_fetching_status, is_fetching
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
@@ -24,7 +29,7 @@ except ImportError:
 # Use our working Portal Market API wrapper
 # This fixes all issues: correct domain, timeout, rate limiting
 try:
-    from portal_market_api import PortalMarketAPI, get_portal_market_price
+    from services.portal_market_api import PortalMarketAPI, get_portal_market_price
     PORTAL_MARKET_API_AVAILABLE = True
     APORTALSMP_AVAILABLE = True  # For backward compatibility
 except ImportError:
@@ -39,11 +44,7 @@ except ImportError:
 
 # Import unupgradeable prices function
 try:
-    import sys
-    import os
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    sys.path.insert(0, bot_dir)
-    from get_unupgradeable_prices import fetch_unupgradeable_prices
+    from services.get_unupgradeable_prices import fetch_unupgradeable_prices
     UNUPGRADEABLE_PRICES_AVAILABLE = True
 except ImportError as e:
     print(f"DEBUG: Import failed: {e}", file=sys.stderr)

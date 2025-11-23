@@ -10,7 +10,7 @@ async function triggerBackgroundUpdate(userId: number, userIdentifier: string): 
     await db.setPortfolioFetching(userId, true);
     
     const projectRoot = '/root/01studio/CollectibleKIT';
-    const pythonScript = path.join(projectRoot, 'bot', 'get_profile_gifts.py');
+    const pythonScript = path.join(projectRoot, 'bot', 'services', 'get_profile_gifts.py');
     const venvPython = '/usr/bin/python3';
     const args = [pythonScript, userIdentifier];
     
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     
     // Run the Python script to fetch profile gifts
     const projectRoot = '/root/01studio/CollectibleKIT';
-    const pythonScript = path.join(projectRoot, 'bot', 'get_profile_gifts.py');
+    const pythonScript = path.join(projectRoot, 'bot', 'services', 'get_profile_gifts.py');
     const venvPython = '/usr/bin/python3';
     
     // Build command arguments - prefer username if available (better for Telethon lookup)

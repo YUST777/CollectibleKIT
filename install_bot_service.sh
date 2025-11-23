@@ -13,7 +13,7 @@ fi
 # Get current user and path
 CURRENT_USER=$(logname)
 PROJECT_PATH=$(pwd)
-BOT_PATH="$PROJECT_PATH/bot/telegram_bot.py"
+BOT_PATH="$PROJECT_PATH/bot/core/telegram_bot.py"
 VENV_PATH="$PROJECT_PATH/.venv/bin/python"
 
 echo "User: $CURRENT_USER"
@@ -32,7 +32,7 @@ After=network.target
 Type=simple
 User=$CURRENT_USER
 WorkingDirectory=$PROJECT_PATH
-ExecStart=$VENV_PATH -m bot.telegram_bot
+ExecStart=$VENV_PATH bot/core/telegram_bot.py
 Restart=always
 RestartSec=10
 StandardOutput=journal

@@ -69,7 +69,7 @@ async function triggerBackgroundPortfolioFetch(userId: number, userIdentifier: s
     await db.setPortfolioFetching(userId, true);
     
     const projectRoot = '/root/01studio/CollectibleKIT';
-    const pythonScript = `${projectRoot}/bot/get_profile_gifts.py`;
+    const pythonScript = `${projectRoot}/bot/services/get_profile_gifts.py`;
     const venvPython = '/usr/bin/python3';
     const args = [pythonScript, userIdentifier];
     

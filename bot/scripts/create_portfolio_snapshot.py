@@ -9,7 +9,11 @@ import json
 import os
 import sqlite3
 from datetime import datetime
-from get_profile_gifts import get_profile_gifts
+import sys
+import os
+bot_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, bot_root)
+from services.get_profile_gifts import get_profile_gifts
 
 # Database path
 DB_PATH = '/root/01studio/CollectibleKIT/bot/bot_data.db'

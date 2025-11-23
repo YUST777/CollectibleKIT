@@ -3,5 +3,5 @@
 # Run this daily at midnight UTC
 
 cd /root/01studio/CollectibleKIT
-python3 bot/create_portfolio_snapshot.py --all-users >> /root/01studio/CollectibleKIT/logs/snapshot.log 2>&1
+python3 bot/scripts/create_portfolio_snapshot.py --all-users >> /root/01studio/CollectibleKIT/logs/snapshot.log 2>&1
 
