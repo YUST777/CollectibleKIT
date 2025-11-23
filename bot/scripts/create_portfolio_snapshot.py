@@ -81,23 +81,35 @@ def save_snapshot(user_id: int, portfolio_data: dict):
 async def create_snapshot_for_user(user_id):
     """Create snapshot for a single user"""
     try:
-        # Fetch portfolio using subprocess (get_profile_gifts prints JSON)
-        import subprocess
-        script_path = os.path.join(os.path.dirname(__file__), 'get_profile_gifts.py')
-        result = subprocess.run(
-            ['python3', script_path, str(user_id)],
-            capture_output=True,
-            text=True,
-            timeout=300,
-            cwd=os.path.dirname(os.path.dirname(script_path))
+        # Fetch portfolio using async subprocess (get_profile_gifts prints JSON)
+        # Use async subprocess to avoid blocking the event loop
+        script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'services', 'get_profile_gifts.py')
+        bot_root = os.path.dirname(os.path.dirname(__file__))
+        
+        # Create async subprocess
+        process = await asyncio.create_subprocess_exec(
+            'python3', script_path, str(user_id),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=bot_root
         )
         
-        if result.returncode != 0:
-            print(f"Error fetching portfolio for user {user_id}: {result.stderr}", file=sys.stderr)
+        # Wait for process with timeout
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300.0)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            print(f"Error fetching portfolio for user {user_id}: Timeout after 300 seconds", file=sys.stderr)
+            return False
+        
+        if process.returncode != 0:
+            error_msg = stderr.decode('utf-8') if stderr else "Unknown error"
+            print(f"Error fetching portfolio for user {user_id}: {error_msg}", file=sys.stderr)
             return False
         
         # Parse JSON from output
-        output = result.stdout
+        output = stdout.decode('utf-8')
         json_start = output.find('{')
         json_end = output.rfind('}') + 1
         
