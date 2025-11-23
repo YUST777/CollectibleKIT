@@ -139,7 +139,7 @@ async def get_portal_market_price(slug, backdrop_name=None, model_name=None, sym
             return None
     except Exception as e:
         # Silent - don't spam errors
-    return None
+        return None
 
 async def get_profile_gifts(user_id=None, return_cached=False, background_update=False):
     """
