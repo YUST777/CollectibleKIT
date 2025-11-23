@@ -69,6 +69,8 @@ try:
 except ImportError:
     MULTI_ACCOUNT_AVAILABLE = False
     PORTAL_ACCOUNTS = []
+    MULTI_ACCOUNT_AVAILABLE = False
+    PORTAL_ACCOUNTS = []
 
 async def fetch_all_gifts(client, peer):
     """Fetch all Star Gifts for a peer (pinned and unpinned) - from gifts/bot.py"""
