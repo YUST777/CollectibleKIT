@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot refer yourself' }, { status: 400 });
     }
 
+    // Store Telegram photo URL directly in database
     const success = await db.addReferral(referrerId, invitedId, invitedName || '', invitedPhoto || '');
     
     if (success) {

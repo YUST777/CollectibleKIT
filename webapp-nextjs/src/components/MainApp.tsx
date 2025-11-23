@@ -102,6 +102,20 @@ export const MainApp: React.FC = () => {
           if (telegramUser) {
             // Create or update user in database via API
             try {
+              // Get start_param from multiple possible locations
+              const startParam = (webApp.initDataUnsafe as any).start_param || 
+                                (webApp as any).startParam || 
+                                (webApp as any).start_param ||
+                                '';
+              
+              console.log('🔗 start_param check:', {
+                from_initDataUnsafe: (webApp.initDataUnsafe as any).start_param,
+                from_webApp_startParam: (webApp as any).startParam,
+                from_webApp_start_param: (webApp as any).start_param,
+                final: startParam,
+                initDataUnsafe_keys: Object.keys(webApp.initDataUnsafe || {})
+              });
+              
               const response = await fetch('/api/user/init', {
                 method: 'POST',
                 headers: {
@@ -115,7 +129,7 @@ export const MainApp: React.FC = () => {
                   language_code: telegramUser.language_code,
                   is_premium: telegramUser.is_premium,
                   photo_url: telegramUser.photo_url,
-                  start_param: (webApp.initDataUnsafe as any).start_param || '',
+                  start_param: startParam,
                 }),
               });
 
@@ -142,6 +156,11 @@ export const MainApp: React.FC = () => {
                   balance: 0,
                   rewards: 0,
                   walletConnected: false,
+                });
+
+                // Preload portfolio in background (saves 0.5 minute when user reaches portfolio tab)
+                fetch('/api/portfolio/preload').catch(err => {
+                  console.log('Portfolio preload error (non-critical):', err);
                 });
               } else {
                 console.error('Failed to initialize user in database');

@@ -6,6 +6,7 @@ import { useTelegram } from '@/components/providers/TelegramProvider';
 import { Button } from '@/components/ui/Button';
 import { Share2, Users, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getProfilePhotoUrl } from '@/lib/profilePhoto';
 
 interface InvitedUser {
   invited_id: number;
@@ -198,10 +199,16 @@ export const ReferralSection: React.FC = () => {
                 key={invitedUser.invited_id}
                 className="flex items-center space-x-3 p-3 bg-box-bg rounded-lg border border-icon-idle/20"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-semibold">
-                    {invitedUser.invited_name.charAt(0).toUpperCase()}
-                  </span>
+                <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                  <img
+                    src={getProfilePhotoUrl(invitedUser.invited_photo)}
+                    alt={invitedUser.invited_name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to default if image fails to load
+                      (e.target as HTMLImageElement).src = '/default-avatar.png';
+                    }}
+                  />
                 </div>
                 <div className="flex-1">
                   <div className="text-text-active font-medium">

@@ -30,16 +30,25 @@ export async function POST(request: NextRequest) {
       user_id,
       username,
       first_name,
-      is_premium
+      is_premium,
+      start_param
     });
+    
+    // Log start_param for debugging
+    if (start_param) {
+      console.log(`📋 start_param received: "${start_param}"`);
+    } else {
+      console.log('⚠️ No start_param provided');
+    }
 
-    // Create or update user in database
+    // Create or update user in database (store Telegram photo URL directly)
     let success = false;
     try {
       success = await db.createUser(
         user_id,
         username,
-        first_name
+        first_name,
+        photo_url || null
       );
     } catch (error) {
       console.warn('Database error, continuing with fallback:', error);
@@ -50,16 +59,24 @@ export async function POST(request: NextRequest) {
     if (start_param && start_param.startsWith('ref_')) {
       try {
         const referrerId = parseInt(start_param.replace('ref_', ''));
+        console.log(`🔍 Parsed referrerId from start_param: ${referrerId} (from "${start_param}")`);
+        
         if (referrerId && referrerId !== user_id) {
           console.log(`🔗 Processing referral: ${user_id} referred by ${referrerId}`);
           
-          // Add referral to database
-          await db.addReferral(
+          // Add referral to database (store Telegram photo URL directly)
+          const referralSuccess = await db.addReferral(
             referrerId,
             user_id,
             `${first_name} ${last_name || ''}`.trim() || `User ${user_id}`,
             photo_url || ''
           );
+          
+          if (referralSuccess) {
+            console.log(`✅ Referral added to database: ${user_id} referred by ${referrerId}`);
+          } else {
+            console.error(`❌ Failed to add referral to database: ${user_id} referred by ${referrerId}`);
+          }
           
           // Complete "Promote CollectibleKIT" task for the referrer
           try {
@@ -67,17 +84,29 @@ export async function POST(request: NextRequest) {
             if (!taskCompletion.completed) {
               await db.completeTask(referrerId, 'daily_promote_canvas');
               console.log(`✅ Promote CollectibleKIT task completed for referrer ${referrerId}`);
+            } else {
+              console.log(`ℹ️ Promote CollectibleKIT task already completed for referrer ${referrerId}`);
             }
           } catch (error) {
             console.log('Task completion failed (non-critical):', error);
           }
           
           console.log(`✅ Referral processed successfully: ${user_id} referred by ${referrerId}`);
+        } else {
+          console.log(`⚠️ Invalid referral: referrerId=${referrerId}, user_id=${user_id} (same user or invalid ID)`);
         }
       } catch (error) {
-        console.error('Error processing referral:', error);
+        console.error('❌ Error processing referral:', error);
+        console.error('Error details:', {
+          start_param,
+          user_id,
+          error: (error as Error).message,
+          stack: (error as Error).stack
+        });
         // Don't fail the entire initialization if referral fails
       }
+    } else {
+      console.log(`ℹ️ No referral detected - start_param: "${start_param}" (doesn't start with "ref_")`);
     }
 
     if (!success) {

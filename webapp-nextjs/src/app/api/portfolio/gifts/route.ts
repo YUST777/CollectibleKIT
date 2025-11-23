@@ -4,6 +4,38 @@ import { spawn } from 'child_process';
 import path from 'path';
 import { db } from '@/lib/database';
 
+// Background update function (non-blocking)
+async function triggerBackgroundUpdate(userId: number, userIdentifier: string): Promise<void> {
+  try {
+    await db.setPortfolioFetching(userId, true);
+    
+    const projectRoot = '/root/01studio/CollectibleKIT';
+    const pythonScript = path.join(projectRoot, 'bot', 'get_profile_gifts.py');
+    const venvPython = '/usr/bin/python3';
+    const args = [pythonScript, userIdentifier];
+    
+    // Run in background (don't wait for result)
+    const python = spawn(venvPython, args, {
+      cwd: projectRoot,
+      detached: true,
+      stdio: 'ignore'
+    });
+    
+    python.unref(); // Allow process to exit independently
+    
+    // Update fetching status after a delay (in case process fails quickly)
+    setTimeout(async () => {
+      const stillFetching = await db.isPortfolioFetching(userId);
+      if (stillFetching) {
+        // Process is still running, which is good
+      }
+    }, 5000);
+  } catch (error) {
+    console.error('Error triggering background update:', error);
+    await db.setPortfolioFetching(userId, false);
+  }
+}
+
 /**
  * Get portfolio gifts for the authenticated user
  * This endpoint fetches the user's saved Telegram Star gifts using Python script
@@ -26,45 +58,48 @@ export async function GET(request: NextRequest) {
     // Check rate limit (60 seconds = 60000ms)
     const canRefresh = await db.checkRateLimit(user.id, 60000);
     
-    // Check cache first
-    const cachedData = await db.getAutoGiftsCache(user.id);
+    // Check cache first - ALWAYS return cached if available (even if stale)
+    const cachedData: { gifts: any[]; totalValue: number; cachedAt: number; isFetching?: boolean; fetchStartedAt?: number } | null = await db.getAutoGiftsCache(user.id);
     const cacheAge = cachedData ? Date.now() - cachedData.cachedAt : Infinity;
     const cacheMaxAge = 5 * 60 * 1000; // 5 minutes
+    const isFetching = cachedData?.isFetching || false;
     
-    // Return cached data if it's fresh
-    if (cachedData && cacheAge < cacheMaxAge) {
-      console.log('✅ Returning cached portfolio data (age:', Math.round(cacheAge / 1000), 'seconds)');
+    // Return cached data immediately if available (even if stale)
+    if (cachedData) {
+      const isStale = cacheAge >= cacheMaxAge;
+      console.log(`✅ Returning cached portfolio data (age: ${Math.round(cacheAge / 1000)}s, stale: ${isStale}, fetching: ${isFetching})`);
+      
+      // Start background update if stale and not already fetching
+      if (isStale && !isFetching && canRefresh) {
+        console.log('🔄 Starting background update...');
+        // Trigger background update (non-blocking)
+        triggerBackgroundUpdate(user.id, user.username || user.id.toString()).catch(err => {
+          console.error('Background update error:', err);
+        });
+      }
+      
+      const cached = cachedData as { gifts: any[]; totalValue: number; cachedAt: number };
       return NextResponse.json({
         success: true,
-        gifts: cachedData.gifts,
-        total_value: cachedData.totalValue,
+        gifts: cached.gifts || [],
+        total_value: cached.totalValue,
         cached: true,
+        stale: isStale,
+        is_fetching: isFetching,
         cache_age_seconds: Math.round(cacheAge / 1000)
       });
     }
     
-    // If no cache exists, allow the request (first-time user)
+    // No cache exists - first-time user
     const isFirstLoad = !cachedData;
     
-    // If rate limit exceeded, return stale cache or continue for first load
+    // If rate limit exceeded and no cache, return error
     if (!canRefresh && !isFirstLoad) {
-      if (cachedData) {
-        console.log('⚠️ Rate limit exceeded, returning stale cache');
-        return NextResponse.json({
-          success: true,
-          gifts: cachedData.gifts,
-          total_value: cachedData.totalValue,
-          cached: true,
-          stale: true,
-          message: 'Rate limit: please wait 1 minute before refreshing'
-        });
-      } else {
         console.log('❌ Rate limit exceeded and no cache available');
         return NextResponse.json({
           success: false,
           error: 'Rate limit exceeded. Please wait 1 minute before refreshing.'
         }, { status: 429 });
-      }
     }
     
     // Rate limit OK or first load, fetch fresh data
@@ -136,10 +171,11 @@ export async function GET(request: NextRequest) {
               // On error, return stale cache if available
               if (cachedData) {
                 console.log('⚠️ Returning stale cache due to Python script error');
+                const cached = cachedData as { gifts: any[]; totalValue: number; cachedAt: number };
                 resolve(NextResponse.json({
                   success: true,
-                  gifts: cachedData.gifts,
-                  total_value: cachedData.totalValue,
+                  gifts: cached.gifts || [],
+                  total_value: cached.totalValue,
                   cached: true,
                   stale: true,
                   message: 'Using cached data'
@@ -155,9 +191,27 @@ export async function GET(request: NextRequest) {
             
             console.log('✅ Portfolio gifts fetched successfully');
             
-            // Cache the results
-            await db.setAutoGiftsCache(user.id, result.gifts || [], result.total_value || 0);
+            // Cache the results and mark as not fetching
+            await db.setAutoGiftsCache(user.id, result.gifts || [], result.total_value || 0, false);
+            await db.setPortfolioFetching(user.id, false);
             console.log('✅ Portfolio data cached');
+            
+            // Create snapshot if it doesn't exist for today
+            const todaySnapshot = await db.getPortfolioSnapshot(user.id);
+            if (!todaySnapshot) {
+              // Create snapshot in background (don't wait)
+              db.savePortfolioSnapshot(
+                user.id,
+                result.total_value || 0,
+                result.gifts?.length || 0,
+                result.nft_count || 0,
+                (result.gifts?.length || 0) - (result.nft_count || 0),
+                result.gifts?.filter((g: any) => g.is_upgraded).reduce((sum: number, g: any) => sum + (g.price || 0), 0) || 0,
+                result.gifts?.filter((g: any) => !g.is_upgraded).reduce((sum: number, g: any) => sum + (g.price || 0), 0) || 0
+              ).catch(err => {
+                console.error('Error creating snapshot:', err);
+              });
+            }
             
             resolve(NextResponse.json({
               ...result,
@@ -169,10 +223,11 @@ export async function GET(request: NextRequest) {
             // On parse error, return stale cache if available
             if (cachedData) {
               console.log('⚠️ Returning stale cache due to parse error');
+              const cached = cachedData as { gifts: any[]; totalValue: number; cachedAt: number };
               resolve(NextResponse.json({
                 success: true,
-                gifts: cachedData.gifts,
-                total_value: cachedData.totalValue,
+                gifts: cached.gifts || [],
+                total_value: cached.totalValue,
                 cached: true,
                 stale: true,
                 message: 'Using cached data'
@@ -219,8 +274,8 @@ export async function GET(request: NextRequest) {
             console.log('⚠️ Returning stale cache due to Python script error');
             resolve(NextResponse.json({
               success: true,
-              gifts: cachedData.gifts,
-              total_value: cachedData.totalValue,
+              gifts: (cachedData as { gifts: any[]; totalValue: number }).gifts || [],
+              total_value: (cachedData as { gifts: any[]; totalValue: number }).totalValue,
               cached: true,
               stale: true,
               message: 'Using cached data'
@@ -240,10 +295,11 @@ export async function GET(request: NextRequest) {
         // On error, return stale cache if available
         if (cachedData) {
           console.log('⚠️ Returning stale cache due to spawn error');
+          const cached = cachedData as { gifts: any[]; totalValue: number; cachedAt: number };
           resolve(NextResponse.json({
             success: true,
-            gifts: cachedData.gifts,
-            total_value: cachedData.totalValue,
+            gifts: cached.gifts || [],
+            total_value: cached.totalValue,
             cached: true,
             stale: true,
             error: 'Failed to refresh data, showing cached data'

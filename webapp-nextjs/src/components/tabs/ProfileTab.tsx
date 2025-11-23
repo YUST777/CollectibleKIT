@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sh
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { hapticFeedback } from '@/lib/telegram';
 import { ReferralSection } from '@/components/sections/ReferralSection';
+import { getProfilePhotoUrl } from '@/lib/profilePhoto';
 import { AdsBanner } from '@/components/AdsBanner';
 import { TasksContent } from '@/components/tabs/TasksTab';
 import {
@@ -136,17 +137,15 @@ export const ProfileTab: React.FC = () => {
           }}
           className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
         >
-          {telegramUser?.photo_url ? (
-            <img
-              src={telegramUser.photo_url}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-              {telegramUser?.first_name?.charAt(0) || user?.first_name?.charAt(0) || 'U'}
-            </div>
-          )}
+          <img
+            src={getProfilePhotoUrl(telegramUser?.photo_url)}
+            alt="Profile"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // Fallback to default if image fails to load
+              (e.target as HTMLImageElement).src = '/default-avatar.png';
+            }}
+          />
           
         </button>
 
@@ -264,19 +263,15 @@ export const ProfileTab: React.FC = () => {
             <div className="flex items-center gap-4">
               {/* Profile Picture */}
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-icon-active flex-shrink-0">
-                {telegramUser?.photo_url ? (
-                  <img
-                    src={telegramUser.photo_url}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-white text-2xl font-bold">
-                      {telegramUser?.first_name?.charAt(0) || user?.first_name?.charAt(0) || 'U'}
-                    </span>
-                  </div>
-                )}
+                <img
+                  src={getProfilePhotoUrl(telegramUser?.photo_url)}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to default if image fails to load
+                    (e.target as HTMLImageElement).src = '/default-avatar.png';
+                  }}
+                />
               </div>
               
               <div className="flex-1">

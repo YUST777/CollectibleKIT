@@ -9,7 +9,7 @@ import { useUser } from '@/store/useAppStore';
 import { useTelegram } from '@/components/providers/TelegramProvider';
 import { hapticFeedback } from '@/lib/telegram';
 import { getGiftPrice } from '@/lib/portalMarketService';
-import { EyeIcon, EyeSlashIcon, StarIcon, Cog6ToothIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, StarIcon, Cog6ToothIcon, PlusIcon, XMarkIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import { getBuyPriceInStars, starsToUsd } from '@/lib/unupgradeableGiftPrices';
@@ -304,6 +304,19 @@ export const PortfolioTab: React.FC = () => {
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const [isChannelGiftDrawerOpen, setIsChannelGiftDrawerOpen] = useState(false);
   const [selectedChannelGift, setSelectedChannelGift] = useState<any>(null);
+  
+  // Custom confirmation dialog state (for desktop where window.confirm doesn't work)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
 
   // Add Sticker drawer state
   const [isAddStickerDrawerOpen, setIsAddStickerDrawerOpen] = useState(false);
@@ -314,6 +327,32 @@ export const PortfolioTab: React.FC = () => {
   const [stickerSearchTerm, setStickerSearchTerm] = useState('');
   const [stickerPackSearchTerm, setStickerPackSearchTerm] = useState('');
   const [showStickerSettings, setShowStickerSettings] = useState(false);
+
+  // Filter drawer state
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [filters, setFilters] = useState<{
+    status?: string[]; // 'upgraded', 'unupgraded', 'channels'
+    backgrounds?: string[];
+    models?: string[];
+    collections?: string[];
+    priceMin?: number | null;
+    priceMax?: number | null;
+  }>({});
+  
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState<{
+    status: boolean;
+    collection: boolean;
+    model: boolean;
+    background: boolean;
+    price: boolean;
+  }>({
+    status: false,
+    collection: false,
+    model: false,
+    background: false,
+    price: false,
+  });
 
   // Hidden items state management (stored in localStorage)
   const getHiddenItemsKey = () => `portfolio_hidden_items_${user?.user_id || 'default'}`;
@@ -340,6 +379,55 @@ export const PortfolioTab: React.FC = () => {
     }
   };
 
+  // Filter function - checks if a gift matches all active filters
+  const matchesFilters = (gift: PortfolioGift): boolean => {
+    // Status filter (upgraded, unupgraded, channels)
+    if (filters.status && filters.status.length > 0) {
+      const isUpgraded = !gift.is_unupgradeable && !gift.is_unupgraded;
+      const isUnupgraded = gift.is_unupgradeable || gift.is_unupgraded;
+      // Check if gift is channel-related (channel gifts might have specific properties)
+      // For now, we'll check if it's a custom gift that might be from a channel
+      const giftAny = gift as any;
+      const isChannel = giftAny.is_channel || (giftAny.is_custom === false) || false;
+      
+      const statusMatch = filters.status.some(status => {
+        if (status === 'upgraded' && isUpgraded) return true;
+        if (status === 'unupgraded' && isUnupgraded) return true;
+        if (status === 'channels' && isChannel) return true;
+        return false;
+      });
+      
+      if (!statusMatch) return false;
+    }
+    if (filters.backgrounds && filters.backgrounds.length > 0) {
+      if (!gift.backdrop_name || !filters.backgrounds.includes(gift.backdrop_name)) {
+        return false;
+      }
+    }
+    if (filters.models && filters.models.length > 0) {
+      if (!gift.model_name || !filters.models.includes(gift.model_name)) {
+        return false;
+      }
+    }
+    if (filters.collections && filters.collections.length > 0) {
+      if (!gift.title || !filters.collections.includes(gift.title)) {
+        return false;
+      }
+    }
+    if (filters.priceMin !== null && filters.priceMin !== undefined) {
+      const price = gift.price || 0;
+      if (price < filters.priceMin) return false;
+    }
+    if (filters.priceMax !== null && filters.priceMax !== undefined) {
+      const price = gift.price || 0;
+      if (price > filters.priceMax) return false;
+    }
+    return true;
+  };
+
+  // Get filtered gifts (for display only)
+  const filteredGifts = gifts.filter(matchesFilters);
+
   const recalculateTotalValue = () => {
     const hidden = getHiddenItems();
     
@@ -349,18 +437,20 @@ export const PortfolioTab: React.FC = () => {
       return sum + (isHidden ? 0 : (cg.total_value || 0));
     }, 0);
     
-    // Calculate custom gifts value excluding hidden ones
+    // Calculate custom gifts value excluding hidden AND filtered ones
     const customGiftsValue = gifts.filter(g => g.is_custom).reduce((sum: number, g: any) => {
       const giftId = `custom_${g.slug || g.title}_${g.num || ''}`;
       const isHidden = hidden.has(giftId);
-      return sum + (isHidden ? 0 : (g.price || 0));
+      const isFiltered = !matchesFilters(g);
+      return sum + (isHidden || isFiltered ? 0 : (g.price || 0));
     }, 0);
     
-    // Calculate auto gifts value excluding hidden ones
+    // Calculate auto gifts value excluding hidden AND filtered ones
     const autoGiftsValue = gifts.filter(g => !g.is_custom).reduce((sum: number, g: any) => {
       const giftId = `auto_${g.slug || g.title}_${g.num || ''}`;
       const isHidden = hidden.has(giftId);
-      return sum + (isHidden ? 0 : (g.price || 0));
+      const isFiltered = !matchesFilters(g);
+      return sum + (isHidden || isFiltered ? 0 : (g.price || 0));
     }, 0);
     
     const newTotalValue = autoGiftsValue + customGiftsValue + channelGiftsValue;
@@ -1427,9 +1517,76 @@ export const PortfolioTab: React.FC = () => {
     hapticFeedback('impact', 'light', webApp || undefined);
     
     // Show confirmation
-    const confirmed = webApp?.showConfirm?.('Are you sure you want to remove this gift from your portfolio?');
+    // On desktop, Telegram's showConfirm doesn't work properly, so use window.confirm directly
+    // On mobile, try Telegram's showConfirm first, then fallback to window.confirm
+    let confirmed = false;
+    const confirmMessage = 'Are you sure you want to remove this gift from your portfolio?';
     
-    if (!confirmed && !window.confirm('Are you sure you want to remove this gift from your portfolio?')) {
+    // Check if we're on desktop (Telegram desktop app)
+    // Telegram desktop has issues with showConfirm, so detect it more aggressively
+    const userAgent = typeof window !== 'undefined' ? window.navigator.userAgent : '';
+    const isDesktop = webApp?.platform === 'tdesktop' || 
+                      webApp?.platform === 'desktop' ||
+                      userAgent.includes('Desktop') ||
+                      userAgent.includes('Windows') ||
+                      userAgent.includes('Macintosh') ||
+                      userAgent.includes('Linux') ||
+                      (!userAgent.includes('Mobile') && !userAgent.includes('Android') && !userAgent.includes('iPhone'));
+    
+    console.log('Delete confirmation - Platform:', webApp?.platform, 'isDesktop:', isDesktop, 'UserAgent:', userAgent);
+    
+    // Always use custom dialog on desktop (window.confirm doesn't work in Telegram Desktop webview)
+    if (isDesktop) {
+      console.log('Using custom confirmation dialog (desktop detected)');
+      // Use a Promise-based custom dialog
+      confirmed = await new Promise<boolean>((resolve) => {
+        setConfirmDialog({
+          isOpen: true,
+          message: confirmMessage,
+          onConfirm: () => {
+            setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {}, onCancel: () => {} });
+            resolve(true);
+          },
+          onCancel: () => {
+            setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {}, onCancel: () => {} });
+            resolve(false);
+          },
+        });
+      });
+    } else {
+      // On mobile, try Telegram's showConfirm first
+      try {
+        if (webApp?.showConfirm && typeof webApp.showConfirm === 'function') {
+          try {
+            const result: any = webApp.showConfirm(confirmMessage);
+            console.log('Telegram showConfirm result:', result, 'type:', typeof result);
+            // WebApp.showConfirm can return a promise or boolean
+            if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
+              confirmed = await (result as Promise<boolean>);
+            } else if (typeof result === 'boolean') {
+              confirmed = result;
+            } else {
+              // If result is void/undefined, use window.confirm as fallback
+              console.log('Telegram showConfirm returned undefined, using window.confirm');
+              confirmed = window.confirm(confirmMessage);
+            }
+          } catch (e) {
+            console.log('WebApp confirm failed, using window.confirm:', e);
+            confirmed = window.confirm(confirmMessage);
+          }
+        } else {
+          console.log('webApp.showConfirm not available, using window.confirm');
+          confirmed = window.confirm(confirmMessage);
+        }
+      } catch (e) {
+        console.error('Error showing confirmation:', e);
+        confirmed = window.confirm(confirmMessage);
+      }
+    }
+    
+    console.log('Final confirmed value:', confirmed);
+    
+    if (!confirmed) {
       return;
     }
     
@@ -1487,36 +1644,75 @@ export const PortfolioTab: React.FC = () => {
     
     hapticFeedback('impact', 'light', webApp || undefined);
     
-    // Show confirmation - try Telegram WebApp first, then fallback to window.confirm
+    // Show confirmation
+    // On desktop, Telegram's showConfirm doesn't work properly, so use window.confirm directly
+    // On mobile, try Telegram's showConfirm first, then fallback to window.confirm
     let confirmed = false;
     const confirmMessage = 'Are you sure you want to remove this channel from your portfolio?';
     
-        try {
-      if (webApp?.showConfirm && typeof webApp.showConfirm === 'function') {
-        try {
-          const result: any = webApp.showConfirm(confirmMessage);
-          // WebApp.showConfirm can return a promise or boolean
-          if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
-            confirmed = await (result as Promise<boolean>);
-          } else if (typeof result === 'boolean') {
-            confirmed = result;
-          } else {
-            // If result is void/undefined, use window.confirm as fallback
+    // Check if we're on desktop (Telegram desktop app)
+    // Telegram desktop has issues with showConfirm, so detect it more aggressively
+    const userAgent = typeof window !== 'undefined' ? window.navigator.userAgent : '';
+    const isDesktop = webApp?.platform === 'tdesktop' || 
+                      webApp?.platform === 'desktop' ||
+                      userAgent.includes('Desktop') ||
+                      userAgent.includes('Windows') ||
+                      userAgent.includes('Macintosh') ||
+                      userAgent.includes('Linux') ||
+                      (!userAgent.includes('Mobile') && !userAgent.includes('Android') && !userAgent.includes('iPhone'));
+    
+    console.log('Delete confirmation - Platform:', webApp?.platform, 'isDesktop:', isDesktop, 'UserAgent:', userAgent);
+    
+    // Always use custom dialog on desktop (window.confirm doesn't work in Telegram Desktop webview)
+    if (isDesktop) {
+      console.log('Using custom confirmation dialog (desktop detected)');
+      // Use a Promise-based custom dialog
+      confirmed = await new Promise<boolean>((resolve) => {
+        setConfirmDialog({
+          isOpen: true,
+          message: confirmMessage,
+          onConfirm: () => {
+            setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {}, onCancel: () => {} });
+            resolve(true);
+          },
+          onCancel: () => {
+            setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {}, onCancel: () => {} });
+            resolve(false);
+          },
+        });
+      });
+    } else {
+      // On mobile, try Telegram's showConfirm first
+      try {
+        if (webApp?.showConfirm && typeof webApp.showConfirm === 'function') {
+          try {
+            const result: any = webApp.showConfirm(confirmMessage);
+            console.log('Telegram showConfirm result:', result, 'type:', typeof result);
+            // WebApp.showConfirm can return a promise or boolean
+            if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
+              confirmed = await (result as Promise<boolean>);
+            } else if (typeof result === 'boolean') {
+              confirmed = result;
+            } else {
+              // If result is void/undefined, use window.confirm as fallback
+              console.log('Telegram showConfirm returned undefined, using window.confirm');
+              confirmed = window.confirm(confirmMessage);
+            }
+          } catch (e) {
+            console.log('WebApp confirm failed, using window.confirm:', e);
             confirmed = window.confirm(confirmMessage);
           }
-        } catch (e) {
-          console.log('WebApp confirm failed, using window.confirm:', e);
+        } else {
+          console.log('webApp.showConfirm not available, using window.confirm');
           confirmed = window.confirm(confirmMessage);
         }
-      } else {
-        // Desktop fallback - always use window.confirm
+      } catch (e) {
+        console.error('Error showing confirmation:', e);
         confirmed = window.confirm(confirmMessage);
       }
-    } catch (e) {
-      console.error('Error showing confirmation:', e);
-      // Fallback to window.confirm
-      confirmed = window.confirm(confirmMessage);
     }
+    
+    console.log('Final confirmed value:', confirmed);
     
     if (!confirmed) {
       return;
@@ -1549,9 +1745,76 @@ export const PortfolioTab: React.FC = () => {
     hapticFeedback('impact', 'light', webApp || undefined);
     
     // Show confirmation
-    const confirmed = webApp?.showConfirm?.('Are you sure you want to remove this sticker from your portfolio?');
+    // On desktop, Telegram's showConfirm doesn't work properly, so use window.confirm directly
+    // On mobile, try Telegram's showConfirm first, then fallback to window.confirm
+    let confirmed = false;
+    const confirmMessage = 'Are you sure you want to remove this sticker from your portfolio?';
     
-    if (!confirmed && !window.confirm('Are you sure you want to remove this sticker from your portfolio?')) {
+    // Check if we're on desktop (Telegram desktop app)
+    // Telegram desktop has issues with showConfirm, so detect it more aggressively
+    const userAgent = typeof window !== 'undefined' ? window.navigator.userAgent : '';
+    const isDesktop = webApp?.platform === 'tdesktop' || 
+                      webApp?.platform === 'desktop' ||
+                      userAgent.includes('Desktop') ||
+                      userAgent.includes('Windows') ||
+                      userAgent.includes('Macintosh') ||
+                      userAgent.includes('Linux') ||
+                      (!userAgent.includes('Mobile') && !userAgent.includes('Android') && !userAgent.includes('iPhone'));
+    
+    console.log('Delete confirmation - Platform:', webApp?.platform, 'isDesktop:', isDesktop, 'UserAgent:', userAgent);
+    
+    // Always use custom dialog on desktop (window.confirm doesn't work in Telegram Desktop webview)
+    if (isDesktop) {
+      console.log('Using custom confirmation dialog (desktop detected)');
+      // Use a Promise-based custom dialog
+      confirmed = await new Promise<boolean>((resolve) => {
+        setConfirmDialog({
+          isOpen: true,
+          message: confirmMessage,
+          onConfirm: () => {
+            setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {}, onCancel: () => {} });
+            resolve(true);
+          },
+          onCancel: () => {
+            setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {}, onCancel: () => {} });
+            resolve(false);
+          },
+        });
+      });
+    } else {
+      // On mobile, try Telegram's showConfirm first
+      try {
+        if (webApp?.showConfirm && typeof webApp.showConfirm === 'function') {
+          try {
+            const result: any = webApp.showConfirm(confirmMessage);
+            console.log('Telegram showConfirm result:', result, 'type:', typeof result);
+            // WebApp.showConfirm can return a promise or boolean
+            if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
+              confirmed = await (result as Promise<boolean>);
+            } else if (typeof result === 'boolean') {
+              confirmed = result;
+            } else {
+              // If result is void/undefined, use window.confirm as fallback
+              console.log('Telegram showConfirm returned undefined, using window.confirm');
+              confirmed = window.confirm(confirmMessage);
+            }
+          } catch (e) {
+            console.log('WebApp confirm failed, using window.confirm:', e);
+            confirmed = window.confirm(confirmMessage);
+          }
+        } else {
+          console.log('webApp.showConfirm not available, using window.confirm');
+          confirmed = window.confirm(confirmMessage);
+        }
+      } catch (e) {
+        console.error('Error showing confirmation:', e);
+        confirmed = window.confirm(confirmMessage);
+      }
+    }
+    
+    console.log('Final confirmed value:', confirmed);
+    
+    if (!confirmed) {
       return;
     }
     
@@ -2540,7 +2803,12 @@ export const PortfolioTab: React.FC = () => {
           {/* Gift List Header */}
           <div className="mx-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-white">Total gifts {gifts.length}</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Total gifts {Object.keys(filters).some(k => filters[k as keyof typeof filters] !== null && filters[k as keyof typeof filters] !== undefined) ? filteredGifts.length : gifts.length}
+                {Object.keys(filters).some(k => filters[k as keyof typeof filters] !== null && filters[k as keyof typeof filters] !== undefined) && (
+                  <span className="text-gray-400 text-sm font-normal"> / {gifts.length}</span>
+                )}
+              </h3>
               <button
                 onClick={openAddGiftDrawer}
                 className="p-1 hover:bg-white/10 rounded-lg transition-colors"
@@ -2549,8 +2817,11 @@ export const PortfolioTab: React.FC = () => {
                 <PlusIcon className="w-5 h-5 text-blue-400" />
               </button>
             </div>
-            <button className="text-sm text-blue-500 hover:text-blue-400 transition-colors">
-              Clear filters
+            <button 
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="text-sm text-blue-500 hover:text-blue-400 transition-colors"
+            >
+              Add filter
             </button>
           </div>
 
@@ -2563,7 +2834,7 @@ export const PortfolioTab: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
-              {gifts.map((gift, index) => {
+              {filteredGifts.map((gift, index) => {
                 console.log('🎁 Rendering gift:', { index, gift: { title: gift.title, slug: gift.slug, num: gift.num } });
                 // Determine gift ID based on whether it's custom or auto
                 const giftId = gift.is_custom 
@@ -2608,7 +2879,7 @@ export const PortfolioTab: React.FC = () => {
                         </div>
                       )}
                       <div className="absolute top-2 right-2 text-xs text-white backdrop-blur-md bg-black/50 px-2 py-1 rounded-lg border border-[#242829]">
-                        {index + 1} of {gifts.length}
+                        {index + 1} of {filteredGifts.length}
                       </div>
                     </div>
                   </div>
@@ -3123,17 +3394,6 @@ export const PortfolioTab: React.FC = () => {
           
           {selectedSticker && (
             <div className="pb-20">
-              {/* Close Button */}
-              <div className="absolute top-4 right-4 z-30">
-                <button
-                  onClick={() => setIsStickerDrawerOpen(false)}
-                  className="text-white/70 hover:text-white p-2 bg-black/30 rounded-full backdrop-blur-sm"
-                >
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                  </svg>
-                </button>
-              </div>
 
               {/* Sticker Image */}
                 <div className="relative w-full max-w-xs mx-auto mt-12 mb-4 px-4">
@@ -3603,16 +3863,8 @@ export const PortfolioTab: React.FC = () => {
           
           <div className="p-6 pb-20">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6">
               <h2 className="text-2xl font-bold text-white">Add Sticker</h2>
-              <button
-                onClick={closeAddStickerDrawer}
-                className="text-white/70 hover:text-white p-2 bg-black/30 rounded-full backdrop-blur-sm"
-              >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </button>
             </div>
             
             <div className="space-y-6">
@@ -3829,17 +4081,6 @@ export const PortfolioTab: React.FC = () => {
           
           {selectedGift && (
             <div className="pb-20">
-              {/* Menu Icon - Fixed position */}
-              <div className="absolute top-4 right-4 z-30">
-                <button
-                  onClick={() => setIsGiftChartOpen(false)}
-                  className="text-white/70 hover:text-white p-2 bg-black/30 rounded-full backdrop-blur-sm"
-                >
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                  </svg>
-                </button>
-              </div>
 
               {/* Gift Image */}
               <div className="relative w-full max-w-xs mx-auto mt-12 mb-4 px-4">
@@ -4134,6 +4375,371 @@ export const PortfolioTab: React.FC = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Filter Drawer */}
+      <Sheet open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+        <SheetContent 
+          className="bg-[#1c1d1f] rounded-t-3xl p-0" 
+          style={{ 
+            height: '90vh', 
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
+          <SheetTitle className="sr-only">Filters</SheetTitle>
+          
+          <div className="p-6 pb-24">
+            {/* Header */}
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-white">Filters</h2>
+            </div>
+            
+            {/* Filter Content */}
+            <div className="space-y-2">
+              {/* Status Filter - Collapsible */}
+              <div className="bg-[#2a2a2a] rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedSections({ ...expandedSections, status: !expandedSections.status })}
+                  className="w-full flex items-center justify-between p-4 text-white hover:bg-[#333333] transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#424242] flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M3.46447 20.5355C4.92893 22 7.28595 22 12 22C16.714 22 19.0711 22 20.5355 20.5355C22 19.0711 22 16.714 22 12C22 7.28595 22 4.92893 20.5355 3.46447C19.0711 2 16.714 2 12 2C7.28595 2 4.92893 2 3.46447 3.46447C2 4.92893 2 7.28595 2 12C2 16.714 2 19.0711 3.46447 20.5355ZM8 7C7.44772 7 7 7.44772 7 8V10C7 10.5523 7.44772 11 8 11H10C10.5523 11 11 10.5523 11 10V8C11 7.44772 10.5523 7 10 7H8ZM14 7C13.4477 7 13 7.44772 13 8V10C13 10.5523 13.4477 11 14 11H16C16.5523 11 17 10.5523 17 10V8C17 7.44772 16.5523 7 16 7H14ZM7 14C7 13.4477 7.44772 13 8 13H10C10.5523 13 11 13.4477 11 14V16C11 16.5523 10.5523 17 10 17H8C7.44772 17 7 16.5523 7 16V14ZM13 14C13 13.4477 13.4477 13 14 13H16C16.5523 13 17 13.4477 17 14V16C17 16.5523 16.5523 17 16 17H14C13.4477 17 13 16.5523 13 16V14Z" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-lg">Status</span>
+                  </div>
+                  {expandedSections.status ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+                {expandedSections.status && (
+                  <div className="px-4 pb-4 space-y-2">
+                    {['upgraded', 'unupgraded', 'channels'].map((status) => {
+                      const isSelected = filters.status?.includes(status) || false;
+                      return (
+                        <label key={status} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#333333] cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const current = filters.status || [];
+                                if (e.target.checked) {
+                                  setFilters({ ...filters, status: [...current, status] });
+                                } else {
+                                  setFilters({ ...filters, status: current.filter(s => s !== status) });
+                                }
+                              }}
+                              className="w-5 h-5 rounded-lg border-2 border-gray-500 bg-transparent checked:bg-blue-600 checked:border-blue-600 appearance-none cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                            />
+                            {isSelected && (
+                              <svg className="absolute top-0 left-0 w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-white flex-1 capitalize">{status}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+
+              {/* Background Filter - Collapsible */}
+              <div className="bg-[#2a2a2a] rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedSections({ ...expandedSections, background: !expandedSections.background })}
+                  className="w-full flex items-center justify-between p-4 text-white hover:bg-[#333333] transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#424242] flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white">
+                        <path d="M3.46447 20.5355C4.92893 22 7.28595 22 12 22C16.714 22 19.0711 22 20.5355 20.5355C22 19.0711 22 16.714 22 12C22 7.28595 22 4.92893 20.5355 3.46447C19.0711 2 16.714 2 12 2C7.28595 2 4.92893 2 3.46447 3.46447C2 4.92893 2 7.28595 2 12C2 16.714 2 19.0711 3.46447 20.5355ZM8 7C7.44772 7 7 7.44772 7 8V10C7 10.5523 7.44772 11 8 11H10C10.5523 11 11 10.5523 11 10V8C11 7.44772 10.5523 7 10 7H8ZM14 7C13.4477 7 13 7.44772 13 8V10C13 10.5523 13.4477 11 14 11H16C16.5523 11 17 10.5523 17 10V8C17 7.44772 16.5523 7 16 7H14ZM7 14C7 13.4477 7.44772 13 8 13H10C10.5523 13 11 13.4477 11 14V16C11 16.5523 10.5523 17 10 17H8C7.44772 17 7 16.5523 7 16V14ZM13 14C13 13.4477 13.4477 13 14 13H16C16.5523 13 17 13.4477 17 14V16C17 16.5523 16.5523 17 16 17H14C13.4477 17 13 16.5523 13 16V14Z" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-lg">Background</span>
+                  </div>
+                  {expandedSections.background ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+                {expandedSections.background && (
+                  <div className="px-4 pb-4 space-y-2 max-h-64 overflow-y-auto">
+                    {Array.from(new Set(gifts.map(g => g.backdrop_name).filter(Boolean))).sort().map((bg) => {
+                      const isSelected = filters.backgrounds?.includes(bg || '') || false;
+                      return (
+                        <label key={bg} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#333333] cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const current = filters.backgrounds || [];
+                                if (e.target.checked) {
+                                  setFilters({ ...filters, backgrounds: [...current, bg || ''] });
+                                } else {
+                                  setFilters({ ...filters, backgrounds: current.filter(b => b !== bg) });
+                                }
+                              }}
+                              className="w-5 h-5 rounded-lg border-2 border-gray-500 bg-transparent checked:bg-blue-600 checked:border-blue-600 appearance-none cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                            />
+                            {isSelected && (
+                              <svg className="absolute top-0 left-0 w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-white flex-1">{bg}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Model Filter - Collapsible */}
+              <div className="bg-[#2a2a2a] rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedSections({ ...expandedSections, model: !expandedSections.model })}
+                  className="w-full flex items-center justify-between p-4 text-white hover:bg-[#333333] transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#424242] flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M3.46447 20.5355C4.92893 22 7.28595 22 12 22C16.714 22 19.0711 22 20.5355 20.5355C22 19.0711 22 16.714 22 12C22 7.28595 22 4.92893 20.5355 3.46447C19.0711 2 16.714 2 12 2C7.28595 2 4.92893 2 3.46447 3.46447C2 4.92893 2 7.28595 2 12C2 16.714 2 19.0711 3.46447 20.5355ZM18.75 16C18.75 16.4142 18.4142 16.75 18 16.75H6C5.58579 16.75 5.25 16.4142 5.25 16C5.25 15.5858 5.58579 15.25 6 15.25H18C18.4142 15.25 18.75 15.5858 18.75 16ZM18 12.75C18.4142 12.75 18.75 12.4142 18.75 12C18.75 11.5858 18.4142 11.25 18 11.25H6C5.58579 11.25 5.25 11.5858 5.25 12C5.25 12.4142 5.58579 12.75 6 12.75H18ZM18.75 8C18.75 8.41421 18.4142 8.75 18 8.75H6C5.58579 8.75 5.25 8.41421 5.25 8C5.25 7.58579 5.58579 7.25 6 7.25H18C18.4142 7.25 18.75 7.58579 18.75 8Z" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-lg">Model</span>
+                  </div>
+                  {expandedSections.model ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+                {expandedSections.model && (
+                  <div className="px-4 pb-4 space-y-2 max-h-64 overflow-y-auto">
+                    {Array.from(new Set(gifts.map(g => g.model_name).filter(Boolean))).sort().map((model) => {
+                      const isSelected = filters.models?.includes(model || '') || false;
+                      return (
+                        <label key={model} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#333333] cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const current = filters.models || [];
+                                if (e.target.checked) {
+                                  setFilters({ ...filters, models: [...current, model || ''] });
+                                } else {
+                                  setFilters({ ...filters, models: current.filter(m => m !== model) });
+                                }
+                              }}
+                              className="w-5 h-5 rounded-lg border-2 border-gray-500 bg-transparent checked:bg-blue-600 checked:border-blue-600 appearance-none cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                            />
+                            {isSelected && (
+                              <svg className="absolute top-0 left-0 w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-white flex-1">{model}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Collection Filter - Collapsible */}
+              <div className="bg-[#2a2a2a] rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedSections({ ...expandedSections, collection: !expandedSections.collection })}
+                  className="w-full flex items-center justify-between p-4 text-white hover:bg-[#333333] transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#424242] flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white">
+                        <path d="M11.2498 2C7.03145 2.00411 4.84888 2.07958 3.46423 3.46423C2.07958 4.84888 2.00411 7.03145 2 11.2498H6.91352C6.56255 10.8114 6.30031 10.2943 6.15731 9.72228C5.61906 7.56926 7.56926 5.61906 9.72228 6.15731C10.2943 6.30031 10.8114 6.56255 11.2498 6.91352V2Z" fill="currentColor"/>
+                        <path d="M2 12.7498C2.00411 16.9681 2.07958 19.1506 3.46423 20.5353C4.84888 21.9199 7.03145 21.9954 11.2498 21.9995V14.1234C10.4701 15.6807 8.8598 16.7498 6.99976 16.7498C6.58555 16.7498 6.24976 16.414 6.24976 15.9998C6.24976 15.5856 6.58555 15.2498 6.99976 15.2498C8.53655 15.2498 9.82422 14.1831 10.1628 12.7498H2Z" fill="currentColor"/>
+                        <path d="M12.7498 21.9995C16.9681 21.9954 19.1506 21.9199 20.5353 20.5353C21.9199 19.1506 21.9954 16.9681 21.9995 12.7498H13.8367C14.1753 14.1831 15.463 15.2498 16.9998 15.2498C17.414 15.2498 17.7498 15.5856 17.7498 15.9998C17.7498 16.414 17.414 16.7498 16.9998 16.7498C15.1397 16.7498 13.5294 15.6807 12.7498 14.1234V21.9995Z" fill="currentColor"/>
+                        <path d="M21.9995 11.2498C21.9954 7.03145 21.9199 4.84888 20.5353 3.46423C19.1506 2.07958 16.9681 2.00411 12.7498 2V6.91352C13.1882 6.56255 13.7053 6.30031 14.2772 6.15731C16.4303 5.61906 18.3805 7.56926 17.8422 9.72228C17.6992 10.2943 17.437 10.8114 17.086 11.2498H21.9995Z" fill="currentColor"/>
+                        <path d="M9.35847 7.61252C10.47 7.8904 11.2498 8.88911 11.2498 10.0348V11.2498H10.0348C8.88911 11.2498 7.8904 10.47 7.61252 9.35847C7.34891 8.30403 8.30403 7.34891 9.35847 7.61252Z" fill="currentColor"/>
+                        <path d="M12.7498 10.0348V11.2498H13.9647C15.1104 11.2498 16.1091 10.47 16.387 9.35847C16.6506 8.30403 15.6955 7.34891 14.6411 7.61252C13.5295 7.8904 12.7498 8.88911 12.7498 10.0348Z" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-lg">Collection</span>
+                  </div>
+                  {expandedSections.collection ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+                {expandedSections.collection && (
+                  <div className="px-4 pb-4 space-y-2 max-h-64 overflow-y-auto">
+                    {Array.from(new Set(gifts.map(g => g.title).filter(Boolean))).sort().map((collection) => {
+                      const isSelected = filters.collections?.includes(collection || '') || false;
+                      return (
+                        <label key={collection} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#333333] cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const current = filters.collections || [];
+                                if (e.target.checked) {
+                                  setFilters({ ...filters, collections: [...current, collection || ''] });
+                                } else {
+                                  setFilters({ ...filters, collections: current.filter(c => c !== collection) });
+                                }
+                              }}
+                              className="w-5 h-5 rounded-lg border-2 border-gray-500 bg-transparent checked:bg-blue-600 checked:border-blue-600 appearance-none cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                            />
+                            {isSelected && (
+                              <svg className="absolute top-0 left-0 w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-white flex-1">{collection}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Price Range Filter - Collapsible */}
+              <div className="bg-[#2a2a2a] rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedSections({ ...expandedSections, price: !expandedSections.price })}
+                  className="w-full flex items-center justify-between p-4 text-white hover:bg-[#333333] transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#424242] flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M20.4105 9.86058C20.3559 9.8571 20.2964 9.85712 20.2348 9.85715L20.2194 9.85715H17.8015C15.8086 9.85715 14.1033 11.4382 14.1033 13.5C14.1033 15.5618 15.8086 17.1429 17.8015 17.1429H20.2194L20.2348 17.1429C20.2964 17.1429 20.3559 17.1429 20.4105 17.1394C21.22 17.0879 21.9359 16.4495 21.9961 15.5577C22.0001 15.4992 22 15.4362 22 15.3778L22 15.3619V11.6381L22 11.6222C22 11.5638 22.0001 11.5008 21.9961 11.4423C21.9359 10.5506 21.22 9.91209 20.4105 9.86058ZM17.5872 14.4714C18.1002 14.4714 18.5162 14.0365 18.5162 13.5C18.5162 12.9635 18.1002 12.5286 17.5872 12.5286C17.0741 12.5286 16.6581 12.9635 16.6581 13.5C16.6581 14.0365 17.0741 14.4714 17.5872 14.4714Z" fill="currentColor"/>
+                        <path fillRule="evenodd" clipRule="evenodd" d="M20.2341 18.6C20.3778 18.5963 20.4866 18.7304 20.4476 18.8699C20.2541 19.562 19.947 20.1518 19.4542 20.6485C18.7329 21.3755 17.8183 21.6981 16.6882 21.8512C15.5902 22 14.1872 22 12.4158 22H10.3794C8.60803 22 7.20501 22 6.10697 21.8512C4.97692 21.6981 4.06227 21.3755 3.34096 20.6485C2.61964 19.9215 2.29953 18.9997 2.1476 17.8608C1.99997 16.7541 1.99999 15.3401 2 13.5548V13.4452C1.99998 11.6599 1.99997 10.2459 2.1476 9.13924C2.29953 8.00031 2.61964 7.07848 3.34096 6.35149C4.06227 5.62451 4.97692 5.30188 6.10697 5.14876C7.205 4.99997 8.60802 4.99999 10.3794 5L12.4158 5C14.1872 4.99998 15.5902 4.99997 16.6882 5.14876C17.8183 5.30188 18.7329 5.62451 19.4542 6.35149C19.947 6.84817 20.2541 7.43804 20.4476 8.13012C20.4866 8.26959 20.3778 8.40376 20.2341 8.4L17.8015 8.40001C15.0673 8.40001 12.6575 10.5769 12.6575 13.5C12.6575 16.4231 15.0673 18.6 17.8015 18.6L20.2341 18.6ZM5.61446 8.88572C5.21522 8.88572 4.89157 9.21191 4.89157 9.61429C4.89157 10.0167 5.21522 10.3429 5.61446 10.3429H9.46988C9.86912 10.3429 10.1928 10.0167 10.1928 9.61429C10.1928 9.21191 9.86912 8.88572 9.46988 8.88572H5.61446Z" fill="currentColor"/>
+                        <path d="M7.77668 4.02439L9.73549 2.58126C10.7874 1.80625 12.2126 1.80625 13.2645 2.58126L15.2336 4.03197C14.4103 3.99995 13.4909 3.99998 12.4829 4H10.3123C9.39123 3.99998 8.5441 3.99996 7.77668 4.02439Z" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-lg">Price Range</span>
+                  </div>
+                  {expandedSections.price ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+                {expandedSections.price && (
+                  <div className="px-4 pb-4 space-y-3">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-gray-400 text-sm mb-1 block">Min</label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={filters.priceMin || ''}
+                          onChange={(e) => setFilters({ ...filters, priceMin: e.target.value ? parseFloat(e.target.value) : null })}
+                          className="w-full py-2.5 px-3 rounded-lg bg-[#424242] text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-500"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-gray-400 text-sm mb-1 block">Max</label>
+                        <input
+                          type="number"
+                          placeholder="100000"
+                          value={filters.priceMax || ''}
+                          onChange={(e) => setFilters({ ...filters, priceMax: e.target.value ? parseFloat(e.target.value) : null })}
+                          className="w-full py-2.5 px-3 rounded-lg bg-[#424242] text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Fixed Bottom Action Buttons */}
+          <div className="fixed bottom-0 left-0 right-0 bg-[#1c1d1f] border-t border-gray-700 p-4 z-10 safe-area-bottom">
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setFilters({});
+                  setExpandedSections({
+                    status: false,
+                    collection: false,
+                    model: false,
+                    background: false,
+                    price: false,
+                  });
+                  setIsFilterDrawerOpen(false);
+                }}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold bg-[#424242] text-white hover:bg-[#4a4a4a] transition-colors text-base"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={() => {
+                  setIsFilterDrawerOpen(false);
+                  hapticFeedback('impact', 'light', webApp || undefined);
+                }}
+                className="flex-1 py-3 px-4 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors text-base shadow-lg shadow-blue-600/30"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Custom Confirmation Dialog for Desktop */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 animate-fade-in">
+          <div className="bg-[#1c1d1f] rounded-2xl p-6 w-[90%] max-w-md relative animate-slide-up border border-gray-700">
+            {/* Close Button */}
+            <button
+              onClick={confirmDialog.onCancel}
+              className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+            
+            {/* Content */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-white pr-8">{confirmDialog.message}</h2>
+              
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={confirmDialog.onCancel}
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold bg-[#424242] text-white hover:bg-[#4a4a4a] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDialog.onConfirm}
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

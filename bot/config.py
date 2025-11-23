@@ -12,7 +12,7 @@ BOT_TOKEN = os.getenv(
 # ALLOWED_USER_ID = int(os.getenv("ALLOWED_USER_ID", "800092886"))
 
 # Mini App configuration
-MINI_APP_URL = os.getenv("MINI_APP_URL", "https://transmental-wendy-divertingly.ngrok-free.dev")  # ngrok URL for testing
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://collectablekit.01studio.xyz")
 
 # TON Wallet configuration
 # IMPORTANT: Set this environment variable with your bot's TON wallet mnemonic (24 words)

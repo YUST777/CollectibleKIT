@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get portfolio history from database
-    const history = await db.getPortfolioHistory(user.id) || [];
+    // Get portfolio history from database (last 90 days)
+    const history = await db.getPortfolioHistory(user.id, 90) || [];
 
     return NextResponse.json({
       success: true,

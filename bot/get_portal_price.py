@@ -9,6 +9,17 @@ import json
 import argparse
 import os
 
+# CRITICAL: Patch timeout BEFORE importing aportalsmp functions
+# This increases timeout from 15s to 60s
+try:
+    import aportalsmp.handlers as handlers
+    _original_fetch = handlers.fetch
+    async def patched_fetch(method="GET", url="", headers=None, json=None, timeout=60, impersonate="chrome110"):
+        return await _original_fetch(method, url, headers, json, timeout, impersonate)
+    handlers.fetch = patched_fetch
+except:
+    pass  # If patching fails, continue anyway
+
 # Import aportalsmp for Portal Market API
 try:
     from aportalsmp import search as search_gifts

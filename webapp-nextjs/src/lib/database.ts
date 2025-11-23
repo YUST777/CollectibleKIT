@@ -234,7 +234,8 @@ class DatabaseService {
         { name: 'streak_days', type: 'INTEGER DEFAULT 0' },
         { name: 'last_streak_click', type: 'TEXT' },
         { name: 'streak_completed', type: 'INTEGER DEFAULT 0' },
-        { name: 'wallet_address', type: 'TEXT' }
+        { name: 'wallet_address', type: 'TEXT' },
+        { name: 'photo_url', type: 'TEXT DEFAULT NULL' }
       ];
 
       for (const column of newColumns) {
@@ -409,6 +410,8 @@ class DatabaseService {
           gifts_data TEXT NOT NULL,
           total_value REAL NOT NULL,
           cached_at REAL NOT NULL,
+          is_fetching INTEGER DEFAULT 0,
+          fetch_started_at INTEGER DEFAULT NULL,
           FOREIGN KEY (user_id) REFERENCES users (user_id)
         )
       `);
@@ -446,6 +449,31 @@ class DatabaseService {
       } catch (err) {
         // Column already exists, ignore error
       }
+
+      // Portfolio: Snapshots table (daily portfolio value tracking)
+      await this.dbRun(`
+        CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          snapshot_date TEXT NOT NULL,
+          snapshot_timestamp INTEGER NOT NULL,
+          total_value REAL NOT NULL,
+          gift_count INTEGER NOT NULL,
+          upgraded_count INTEGER NOT NULL,
+          unupgraded_count INTEGER NOT NULL,
+          upgraded_value REAL DEFAULT 0,
+          unupgraded_value REAL DEFAULT 0,
+          created_at INTEGER NOT NULL,
+          UNIQUE(user_id, snapshot_date),
+          FOREIGN KEY (user_id) REFERENCES users (user_id)
+        )
+      `);
+
+      // Index for fast lookups
+      await this.dbRun(`
+        CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_user_date 
+        ON portfolio_snapshots(user_id, snapshot_date)
+      `);
 
       // Channel gifts table (also used for account gifts)
       await this.dbRun(`
@@ -548,7 +576,7 @@ class DatabaseService {
     }
   }
 
-  async createUser(userId: number, username?: string, firstName?: string): Promise<boolean> {    
+  async createUser(userId: number, username?: string, firstName?: string, photoUrl?: string | null): Promise<boolean> {    
     try {
       // Check if user already exists
       const existingUser = await this.dbGet(`SELECT * FROM users WHERE user_id = ?`, [userId]);
@@ -573,10 +601,17 @@ class DatabaseService {
         }
         
         // Update user with migrated credits
-        await this.dbRun(
-          `UPDATE users SET username = ?, first_name = ?, last_activity = ?, credits = ? WHERE user_id = ?`,
-          [username, firstName, Date.now(), newCredits, userId]
-        );
+        if (photoUrl !== undefined) {
+          await this.dbRun(
+            `UPDATE users SET username = ?, first_name = ?, last_activity = ?, credits = ?, photo_url = ? WHERE user_id = ?`,
+            [username, firstName, Date.now(), newCredits, photoUrl || null, userId]
+          );
+        } else {
+          await this.dbRun(
+            `UPDATE users SET username = ?, first_name = ?, last_activity = ?, credits = ? WHERE user_id = ?`,
+            [username, firstName, Date.now(), newCredits, userId]
+          );
+        }
         console.log('✅ Updated existing user:', { userId, user_type: (existingUser as any).user_type, credits: newCredits });
       } else {
         // New user, create with default values - START WITH 20 CREDITS
@@ -1637,22 +1672,159 @@ class DatabaseService {
   }
 
   // Portfolio methods
-  async getPortfolioHistory(userId: number): Promise<Array<{date: string; total_value: number; gifts_count: number}>> {
+  async getPortfolioHistory(userId: number, days: number = 90): Promise<Array<{date: string; total_value: number; gifts_count: number}>> {
     try {
-      // TODO: Implement portfolio history retrieval from database
-      return [];
+      const rows = await this.dbAll(
+        `SELECT snapshot_date, total_value, gift_count 
+         FROM portfolio_snapshots 
+         WHERE user_id = ? 
+         ORDER BY snapshot_date DESC 
+         LIMIT ?`,
+        [userId, days]
+      ) as any[];
+      
+      return rows.map(row => ({
+        date: row.snapshot_date,
+        total_value: row.total_value,
+        gifts_count: row.gift_count
+      }));
     } catch (error) {
       console.error('Error getting portfolio history:', error);
       return [];
     }
   }
 
-  async savePortfolioSnapshot(userId: number, totalValue: number, giftsCount: number): Promise<void> {
+  async savePortfolioSnapshot(
+    userId: number, 
+    totalValue: number, 
+    giftsCount: number,
+    upgradedCount: number = 0,
+    unupgradedCount: number = 0,
+    upgradedValue: number = 0,
+    unupgradedValue: number = 0
+  ): Promise<boolean> {
     try {
-      // TODO: Implement portfolio snapshot saving to database
-      console.log('Portfolio snapshot (stub):', { userId, totalValue, giftsCount });
+      const now = Date.now();
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      await this.dbRun(
+        `INSERT OR REPLACE INTO portfolio_snapshots 
+         (user_id, snapshot_date, snapshot_timestamp, total_value, gift_count, 
+          upgraded_count, unupgraded_count, upgraded_value, unupgraded_value, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, today, now, totalValue, giftsCount, upgradedCount, unupgradedCount, upgradedValue, unupgradedValue, now]
+      );
+      
+      return true;
     } catch (error) {
       console.error('Error saving portfolio snapshot:', error);
+      return false;
+    }
+  }
+
+  async getPortfolioSnapshot(userId: number, date?: string): Promise<{date: string; total_value: number; gift_count: number} | null> {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      const row = await this.dbGet(
+        `SELECT snapshot_date, total_value, gift_count 
+         FROM portfolio_snapshots 
+         WHERE user_id = ? AND snapshot_date = ?`,
+        [userId, targetDate]
+      ) as any;
+      
+      if (row) {
+        return {
+          date: row.snapshot_date,
+          total_value: row.total_value,
+          gift_count: row.gift_count
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting portfolio snapshot:', error);
+      return null;
+    }
+  }
+
+  async getProfitLoss(userId: number): Promise<{
+    daily: { change: number; change_percent: number } | null;
+    weekly: { change: number; change_percent: number } | null;
+    monthly: { change: number; change_percent: number } | null;
+    all_time_high: number | null;
+    all_time_low: number | null;
+  }> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      // Get today's value
+      const todaySnapshot = await this.getPortfolioSnapshot(userId, today);
+      const todayValue = todaySnapshot?.total_value || null;
+
+      // Get yesterday's value
+      const yesterdaySnapshot = await this.getPortfolioSnapshot(userId, yesterday);
+      const yesterdayValue = yesterdaySnapshot?.total_value || null;
+
+      // Get week ago value
+      const weekAgoSnapshot = await this.getPortfolioSnapshot(userId, weekAgo);
+      const weekAgoValue = weekAgoSnapshot?.total_value || null;
+
+      // Get month ago value
+      const monthAgoSnapshot = await this.getPortfolioSnapshot(userId, monthAgo);
+      const monthAgoValue = monthAgoSnapshot?.total_value || null;
+
+      // Get all-time high/low
+      const highRow = await this.dbGet(
+        `SELECT MAX(total_value) as max_value FROM portfolio_snapshots WHERE user_id = ?`,
+        [userId]
+      ) as any;
+      const lowRow = await this.dbGet(
+        `SELECT MIN(total_value) as min_value FROM portfolio_snapshots WHERE user_id = ?`,
+        [userId]
+      ) as any;
+
+      // Calculate daily P/L
+      let daily = null;
+      if (todayValue !== null && yesterdayValue !== null && yesterdayValue > 0) {
+        const change = todayValue - yesterdayValue;
+        const changePercent = (change / yesterdayValue) * 100;
+        daily = { change, change_percent: changePercent };
+      }
+
+      // Calculate weekly P/L
+      let weekly = null;
+      if (todayValue !== null && weekAgoValue !== null && weekAgoValue > 0) {
+        const change = todayValue - weekAgoValue;
+        const changePercent = (change / weekAgoValue) * 100;
+        weekly = { change, change_percent: changePercent };
+      }
+
+      // Calculate monthly P/L
+      let monthly = null;
+      if (todayValue !== null && monthAgoValue !== null && monthAgoValue > 0) {
+        const change = todayValue - monthAgoValue;
+        const changePercent = (change / monthAgoValue) * 100;
+        monthly = { change, change_percent: changePercent };
+      }
+
+      return {
+        daily,
+        weekly,
+        monthly,
+        all_time_high: highRow?.max_value || null,
+        all_time_low: lowRow?.min_value || null
+      };
+    } catch (error) {
+      console.error('Error getting profit/loss:', error);
+      return {
+        daily: null,
+        weekly: null,
+        monthly: null,
+        all_time_high: null,
+        all_time_low: null
+      };
     }
   }
 
@@ -1833,7 +2005,7 @@ class DatabaseService {
   }
 
   // Auto gifts cache methods
-  async getAutoGiftsCache(userId: number): Promise<{ gifts: any[]; totalValue: number; cachedAt: number } | null> {
+  async getAutoGiftsCache(userId: number): Promise<{ gifts: any[]; totalValue: number; cachedAt: number; isFetching?: boolean; fetchStartedAt?: number } | null> {
     try {
       const row = await this.dbGet(
         `SELECT * FROM portfolio_auto_gifts_cache WHERE user_id = ?`,
@@ -1844,7 +2016,9 @@ class DatabaseService {
         return {
           gifts: JSON.parse(row.gifts_data),
           totalValue: row.total_value,
-          cachedAt: row.cached_at
+          cachedAt: row.cached_at,
+          isFetching: row.is_fetching === 1,
+          fetchStartedAt: row.fetch_started_at || null
         };
       }
       return null;
@@ -1854,16 +2028,43 @@ class DatabaseService {
     }
   }
 
-  async setAutoGiftsCache(userId: number, gifts: any[], totalValue: number): Promise<boolean> {
+  async setAutoGiftsCache(userId: number, gifts: any[], totalValue: number, isFetching: boolean = false): Promise<boolean> {
     try {
       await this.dbRun(
-        `INSERT OR REPLACE INTO portfolio_auto_gifts_cache (user_id, gifts_data, total_value, cached_at)
-         VALUES (?, ?, ?, ?)`,
-        [userId, JSON.stringify(gifts), totalValue, Date.now()]
+        `INSERT OR REPLACE INTO portfolio_auto_gifts_cache (user_id, gifts_data, total_value, cached_at, is_fetching, fetch_started_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [userId, JSON.stringify(gifts), totalValue, Date.now(), isFetching ? 1 : 0, isFetching ? Date.now() : null]
       );
       return true;
     } catch (error) {
       console.error('Error setting auto gifts cache:', error);
+      return false;
+    }
+  }
+
+  async setPortfolioFetching(userId: number, isFetching: boolean): Promise<boolean> {
+    try {
+      await this.dbRun(
+        `UPDATE portfolio_auto_gifts_cache 
+         SET is_fetching = ?, fetch_started_at = ? 
+         WHERE user_id = ?`,
+        [isFetching ? 1 : 0, isFetching ? Date.now() : null, userId]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error setting portfolio fetching status:', error);
+      return false;
+    }
+  }
+
+  async isPortfolioFetching(userId: number): Promise<boolean> {
+    try {
+      const row = await this.dbGet(
+        `SELECT is_fetching FROM portfolio_auto_gifts_cache WHERE user_id = ?`,
+        [userId]
+      ) as any;
+      return row?.is_fetching === 1;
+    } catch (error) {
       return false;
     }
   }
