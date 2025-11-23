@@ -5,7 +5,11 @@ Test the working Portal Market API wrapper
 import asyncio
 import sys
 import os
-from portal_market_api import PortalMarketAPI, get_portal_market_price
+import sys
+import os
+bot_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, bot_root)
+from services.portal_market_api import PortalMarketAPI, get_portal_market_price
 
 # Config
 API_ID = 22307634

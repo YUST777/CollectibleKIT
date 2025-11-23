@@ -32,7 +32,11 @@ except ImportError:
 
 # Import config
 try:
-    from config import API_ID, API_HASH
+    import sys
+    import os
+    bot_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, bot_root)
+    from core.config import API_ID, API_HASH
 except ImportError:
     try:
         # Try showprofilegifts config

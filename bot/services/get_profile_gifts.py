@@ -64,7 +64,7 @@ except ImportError:
 
 # Import multi-account configuration
 try:
-    from portal_accounts_config import PORTAL_ACCOUNTS, AUTH_CACHE_TTL
+    from portal_accounts_config import PORTAL_ACCOUNTS, AUTH_CACHE_TTL  # Still in bot/ root
     MULTI_ACCOUNT_AVAILABLE = True
 except ImportError:
     MULTI_ACCOUNT_AVAILABLE = False
@@ -119,7 +119,7 @@ async def get_portal_market_price(slug, backdrop_name=None, model_name=None, sym
     except (ImportError, Exception) as e:
         # Fallback to single-account if multi-account not available
         try:
-            from portal_market_api import get_portal_market_price as get_price_wrapper
+            from services.portal_market_api import get_portal_market_price as get_price_wrapper
             gifts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gifts')
             price = await get_price_wrapper(
                 slug=slug,
@@ -442,7 +442,7 @@ async def get_profile_gifts(user_id=None, return_cached=False, background_update
             try:
                 from portal_market_multi_account import get_multi_account_api
                 try:
-                    from global_price_cache import get_cached_price, set_cached_price, normalize_attr
+                    from utils.global_price_cache import get_cached_price, set_cached_price, normalize_attr
                     GLOBAL_CACHE_AVAILABLE = True
                 except ImportError:
                     # Fallback if global cache not available

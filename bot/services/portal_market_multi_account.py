@@ -10,7 +10,11 @@ from collections import deque
 import time
 
 # Import the base wrapper
-from portal_market_api import PortalMarketAPI, _apply_portal_market_fixes
+import sys
+import os
+bot_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, bot_root)
+from services.portal_market_api import PortalMarketAPI, _apply_portal_market_fixes
 
 # Apply fixes first
 _apply_portal_market_fixes()

@@ -22,7 +22,11 @@ SESSION_FILE = "/root/01studio/CollectibleKIT/gifts/gifts_session.session"
 
 # Import unupgradeable prices function
 try:
-    from get_unupgradeable_prices import fetch_unupgradeable_prices
+    import sys
+    import os
+    bot_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, bot_root)
+    from services.get_unupgradeable_prices import fetch_unupgradeable_prices
     UNUPGRADEABLE_PRICES_AVAILABLE = True
 except ImportError as e:
     print(f"DEBUG: Import failed: {e}", file=sys.stderr)

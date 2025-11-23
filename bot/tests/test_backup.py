@@ -12,7 +12,11 @@ import logging
 sys.path.append(os.path.dirname(__file__))
 
 from backup import DatabaseBackup
-from config import BOT_TOKEN
+import sys
+import os
+bot_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, bot_root)
+from core.config import BOT_TOKEN
 
 # Configure logging
 logging.basicConfig(
