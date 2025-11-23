@@ -398,8 +398,8 @@ async def get_profile_gifts(user_id=None, return_cached=False, background_update
                     
                     # For unupgraded gifts, collect price request for parallel fetching
                     if is_unupgraded and PORTAL_MARKET_API_AVAILABLE:
-                            title_for_search = gift.title or 'N/A'
-                            if title_for_search != 'N/A':
+                        title_for_search = gift.title or 'N/A'
+                        if title_for_search != 'N/A':
                             price_requests.append({
                                 'index': len(processed_gifts),
                                 'slug': f"{title_for_search}-0",  # Use title as collection name
