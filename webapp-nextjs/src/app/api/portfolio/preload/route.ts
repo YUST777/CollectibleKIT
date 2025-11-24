@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getUserFromTelegram } from '@/lib/telegram';
 import { db } from '@/lib/database';
 import { spawn } from 'child_process';
+import { successResponse, ApiErrors, handleApiError } from '@/lib/api-response';
 
 /**
  * Preload portfolio in background when user opens website
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     const user = await getUserFromTelegram(request);
     if (!user) {
       // Not authenticated, but don't error (might be public page)
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return ApiErrors.unauthorized();
     }
 
     // Check if we have cached data
@@ -32,34 +33,37 @@ export async function GET(request: NextRequest) {
 
     // Return cached data immediately (even if stale) or empty
     if (cachedData) {
-      return NextResponse.json({
-        success: true,
-        gifts: cachedData.gifts,
-        total_value: cachedData.totalValue,
-        cached: true,
-        stale: cacheAge >= cacheMaxAge,
-        preloading: !cachedData || cacheAge >= cacheMaxAge
-      });
+      return successResponse(
+        {
+          gifts: cachedData.gifts,
+          total_value: cachedData.totalValue
+        },
+        undefined,
+        200,
+        {
+          cached: true,
+          stale: cacheAge >= cacheMaxAge,
+          preloading: !cachedData || cacheAge >= cacheMaxAge
+        }
+      );
     }
 
     // No cache, return empty (background fetch will populate)
-    return NextResponse.json({
-      success: true,
-      gifts: [],
-      total_value: 0,
-      cached: false,
-      preloading: true
-    });
+    return successResponse(
+      {
+        gifts: [],
+        total_value: 0
+      },
+      undefined,
+      200,
+      {
+        cached: false,
+        preloading: true
+      }
+    );
 
   } catch (error) {
-    console.error('❌ Portfolio preload error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Failed to preload portfolio');
   }
 }
 
