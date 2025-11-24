@@ -1090,12 +1090,14 @@ export const PortfolioTab: React.FC = () => {
           const data = JSON.parse(responseText);
           console.log('📊 loadAutoGifts: Parsed data:', { 
             success: data.success, 
-            giftsCount: data.gifts?.length,
-            totalValue: data.total_value 
+            giftsCount: data.data?.gifts?.length || data.gifts?.length,
+            totalValue: data.data?.total_value || data.total_value 
           });
           
           if (data.success) {
-            const giftsList = data.gifts || [];
+            // Handle both response formats: { data: { gifts: [...] } } and { gifts: [...] }
+            const giftsList = data.data?.gifts || data.gifts || [];
+            const totalValue = data.data?.total_value || data.total_value || 0;
             
             // Normalize gifts with is_custom: false
             const normalizedGifts = giftsList.map((g: any) => ({
@@ -1125,7 +1127,7 @@ export const PortfolioTab: React.FC = () => {
             console.log('✅ Auto gifts loaded:', normalizedGifts.length);
             return {
                 gifts: normalizedGifts,
-              totalValue: data.total_value || 0
+              totalValue: totalValue
             };
           } else {
             console.error('❌ API returned success:false, error:', data.error);
@@ -2725,7 +2727,7 @@ export const PortfolioTab: React.FC = () => {
                       className="fixed inset-0 z-[5]" 
                       onClick={() => setShowPortfolioSettings(false)}
                     />
-                    <div className="absolute bottom-8 right-0 bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl z-[10] min-w-[200px]">
+                    <div className="absolute bottom-8 right-0 bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl z-[10] min-w-[200px] max-w-[90vw] sm:max-w-md">
                     <div className="mb-3">
                       <div className="text-xs text-gray-400 mb-2">Chart Mode</div>
                       <div className="flex gap-2">
@@ -3195,7 +3197,7 @@ export const PortfolioTab: React.FC = () => {
                   className="fixed inset-0 z-[5]" 
                   onClick={() => setShowStickerSettings(false)}
                 />
-                <div className="absolute bottom-8 right-0 bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl z-[10] min-w-[200px]">
+                <div className="absolute bottom-8 right-0 bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl z-[10] min-w-[200px] max-w-[90vw] sm:max-w-md">
                   <div className="mb-3">
                     <div className="text-xs text-gray-400 mb-2">Currency</div>
                     <div className="flex gap-2">
@@ -3396,7 +3398,7 @@ export const PortfolioTab: React.FC = () => {
             <div className="pb-20">
 
               {/* Sticker Image */}
-                <div className="relative w-full max-w-xs mx-auto mt-12 mb-4 px-4">
+                <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg mx-auto mt-12 mb-4 px-4">
                   <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl">
                     <img
                     src={getStickerImageUrl(selectedSticker.collection, selectedSticker.character, selectedSticker.filename)}
@@ -4083,7 +4085,7 @@ export const PortfolioTab: React.FC = () => {
             <div className="pb-20">
 
               {/* Gift Image */}
-              <div className="relative w-full max-w-xs mx-auto mt-12 mb-4 px-4">
+              <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg mx-auto mt-12 mb-4 px-4">
                 <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl">
                   {/* Background pattern */}
                   <div className="absolute inset-0 opacity-20 z-0">
@@ -4673,8 +4675,8 @@ export const PortfolioTab: React.FC = () => {
           </div>
 
           {/* Fixed Bottom Action Buttons */}
-          <div className="fixed bottom-0 left-0 right-0 bg-[#1c1d1f] border-t border-gray-700 p-4 z-10 safe-area-bottom">
-            <div className="flex gap-3">
+          <div className="fixed bottom-0 left-0 right-0 bg-[#1c1d1f] border-t border-gray-700 p-3 sm:p-4 z-10 safe-area-bottom">
+            <div className="flex gap-2 sm:gap-3 max-w-7xl mx-auto">
               <button
                 onClick={() => {
                   setFilters({});
@@ -4708,7 +4710,7 @@ export const PortfolioTab: React.FC = () => {
       {/* Custom Confirmation Dialog for Desktop */}
       {confirmDialog.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 animate-fade-in">
-          <div className="bg-[#1c1d1f] rounded-2xl p-6 w-[90%] max-w-md relative animate-slide-up border border-gray-700">
+          <div className="bg-[#1c1d1f] rounded-2xl p-4 sm:p-6 w-[90%] sm:w-[85%] md:w-[75%] max-w-md md:max-w-lg relative animate-slide-up border border-gray-700">
             {/* Close Button */}
             <button
               onClick={confirmDialog.onCancel}

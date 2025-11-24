@@ -44,15 +44,15 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
+    sm: 'max-w-sm md:max-w-md',
+    md: 'max-w-md md:max-w-lg',
+    lg: 'max-w-lg md:max-w-xl lg:max-w-2xl',
+    xl: 'max-w-xl md:max-w-2xl lg:max-w-3xl',
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in">
-      <div className={`bg-box-bg rounded-2xl p-6 w-[90%] max-h-[90vh] overflow-y-auto relative animate-slide-up ${sizeClasses[size]}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in p-4">
+      <div className={`bg-box-bg rounded-2xl p-4 sm:p-6 w-full max-h-[90vh] overflow-y-auto relative animate-slide-up ${sizeClasses[size]}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-text-idle">{title}</h2>
