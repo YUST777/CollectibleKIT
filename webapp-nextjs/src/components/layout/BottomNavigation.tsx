@@ -57,8 +57,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-box-bg border-t border-icon-idle/30 shadow-tg">
-      <div className="flex justify-around items-center py-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-box-bg border-t border-icon-idle/30 shadow-tg md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2 md:rounded-t-2xl">
+      <div className="flex justify-around items-center py-2 px-2">
         {navItems.map((item) => (
           <NavButton
             key={item.id}

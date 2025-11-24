@@ -325,8 +325,8 @@ export const MainApp: React.FC = () => {
       <DrawerHandle />
       
       {/* Main Content */}
-      <main className="pb-28">
-        <div className="max-w-md mx-auto px-4">
+      <main className="pb-20 sm:pb-24 md:pb-28">
+        <div className="max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
           <div className="transition-all duration-300 ease-in-out">
             {renderTabContent()}
           </div>

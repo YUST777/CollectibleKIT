@@ -2801,7 +2801,7 @@ export const PortfolioTab: React.FC = () => {
           </div>
 
           {/* Gift List Header */}
-          <div className="mx-4 flex items-center justify-between">
+          <div className="mx-3 sm:mx-4 md:mx-6 lg:mx-8 flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-semibold text-white">
                 Total gifts {Object.keys(filters).some(k => filters[k as keyof typeof filters] !== null && filters[k as keyof typeof filters] !== undefined) ? filteredGifts.length : gifts.length}
@@ -2833,7 +2833,7 @@ export const PortfolioTab: React.FC = () => {
               <p className="text-gray-400 mt-4">Loading portfolio...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 px-3 sm:px-4 md:px-6 lg:px-8 pb-4 relative z-0 max-w-7xl mx-auto">
               {filteredGifts.map((gift, index) => {
                 console.log('🎁 Rendering gift:', { index, gift: { title: gift.title, slug: gift.slug, num: gift.num } });
                 // Determine gift ID based on whether it's custom or auto
@@ -2886,8 +2886,8 @@ export const PortfolioTab: React.FC = () => {
 
                   {/* Gift Info */}
                   <div className="relative z-10 space-y-1" style={{ position: 'relative' }}>
-                    <h4 className="font-bold text-white text-sm truncate" style={{ position: 'relative', zIndex: 10 }}>{gift.title}</h4>
-                    <p className="text-xs text-blue-200" style={{ position: 'relative', zIndex: 10 }}>#{gift.num} 1%</p>
+                    <h4 className="font-bold text-white text-xs sm:text-sm truncate" style={{ position: 'relative', zIndex: 10 }}>{gift.title}</h4>
+                    <p className="text-[10px] sm:text-xs text-blue-200" style={{ position: 'relative', zIndex: 10 }}>#{gift.num} 1%</p>
                     
                     <div className="flex items-center gap-1 text-xs text-white mt-2">
                       <span className="text-blue-200">Est. price</span>
@@ -3235,7 +3235,7 @@ export const PortfolioTab: React.FC = () => {
               <p className="text-gray-400 mt-4">Loading stickers...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 px-4 pb-4 relative z-0">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 px-3 sm:px-4 md:px-6 lg:px-8 pb-4 relative z-0 max-w-7xl mx-auto">
               {stickers.map((sticker, index) => {
                 const isHidden = sticker.sticker_id ? isStickerHidden(sticker.sticker_id.toString()) : false;
                 return (

@@ -43,7 +43,7 @@ const SheetContent = React.forwardRef<
       ref={ref}
       {...props}
       className={cn(
-        "fixed z-[70] inset-x-0 bottom-0 mt-24 h-auto max-h-[85vh] overflow-y-auto rounded-t-[24px] bg-[#1c1c1d] p-6 shadow-lg data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-full data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-full",
+        "fixed z-[70] inset-x-0 bottom-0 mt-24 h-auto max-h-[85vh] md:max-h-[90vh] overflow-y-auto rounded-t-[24px] bg-[#1c1c1d] p-4 sm:p-5 md:p-6 shadow-lg data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-full data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-full md:max-w-2xl md:mx-auto md:left-1/2 md:-translate-x-1/2 md:rounded-2xl",
         className
       )}
     >
