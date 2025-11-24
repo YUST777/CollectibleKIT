@@ -2632,11 +2632,11 @@ export const PortfolioTab: React.FC = () => {
       <AdsBanner />
 
       {/* Inner Tabs */}
-      <div className="flex justify-start px-4">
-        <div className="flex space-x-8">
+      <div className="flex justify-start px-3 sm:px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="flex space-x-4 sm:space-x-6 md:space-x-8">
           <button
             onClick={() => setActiveTab('gifts')}
-            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+            className={`text-base sm:text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
               activeTab === 'gifts'
                 ? 'text-white border-b-2 border-white pb-1 scale-105'
                 : 'text-gray-400 hover:text-gray-300 hover:scale-105'
@@ -2646,7 +2646,7 @@ export const PortfolioTab: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('stickers')}
-            className={`text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
+            className={`text-base sm:text-lg font-medium transition-all duration-200 ease-in-out capitalize ${
               activeTab === 'stickers'
                 ? 'text-white border-b-2 border-white pb-1 scale-105'
                 : 'text-gray-400 hover:text-gray-300 hover:scale-105'
@@ -2803,7 +2803,7 @@ export const PortfolioTab: React.FC = () => {
           {/* Gift List Header */}
           <div className="mx-3 sm:mx-4 md:mx-6 lg:mx-8 flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-base sm:text-lg font-semibold text-white">
                 Total gifts {Object.keys(filters).some(k => filters[k as keyof typeof filters] !== null && filters[k as keyof typeof filters] !== undefined) ? filteredGifts.length : gifts.length}
                 {Object.keys(filters).some(k => filters[k as keyof typeof filters] !== null && filters[k as keyof typeof filters] !== undefined) && (
                   <span className="text-gray-400 text-sm font-normal"> / {gifts.length}</span>
