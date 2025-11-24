@@ -3,6 +3,7 @@ import { getUserFromTelegram } from '@/lib/telegram';
 import { spawn } from 'child_process';
 import path from 'path';
 import { db } from '@/lib/database';
+import { successResponse, ApiErrors, handleApiError } from '@/lib/api-response';
 
 // Background update function (non-blocking)
 async function triggerBackgroundUpdate(userId: number, userIdentifier: string): Promise<void> {
@@ -47,10 +48,7 @@ export async function GET(request: NextRequest) {
     
     const user = await getUserFromTelegram(request);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return ApiErrors.unauthorized();
     }
 
     console.log('📊 Getting portfolio for user:', user.id);
@@ -79,15 +77,20 @@ export async function GET(request: NextRequest) {
       }
       
       const cached = cachedData as { gifts: any[]; totalValue: number; cachedAt: number };
-      return NextResponse.json({
-        success: true,
-        gifts: cached.gifts || [],
-        total_value: cached.totalValue,
-        cached: true,
-        stale: isStale,
-        is_fetching: isFetching,
-        cache_age_seconds: Math.round(cacheAge / 1000)
-      });
+      return successResponse(
+        {
+          gifts: cached.gifts || [],
+          total_value: cached.totalValue
+        },
+        undefined,
+        200,
+        {
+          cached: true,
+          stale: isStale,
+          is_fetching: isFetching,
+          cache_age_seconds: Math.round(cacheAge / 1000)
+        }
+      );
     }
     
     // No cache exists - first-time user
@@ -96,10 +99,7 @@ export async function GET(request: NextRequest) {
     // If rate limit exceeded and no cache, return error
     if (!canRefresh && !isFirstLoad) {
         console.log('❌ Rate limit exceeded and no cache available');
-        return NextResponse.json({
-          success: false,
-          error: 'Rate limit exceeded. Please wait 1 minute before refreshing.'
-        }, { status: 429 });
+        return ApiErrors.rateLimitExceeded('Rate limit exceeded. Please wait 1 minute before refreshing.');
     }
     
     // Rate limit OK or first load, fetch fresh data
@@ -213,10 +213,17 @@ export async function GET(request: NextRequest) {
               });
             }
             
-            resolve(NextResponse.json({
-              ...result,
-              cached: false
-            }));
+            resolve(successResponse(
+              {
+                gifts: result.gifts || [],
+                total_value: result.total_value || 0,
+                total: result.total,
+                nft_count: result.nft_count
+              },
+              undefined,
+              200,
+              { cached: false }
+            ));
           } catch (parseError) {
             console.error('❌ Parse error:', parseError, output);
             
@@ -224,19 +231,17 @@ export async function GET(request: NextRequest) {
             if (cachedData) {
               console.log('⚠️ Returning stale cache due to parse error');
               const cached = cachedData as { gifts: any[]; totalValue: number; cachedAt: number };
-              resolve(NextResponse.json({
-                success: true,
-                gifts: cached.gifts || [],
-                total_value: cached.totalValue,
-                cached: true,
-                stale: true,
-                message: 'Using cached data'
-              }));
+              resolve(successResponse(
+                {
+                  gifts: cached.gifts || [],
+                  total_value: cached.totalValue
+                },
+                'Using cached data',
+                200,
+                { cached: true, stale: true }
+              ));
             } else {
-              resolve(NextResponse.json({
-                success: false,
-                error: 'Failed to parse response'
-              }, { status: 500 }));
+              resolve(ApiErrors.internalServerError('Failed to parse response'));
             }
           }
         } else {
@@ -272,19 +277,18 @@ export async function GET(request: NextRequest) {
           // On error, return stale cache if available
           if (cachedData) {
             console.log('⚠️ Returning stale cache due to Python script error');
-            resolve(NextResponse.json({
-              success: true,
-              gifts: (cachedData as { gifts: any[]; totalValue: number }).gifts || [],
-              total_value: (cachedData as { gifts: any[]; totalValue: number }).totalValue,
-              cached: true,
-              stale: true,
-              message: 'Using cached data'
-            }));
+            const cached = cachedData as { gifts: any[]; totalValue: number };
+            resolve(successResponse(
+              {
+                gifts: cached.gifts || [],
+                total_value: cached.totalValue
+              },
+              'Using cached data',
+              200,
+              { cached: true, stale: true }
+            ));
           } else {
-            resolve(NextResponse.json({
-              success: false,
-              error: actualError
-            }, { status: 500 }));
+            resolve(ApiErrors.internalServerError(actualError));
           }
         }
       });
@@ -296,32 +300,23 @@ export async function GET(request: NextRequest) {
         if (cachedData) {
           console.log('⚠️ Returning stale cache due to spawn error');
           const cached = cachedData as { gifts: any[]; totalValue: number; cachedAt: number };
-          resolve(NextResponse.json({
-            success: true,
-            gifts: cached.gifts || [],
-            total_value: cached.totalValue,
-            cached: true,
-            stale: true,
-            error: 'Failed to refresh data, showing cached data'
-          }));
+          resolve(successResponse(
+            {
+              gifts: cached.gifts || [],
+              total_value: cached.totalValue
+            },
+            'Failed to refresh data, showing cached data',
+            200,
+            { cached: true, stale: true }
+          ));
         } else {
-          resolve(NextResponse.json({
-            success: false,
-            error: 'Failed to start Python script'
-          }, { status: 500 }));
+          resolve(ApiErrors.internalServerError('Failed to start Python script'));
         }
       });
     });
 
   } catch (error) {
-    console.error('❌ Portfolio gifts error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Failed to fetch portfolio gifts');
   }
 }
 

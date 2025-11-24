@@ -607,10 +607,10 @@ class DatabaseService {
             [username, firstName, Date.now(), newCredits, photoUrl || null, userId]
           );
         } else {
-          await this.dbRun(
-            `UPDATE users SET username = ?, first_name = ?, last_activity = ?, credits = ? WHERE user_id = ?`,
-            [username, firstName, Date.now(), newCredits, userId]
-          );
+        await this.dbRun(
+          `UPDATE users SET username = ?, first_name = ?, last_activity = ?, credits = ? WHERE user_id = ?`,
+          [username, firstName, Date.now(), newCredits, userId]
+        );
         }
         console.log('✅ Updated existing user:', { userId, user_type: (existingUser as any).user_type, credits: newCredits });
       } else {

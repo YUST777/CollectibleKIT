@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { successResponse, handleApiError } from '@/lib/api-response';
 
 // Cache for TON price with 1 hour expiration
 let cachedPrice: number | null = null;
@@ -16,11 +16,12 @@ export async function GET() {
     // Return cached price if still valid
     if (cachedPrice !== null && (now - cacheTimestamp) < CACHE_DURATION) {
       console.log('📊 TON price from cache:', cachedPrice);
-      return NextResponse.json({
-        success: true,
-        rate: cachedPrice,
-        cached: true
-      });
+      return successResponse(
+        { rate: cachedPrice },
+        undefined,
+        200,
+        { cached: true }
+      );
     }
     
     console.log('📊 Fetching fresh TON price from CoinGecko...');
@@ -50,11 +51,12 @@ export async function GET() {
     
     console.log('✅ Fresh TON price fetched:', rate);
     
-    return NextResponse.json({
-      success: true,
-      rate: rate,
-      cached: false
-    });
+    return successResponse(
+      { rate },
+      undefined,
+      200,
+      { cached: false }
+    );
     
   } catch (error) {
     console.error('❌ Error fetching TON price:', error);
@@ -62,21 +64,21 @@ export async function GET() {
     // Return cached price even if expired if available
     if (cachedPrice !== null) {
       console.log('⚠️ Using stale TON price from cache');
-      return NextResponse.json({
-        success: true,
-        rate: cachedPrice,
-        cached: true,
-        stale: true
-      });
+      return successResponse(
+        { rate: cachedPrice },
+        undefined,
+        200,
+        { cached: true, stale: true }
+      );
     }
     
     // Last resort: default fallback
-    return NextResponse.json({
-      success: true,
-      rate: 2.5, // Default fallback
-      cached: false,
-      fallback: true
-    });
+    return successResponse(
+      { rate: 2.5 }, // Default fallback
+      undefined,
+      200,
+      { cached: false, fallback: true }
+    );
   }
 }
 

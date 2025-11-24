@@ -1683,32 +1683,32 @@ export const PortfolioTab: React.FC = () => {
       });
     } else {
       // On mobile, try Telegram's showConfirm first
-      try {
-        if (webApp?.showConfirm && typeof webApp.showConfirm === 'function') {
-          try {
-            const result: any = webApp.showConfirm(confirmMessage);
+        try {
+      if (webApp?.showConfirm && typeof webApp.showConfirm === 'function') {
+        try {
+          const result: any = webApp.showConfirm(confirmMessage);
             console.log('Telegram showConfirm result:', result, 'type:', typeof result);
-            // WebApp.showConfirm can return a promise or boolean
-            if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
-              confirmed = await (result as Promise<boolean>);
-            } else if (typeof result === 'boolean') {
-              confirmed = result;
-            } else {
-              // If result is void/undefined, use window.confirm as fallback
+          // WebApp.showConfirm can return a promise or boolean
+          if (result && typeof result === 'object' && 'then' in result && typeof result.then === 'function') {
+            confirmed = await (result as Promise<boolean>);
+          } else if (typeof result === 'boolean') {
+            confirmed = result;
+          } else {
+            // If result is void/undefined, use window.confirm as fallback
               console.log('Telegram showConfirm returned undefined, using window.confirm');
-              confirmed = window.confirm(confirmMessage);
-            }
-          } catch (e) {
-            console.log('WebApp confirm failed, using window.confirm:', e);
             confirmed = window.confirm(confirmMessage);
           }
-        } else {
-          console.log('webApp.showConfirm not available, using window.confirm');
+        } catch (e) {
+          console.log('WebApp confirm failed, using window.confirm:', e);
           confirmed = window.confirm(confirmMessage);
         }
-      } catch (e) {
-        console.error('Error showing confirmation:', e);
+      } else {
+          console.log('webApp.showConfirm not available, using window.confirm');
         confirmed = window.confirm(confirmMessage);
+      }
+    } catch (e) {
+      console.error('Error showing confirmation:', e);
+      confirmed = window.confirm(confirmMessage);
       }
     }
     

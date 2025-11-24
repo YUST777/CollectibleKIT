@@ -12,16 +12,8 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromTelegram(request);
     if (!user) {
-      // Not authenticated - return empty data gracefully (preload is non-critical)
-      // This prevents 401 errors in console when called before user is fully initialized
-      return NextResponse.json({
-        success: true,
-        gifts: [],
-        total_value: 0,
-        cached: false,
-        preloading: false,
-        authenticated: false
-      });
+      // Not authenticated, but don't error (might be public page)
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if we have cached data

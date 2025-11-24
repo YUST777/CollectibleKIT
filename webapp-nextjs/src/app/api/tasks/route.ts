@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getUserFromTelegram } from '@/lib/telegram';
 import { db } from '@/lib/database';
+import { successResponse, ApiErrors, handleApiError } from '@/lib/api-response';
 
 /**
  * Get all tasks for the authenticated user
@@ -9,10 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromTelegram(request);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return ApiErrors.unauthorized();
     }
 
     // Get all active tasks
@@ -31,19 +29,9 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({
-      success: true,
-      tasks: tasksWithStatus
-    });
+    return successResponse({ tasks: tasksWithStatus });
 
   } catch (error) {
-    console.error('❌ Tasks GET error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Failed to fetch tasks');
   }
 }

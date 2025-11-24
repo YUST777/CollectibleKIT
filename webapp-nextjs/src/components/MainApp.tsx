@@ -159,16 +159,7 @@ export const MainApp: React.FC = () => {
                 });
 
                 // Preload portfolio in background (saves 0.5 minute when user reaches portfolio tab)
-                // Include initData header for authentication
-                const webApp = getTelegramWebApp();
-                const initData = webApp?.initData || '';
-                
-                fetch('/api/portfolio/preload', {
-                  headers: initData ? {
-                    'X-Telegram-Init-Data': initData
-                  } : {}
-                }).catch(err => {
-                  // Silently handle errors - preload is non-critical
+                fetch('/api/portfolio/preload').catch(err => {
                   console.log('Portfolio preload error (non-critical):', err);
                 });
               } else {

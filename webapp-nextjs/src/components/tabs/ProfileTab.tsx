@@ -137,15 +137,15 @@ export const ProfileTab: React.FC = () => {
           }}
           className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-gray-600 hover:border-gray-400 transition-colors"
         >
-          <img
+            <img
             src={getProfilePhotoUrl(telegramUser?.photo_url)}
-            alt="Profile"
-            className="w-full h-full object-cover"
+              alt="Profile"
+              className="w-full h-full object-cover"
             onError={(e) => {
               // Fallback to default if image fails to load
               (e.target as HTMLImageElement).src = '/default-avatar.png';
             }}
-          />
+            />
           
         </button>
 
@@ -263,10 +263,10 @@ export const ProfileTab: React.FC = () => {
             <div className="flex items-center gap-4">
               {/* Profile Picture */}
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-icon-active flex-shrink-0">
-                <img
+                  <img
                   src={getProfilePhotoUrl(telegramUser?.photo_url)}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
+                    alt="Profile"
+                    className="w-full h-full object-cover"
                   onError={(e) => {
                     // Fallback to default if image fails to load
                     (e.target as HTMLImageElement).src = '/default-avatar.png';

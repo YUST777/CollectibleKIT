@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { UserService } from '@/lib/userService';
 import { db } from '@/lib/database';
+import { successResponse, ApiErrors, handleApiError } from '@/lib/api-response';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,10 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!user_id) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest('User ID is required');
     }
 
     console.log('Initializing user:', {
@@ -111,10 +109,7 @@ export async function POST(request: NextRequest) {
 
     if (!success) {
       console.error('❌ Failed to create/update user in database');
-      return NextResponse.json(
-        { success: false, error: 'Failed to initialize user' },
-        { status: 500 }
-      );
+      return ApiErrors.internalServerError('Failed to initialize user');
     }
 
     // Get user permissions and info
@@ -156,8 +151,7 @@ export async function POST(request: NextRequest) {
       watermark: permissions.watermark
     });
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       user_id: user.user_id,
       user_type: actualUserType,
       watermark: permissions.watermark,
@@ -169,13 +163,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ User initialization error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Failed to initialize user');
   }
 }

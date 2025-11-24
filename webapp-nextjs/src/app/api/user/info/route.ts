@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getUserFromTelegram } from '@/lib/telegram';
 import { db } from '@/lib/database';
+import { successResponse, ApiErrors, handleApiError } from '@/lib/api-response';
 
 /**
  * Get user information
@@ -9,22 +10,15 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromTelegram(request);
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return ApiErrors.unauthorized();
     }
 
     const userData = await db.getUser(user.id);
     if (!userData) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return ApiErrors.notFound('User');
     }
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       user: {
         id: userData.user_id,
         username: userData.username,
@@ -40,13 +34,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ User info error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'Failed to fetch user information');
   }
 }
