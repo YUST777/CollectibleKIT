@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     
     // Run the Python script to fetch sticker portfolio
     const projectRoot = '/root/01studio/CollectibleKIT';
-    const pythonScript = path.join(projectRoot, 'bot', 'get_sticker_profile.py');
+    const pythonScript = path.join(projectRoot, 'bot', 'services', 'get_sticker_profile.py');
     const venvPython = '/usr/bin/python3';
     
     const args = [pythonScript, user.id.toString()];

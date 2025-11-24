@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Update Python tracker premium status
     try {
       const { spawn } = require('child_process');
-      const pythonScript = '/root/01studio/CollectibleKIT/bot/ton_wallet_cli.py';
+      const pythonScript = '/root/01studio/CollectibleKIT/bot/core/ton_wallet_cli.py';
       
       // Set premium status in Python tracker
       const script = spawn('python3', [
