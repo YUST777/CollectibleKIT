@@ -81,6 +81,23 @@ def save_snapshot(user_id: int, portfolio_data: dict):
 async def create_snapshot_for_user(user_id):
     """Create snapshot for a single user"""
     try:
+        # Get username from database if available (more reliable than numeric ID)
+        user_identifier = str(user_id)  # Default to numeric ID
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT username FROM users WHERE user_id = ?", (user_id,))
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result and result[0] and result[0].strip():
+                # Use username if available (prefer @username format)
+                username = result[0].strip()
+                user_identifier = username if username.startswith('@') else f'@{username}'
+        except Exception as e:
+            # If we can't get username, fall back to numeric ID
+            print(f"⚠️ Could not get username for user {user_id}, using numeric ID: {e}", file=sys.stderr)
+        
         # Fetch portfolio using async subprocess (get_profile_gifts prints JSON)
         # Use async subprocess to avoid blocking the event loop
         script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'services', 'get_profile_gifts.py')
@@ -88,7 +105,7 @@ async def create_snapshot_for_user(user_id):
         
         # Create async subprocess
         process = await asyncio.create_subprocess_exec(
-            'python3', script_path, str(user_id),
+            'python3', script_path, user_identifier,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=bot_root
@@ -143,7 +160,7 @@ async def create_snapshots_for_all_users():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Get all user IDs
+        # Get all user IDs (we'll fetch usernames individually in create_snapshot_for_user)
         cursor.execute("SELECT user_id FROM users")
         users = cursor.fetchall()
         conn.close()
