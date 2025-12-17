@@ -24,8 +24,8 @@ export default function SessionsPage() {
         {
             id: 4,
             number: '04',
-            title: 'Loops',
-            desc: 'In-depth guide to for loops, while loops, and do-while loops for repetitive tasks and iteration.',
+            title: 'Revision',
+            desc: 'Comprehensive review covering all previous topics with 3 practice problems to solidify your understanding.',
             thumbnail: '/images/revison.webp'
         },
     ];

@@ -157,89 +157,68 @@ function Session3Content() {
     );
 }
 
-// Session 4 Content (New)
+// Session 4 Content (Revision)
 function Session4Content() {
     return (
         <div className="space-y-12 text-white/90">
             <section className="space-y-6">
                 <div className="flex items-center gap-3 text-[#d59928] mb-6">
                     <Terminal className="w-6 h-6" />
-                    <h2 className="text-2xl sm:text-3xl font-bold">Loops in C++</h2>
+                    <h2 className="text-2xl sm:text-3xl font-bold">Revision Session</h2>
                 </div>
                 <div className="mb-8">
-                    <p className="text-white/70 text-lg">Loops allow your program to repeat code automatically instead of writing it many times. C++ has 4 main loops: while, for, do...while, and range-based for.</p>
+                    <p className="text-white/70 text-lg">This session covers a comprehensive review of all topics from the previous sessions. Complete the 3 practice problems below to test your understanding.</p>
                 </div>
 
-                {/* For Loop */}
-                <div className="bg-[#111] rounded-2xl border border-white/10 p-6 sm:p-8">
-                    <h3 className="text-xl font-bold mb-4 text-white border-l-4 border-[#d59928] pl-3">1. For Loop</h3>
-                    <div className="grid lg:grid-cols-2 gap-8">
-                        <div>
-                            <p className="text-white/70 mb-4">Repeats a block of code a known number of times. Extremely important in Competitive Programming for iterating over arrays and repeating operations efficiently.</p>
-                            <ul className="space-y-2 text-sm text-white/60 list-disc list-inside mb-4">
-                                <li>Standard loop</li>
-                                <li>Loop from 1 to n</li>
-                                <li>Backward loop</li>
-                                <li>Step-based loops</li>
-                            </ul>
-                            <div className="bg-blue-900/10 border border-blue-500/10 p-3 rounded-lg">
-                                <h4 className="text-blue-400 text-sm font-bold mb-1">Pro Tip: Cache Size</h4>
-                                <code className="text-xs block text-white/70 mb-1">// BAD: i &lt; v.size()</code>
-                                <code className="text-xs block text-green-400">// GOOD: int n = v.size(); i &lt; n;</code>
-                            </div>
-                        </div>
-                        <div className="bg-black/50 rounded-xl p-4 font-mono text-xs border border-white/5 overflow-x-auto">
-                            <pre className="text-white/80"><span className="text-[#d59928]">for</span> (initialization; condition; update) {'{'}<br />    <span className="text-green-400">// code</span><br />{'}'}</pre>
-                            <div className="mt-4 pt-4 border-t border-white/10">
-                                <span className="text-white/40 block mb-2">// Example 1: Find element &gt; x</span>
-                                <pre className="text-green-400">{`for (int i = 0; i < n; i++) {
-    if (arr[i] > x) {
-        cout << "Found at " << i;
-        break;
-    }
-}`}</pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {/* Practice Problems */}
+                <div className="space-y-6">
+                    <h3 className="text-xl font-bold text-white border-l-4 border-[#d59928] pl-3">Practice Problems</h3>
 
-                {/* While & Do-While */}
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="bg-[#111] rounded-2xl border border-white/10 p-6">
-                        <h3 className="text-lg font-bold mb-3 text-white">2. While Loop</h3>
-                        <p className="text-sm text-white/60 mb-4">Repeats while a condition is true.</p>
-                        <pre className="bg-black/50 p-3 rounded-lg text-xs font-mono text-green-400">{`while (condition) {
-    // code
-}`}</pre>
-                    </div>
-                    <div className="bg-[#111] rounded-2xl border border-white/10 p-6">
-                        <h3 className="text-lg font-bold mb-3 text-white">3. Do...While Loop</h3>
-                        <p className="text-sm text-white/60 mb-4">Runs code at least once.</p>
-                        <pre className="bg-black/50 p-3 rounded-lg text-xs font-mono text-green-400">{`do {
-    // code
-} while (condition);`}</pre>
-                    </div>
-                </div>
-
-                {/* For-Each & Nested */}
-                <div className="bg-[#111] rounded-2xl border border-white/10 p-6 sm:p-8">
-                    <h3 className="text-xl font-bold mb-4 text-white">4. Range-based & Nested Loops</h3>
-                    <div className="grid md:grid-cols-2 gap-8">
-                        <div>
-                            <h4 className="text-sm font-bold text-[#d59928] mb-2">For-Each Loop</h4>
-                            <p className="text-xs text-white/60 mb-2">Loops through all items in a container automatically.</p>
-                            <pre className="bg-black/50 p-3 rounded-lg text-xs font-mono text-green-400">{`string str = "Hello!";
-for (char c : str)
-    cout << c << endl;`}</pre>
+                    {/* Problem 1 */}
+                    <div className="bg-[#111] rounded-2xl border border-white/10 p-6 sm:p-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="bg-[#d59928] text-black px-2.5 py-1 rounded-full text-xs font-bold">Problem 1</span>
+                            <span className="text-white/40 text-sm">I/O & Data Types</span>
                         </div>
-                        <div>
-                            <h4 className="text-sm font-bold text-[#d59928] mb-2">Nested Loop</h4>
-                            <p className="text-xs text-white/60 mb-2">Loop inside a loop (e.g., Multiplication Table).</p>
-                            <pre className="bg-black/50 p-3 rounded-lg text-xs font-mono text-green-400">{`for (int i=1; i<=12; ++i) {
-  for (int j=1; j<=12; ++j) {
-    cout << i * j << endl;
-  }
-}`}</pre>
+                        <h4 className="text-lg font-bold mb-3 text-white">Sum of Two Numbers</h4>
+                        <p className="text-white/70 mb-4">Read two integers from the user and print their sum. Make sure to handle the case where the sum might overflow.</p>
+                        <div className="bg-black/50 rounded-xl p-4 font-mono text-sm border border-white/5 overflow-x-auto">
+                            <pre className="text-green-400">{`// Sample Input:
+5 7
+// Sample Output:
+12`}</pre>
+                        </div>
+                    </div>
+
+                    {/* Problem 2 */}
+                    <div className="bg-[#111] rounded-2xl border border-white/10 p-6 sm:p-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="bg-[#d59928] text-black px-2.5 py-1 rounded-full text-xs font-bold">Problem 2</span>
+                            <span className="text-white/40 text-sm">Control Flow</span>
+                        </div>
+                        <h4 className="text-lg font-bold mb-3 text-white">Grade Calculator</h4>
+                        <p className="text-white/70 mb-4">Given a score (0-100), print the corresponding grade: A (90-100), B (80-89), C (70-79), D (60-69), F (below 60).</p>
+                        <div className="bg-black/50 rounded-xl p-4 font-mono text-sm border border-white/5 overflow-x-auto">
+                            <pre className="text-green-400">{`// Sample Input:
+85
+// Sample Output:
+B`}</pre>
+                        </div>
+                    </div>
+
+                    {/* Problem 3 */}
+                    <div className="bg-[#111] rounded-2xl border border-white/10 p-6 sm:p-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="bg-[#d59928] text-black px-2.5 py-1 rounded-full text-xs font-bold">Problem 3</span>
+                            <span className="text-white/40 text-sm">Loops</span>
+                        </div>
+                        <h4 className="text-lg font-bold mb-3 text-white">Factorial</h4>
+                        <p className="text-white/70 mb-4">Given a non-negative integer n, print n! (n factorial). Remember: 0! = 1.</p>
+                        <div className="bg-black/50 rounded-xl p-4 font-mono text-sm border border-white/5 overflow-x-auto">
+                            <pre className="text-green-400">{`// Sample Input:
+5
+// Sample Output:
+120`}</pre>
                         </div>
                     </div>
                 </div>
@@ -284,9 +263,9 @@ function DashboardSessionContent() {
         },
         '4': {
             number: '04',
-            tag: 'Loops',
-            title: 'Loops',
-            description: 'In-depth guide to for loops, while loops, and do-while loops. Learn how to repeat code automatically instead of writing it many times.',
+            tag: 'Revision',
+            title: 'Revision',
+            description: 'Comprehensive review of all previous topics with 3 practice problems to solidify your understanding.',
             videoId: '1sQT2Uk9A0FdDqn1gzBgvl8zn2rge3fe0',
             content: <Session4Content />
         }
