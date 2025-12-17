@@ -1,0 +1,239 @@
+'use client';
+
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+
+// Types
+interface User {
+    id: number;
+    email: string;
+    is_verified?: boolean;
+    telegram_username?: string;
+    is_public?: boolean;
+    role?: string;
+}
+
+interface Profile {
+    id: number;
+    name: string;
+    faculty: string;
+    student_id: string;
+    student_level: string;
+    telephone: string;
+    codeforces_profile?: string;
+    leetcode_profile?: string;
+    telegram_username?: string;
+    codeforces_data?: {
+        rating?: number;
+        maxRating?: number;
+        rank?: string;
+        handle?: string;
+    };
+    leetcode_data?: {
+        totalSolved?: number;
+        ranking?: number;
+    };
+}
+
+interface AuthContextType {
+    user: User | null;
+    profile: Profile | null;
+    loading: boolean;
+    isAuthenticated: boolean;
+    login: (email: string, password: string) => Promise<{ token: string; user: User }>;
+    register: (email: string, password: string) => Promise<{ token: string; user: User }>;
+    checkEmail: (email: string) => Promise<{ exists: boolean; hasAccount: boolean }>;
+    logout: () => void;
+    refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+// Cookie utilities
+const setCookie = (name: string, value: string, days = 30): void => {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+};
+
+const getCookie = (name: string): string | null => {
+    const nameEQ = name + '=';
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+};
+
+const deleteCookie = (name: string): void => {
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:01 GMT;path=/`;
+};
+
+// Token utilities
+const getStoredToken = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('authToken') || getCookie('authToken');
+};
+
+const storeToken = (token: string): void => {
+    localStorage.setItem('authToken', token);
+    setCookie('authToken', token, 30);
+};
+
+const clearToken = (): void => {
+    localStorage.removeItem('authToken');
+    deleteCookie('authToken');
+};
+
+interface AuthProviderProps {
+    children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+    const [user, setUser] = useState<User | null>(null);
+    const [profile, setProfile] = useState<Profile | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [token, setToken] = useState<string | null>(null);
+
+    const logout = useCallback(() => {
+        clearToken();
+        setToken(null);
+        setUser(null);
+        setProfile(null);
+    }, []);
+
+    // Initialize auth state
+    useEffect(() => {
+        const initAuth = async () => {
+            const storedToken = getStoredToken();
+
+            if (storedToken) {
+                setToken(storedToken);
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        headers: { Authorization: `Bearer ${storedToken}` },
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setUser(data.user);
+                        setProfile(data.profile);
+                    } else if (response.status === 401) {
+                        // Token is definitely invalid
+                        console.warn('[AuthContext] Token expired (401), clearing auth.');
+                        logout();
+                    } else {
+                        // Server error or other issue - DON'T logout, just log error
+                        console.error(`[AuthContext] Failed to verify token. Status: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error('[AuthContext] Network error verifying token:', error);
+                }
+            }
+
+            setLoading(false);
+        };
+
+        initAuth();
+    }, [logout]);
+
+    const fetchUserProfile = useCallback(async () => {
+        const currentToken = getStoredToken();
+        if (!currentToken) return; // Don't set loading false here, it's global reload
+
+        try {
+            const response = await fetch('/api/auth/me', {
+                headers: { Authorization: `Bearer ${currentToken}` },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setUser(data.user);
+                setProfile(data.profile);
+            } else if (response.status === 401) {
+                logout();
+            }
+        } catch (error) {
+            console.error('[AuthContext] Refresh profile error:', error);
+        }
+    }, [logout]);
+
+    const login = async (email: string, password: string) => {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Login failed');
+        }
+
+        storeToken(data.token);
+        setToken(data.token);
+        setUser(data.user);
+
+        return data;
+    };
+
+    const register = async (email: string, password: string) => {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Registration failed');
+        }
+
+        storeToken(data.token);
+        setToken(data.token);
+        setUser(data.user);
+
+        return data;
+    };
+
+    const checkEmail = async (email: string) => {
+        const response = await fetch('/api/auth/check-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Email check failed');
+        }
+
+        return data;
+    };
+
+    const value: AuthContextType = {
+        user,
+        profile,
+        loading,
+        isAuthenticated: !!token && !!user,
+        login,
+        register,
+        checkEmail,
+        logout,
+        refreshProfile: fetchUserProfile,
+    };
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextType {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+}

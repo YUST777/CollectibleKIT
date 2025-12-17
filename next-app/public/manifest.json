@@ -1,0 +1,57 @@
+{
+  "name": "ICPC HUE - Competitive Programming Platform",
+  "short_name": "ICPC HUE",
+  "description": "First ICPC Community in Hours University. Training platform for competitive programming.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0B0B0C",
+  "theme_color": "#d59928",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icpchue-logo.webp",
+      "sizes": "any",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.webp",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": [
+    {
+      "src": "/images/coding-dashboard.webp",
+      "sizes": "1920x1080",
+      "type": "image/webp",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open your training dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icpchue-logo.webp", "sizes": "192x192" }]
+    },
+    {
+      "name": "Training Sheets",
+      "short_name": "Sheets",
+      "description": "Access training sheets",
+      "url": "/dashboard/training",
+      "icons": [{ "src": "/icpchue-logo.webp", "sizes": "192x192" }]
+    },
+    {
+      "name": "Sessions",
+      "short_name": "Sessions",
+      "description": "Watch training sessions",
+      "url": "/dashboard/sessions",
+      "icons": [{ "src": "/icpchue-logo.webp", "sizes": "192x192" }]
+    }
+  ]
+}
+
