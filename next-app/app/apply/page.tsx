@@ -276,7 +276,7 @@ function ApplicationFormContent() {
     return (
         <div className="min-h-screen relative bg-black">
             {/* Video background */}
-            <div className="fixed inset-0 z-0 overflow-hidden">
+            <div className="fixed inset-0 !z-0 overflow-hidden">
                 <video
                     autoPlay
                     loop
@@ -535,8 +535,8 @@ function ApplicationFormContent() {
                                         </label>
                                         <div className="flex gap-4">
                                             <label className={`flex items-center gap-2 p-4 rounded-lg cursor-pointer transition flex-1 border border-transparent ${formData.hasLaptop === true || formData.hasLaptop === 'true'
-                                                    ? 'bg-[#E8C15A] text-black border-[#E8C15A] shadow-lg shadow-[#E8C15A]/20'
-                                                    : 'bg-white/10 hover:bg-white/20 text-white border-white/5'
+                                                ? 'bg-[#E8C15A] text-black border-[#E8C15A] shadow-lg shadow-[#E8C15A]/20'
+                                                : 'bg-white/10 hover:bg-white/20 text-white border-white/5'
                                                 }`}>
                                                 <input
                                                     type="radio"
@@ -549,8 +549,8 @@ function ApplicationFormContent() {
                                                 <span className="font-bold">Yes</span>
                                             </label>
                                             <label className={`flex items-center gap-2 p-4 rounded-lg cursor-pointer transition flex-1 border border-transparent ${formData.hasLaptop === false || formData.hasLaptop === 'false'
-                                                    ? 'bg-[#E8C15A] text-black border-[#E8C15A] shadow-lg shadow-[#E8C15A]/20'
-                                                    : 'bg-white/10 hover:bg-white/20 text-white border-white/5'
+                                                ? 'bg-[#E8C15A] text-black border-[#E8C15A] shadow-lg shadow-[#E8C15A]/20'
+                                                : 'bg-white/10 hover:bg-white/20 text-white border-white/5'
                                                 }`}>
                                                 <input
                                                     type="radio"

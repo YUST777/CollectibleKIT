@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-
-// Simple encryption for sensitive data (in production, use a proper encryption library)
-function encrypt(text: string | null): string | null {
-    if (!text) return null;
-    // For now, return the text as-is. In production, use proper encryption
-    return text;
-}
+import { encrypt } from '@/lib/crypto';
 
 function sanitizeInput(input: string): string {
     if (!input) return '';
@@ -71,8 +65,25 @@ export async function POST(request: NextRequest) {
             applicationId
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Submit application error:', error);
+
+        // Handle duplicate key error (PostgreSQL code 23505)
+        if (error?.code === '23505') {
+            const detail = error.detail || '';
+            let message = 'This record already exists.';
+
+            if (detail.includes('student_id')) {
+                message = 'This Student ID is already registered.';
+            } else if (detail.includes('email')) {
+                message = 'This Email is already registered.';
+            } else if (detail.includes('national_id')) {
+                message = 'This National ID is already registered.';
+            }
+
+            return NextResponse.json({ error: message }, { status: 409 });
+        }
+
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }

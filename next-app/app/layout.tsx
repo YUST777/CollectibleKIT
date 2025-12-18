@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Providers from "@/components/Providers";
+import InstallBanner from "@/components/InstallBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,7 +35,7 @@ export const metadata: Metadata = {
     siteName: "ICPC HUE",
     images: [
       {
-        url: "/framer-og-image.webp",
+        url: "/images/metadata.webp",
         width: 1200,
         height: 630,
         alt: "ICPC HUE",
@@ -46,15 +48,21 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ICPC HUE",
     description: "First ICPC Community in Hours University",
-    images: ["/framer-og-image.webp"],
+    images: ["/images/metadata.webp"],
   },
   robots: {
     index: true,
     follow: true,
+    nocache: true,
   },
   icons: {
-    icon: "/favicon.webp",
-    apple: "/favicon.webp",
+    icon: [
+      { url: '/icpchue-logo.webp?v=3', type: 'image/webp' },
+    ],
+    apple: [
+      { url: '/icpchue-logo.webp?v=3', type: 'image/webp' },
+    ],
+    shortcut: ['/icpchue-logo.webp?v=3'],
   },
   manifest: "/manifest.json",
 };
@@ -63,7 +71,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#000000",
+  themeColor: "#E8C15A",
 };
 
 export default function RootLayout({
@@ -73,7 +81,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className="antialiased bg-black text-white">{children}</body>
+      <body className="antialiased bg-black text-white">
+        <Providers>
+          <InstallBanner />
+          {children}
+        </Providers>
+      </body>
     </html>
   );
 }

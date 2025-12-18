@@ -3,13 +3,17 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { getDisplayName } from '@/lib/utils';
 import { ChevronLeft, Copy, Check, Settings, User, Mail, Shield } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, profile: authProfile } = useAuth();
     const profile = authProfile || { name: user?.email?.split('@')[0] || 'User' };
     const [copied, setCopied] = useState(false);
-    const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/profile/${authProfile?.student_id || user?.id || 'unknown'}` : '';
+
+    // ALWAYS use email prefix for profile URL (student_id in DB may have user typos)
+    const studentId = user?.email?.split('@')[0] || 'unknown';
+    const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/profile/${studentId}` : '';
 
     const handleCopy = () => {
         navigator.clipboard.writeText(profileUrl);
@@ -26,7 +30,7 @@ export default function SettingsPage() {
                     <span className="text-[#DCDCDC] uppercase text-xs sm:text-sm">Settings</span>
                 </div>
             </header>
-            <div className="space-y-6 animate-fade-in max-w-2xl">
+            <div className="space-y-6 animate-fade-in max-w-4xl">
                 <div className="flex items-center gap-3"><Settings className="text-[#E8C15A]" size={24} /><h2 className="text-xl md:text-2xl font-bold text-[#F2F2F2]">Settings</h2></div>
 
                 {/* Profile Sharing */}
@@ -61,7 +65,7 @@ export default function SettingsPage() {
                     <h3 className="text-lg font-bold text-[#F2F2F2] mb-4 flex items-center gap-2"><Mail size={20} className="text-[#E8C15A]" />Account</h3>
                     <div className="space-y-3">
                         <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Email</span><span className="text-sm text-[#F2F2F2]">{user?.email || 'Not available'}</span></div>
-                        <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Name</span><span className="text-sm text-[#F2F2F2]">{profile.name || 'Not set'}</span></div>
+                        <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Name</span><span className="text-sm text-[#F2F2F2]">{getDisplayName(profile.name) || 'Not set'}</span></div>
                         <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Member since</span><span className="text-sm text-[#F2F2F2]">December 2024</span></div>
                     </div>
                 </div>

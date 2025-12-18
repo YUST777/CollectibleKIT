@@ -466,9 +466,8 @@ const verifyRecaptcha = async (token) => {
         console.log(`✅ reCAPTCHA verified - Score: ${score}`);
         return true;
       } else {
-        console.log(`⚠️ reCAPTCHA score low: ${score} (minimum: ${minScore}) - but allowing anyway`);
-        // Always allow - don't block users based on score
-        return true;
+        console.log(`⚠️ reCAPTCHA score low: ${score} (minimum: ${minScore}) - Blocking request`);
+        return false;
       }
     } else {
       const errorCodes = response.data?.['error-codes'] || [];
@@ -856,8 +855,8 @@ const scrapeCodeforces = async (username, retryCount = 0) => {
       }
     }
 
-    // Then get submission stats (only first 100 submissions for speed)
-    const submissionsUrl = `https://codeforces.com/api/user.status?handle=${username}&from=1&count=100`;
+    // Then get submission stats (increase limit to 10000 to get accurate solved count)
+    const submissionsUrl = `https://codeforces.com/api/user.status?handle=${username}&from=1&count=10000`;
     const submissionsResponse = await axios.get(submissionsUrl, {
       timeout: 15000,
       headers: {
@@ -994,6 +993,51 @@ app.post('/api/submit-application', apiLimiter, validateApiKey, async (req, res,
       userAgent,  // Sanitized above
       'pending'   // Scraping status
     ]);
+
+    // Manual uniqueness check for encrypted fields (because encryption is non-deterministic)
+    // We must decrypt and compare all existing records. 
+    // This is O(N) but necessary without a schema change (Blind Index).
+    const checkUniqueness = async () => {
+      const allApps = await pool.query('SELECT id, national_id, telephone, email, student_id FROM applications WHERE id != $1', [result.rows[0].id]);
+
+      const duplicates = [];
+      const newNationalId = nationalId.replace(/\D/g, '');
+      const newTelephone = telephone.replace(/[^\d+]/g, '');
+      const newEmail = email.toLowerCase().trim();
+
+      for (const app of allApps.rows) {
+        // Check National ID
+        if (app.national_id) {
+          const dec = decrypt(app.national_id);
+          if (dec && dec.replace(/\D/g, '') === newNationalId) {
+            duplicates.push(`National ID already exists (Application ID: ${app.id})`);
+          }
+        }
+        // Check Telephone
+        if (app.telephone) {
+          const dec = decrypt(app.telephone);
+          if (dec && dec.replace(/[^\d+]/g, '') === newTelephone) {
+            duplicates.push(`Telephone already exists (Application ID: ${app.id})`);
+          }
+        }
+        // Check Email
+        if (app.email) {
+          const dec = decrypt(app.email);
+          if (dec && dec.toLowerCase().trim() === newEmail) {
+            duplicates.push(`Email already exists (Application ID: ${app.id})`);
+          }
+        }
+      }
+
+      if (duplicates.length > 0) {
+        // Rollback (delete the just-inserted record)
+        await pool.query('DELETE FROM applications WHERE id = $1', [result.rows[0].id]);
+        throw new Error(`Duplicate Data: ${duplicates.join(', ')}`);
+      }
+    };
+
+    // Run the check
+    await checkUniqueness();
 
     const applicationId = result.rows[0].id;
 
@@ -4124,6 +4168,7 @@ app.get('/api/profile/:studentId', standardLimiter, async (req, res) => {
           rating: codeforcesData?.rating || null,
           maxRating: codeforcesData?.maxRating || null,
           rank: codeforcesData?.rank || null,
+          totalSolved: codeforcesData?.total_solved || 0,
         },
         leetcode: {
           profile: application.leetcode_profile,

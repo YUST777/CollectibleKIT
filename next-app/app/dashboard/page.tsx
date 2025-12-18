@@ -5,6 +5,7 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { getDisplayName } from '@/lib/utils';
 import {
     BookOpen,
     ChevronLeft,
@@ -114,7 +115,7 @@ function ConsistencyCalendar({ data }: { data: Record<string, number> }) {
 
 export default function DashboardHome() {
     const { user, profile } = useAuth();
-    const displayName = profile?.name || user?.email?.split('@')[0] || 'Member';
+    const displayName = getDisplayName(profile?.name) || user?.email?.split('@')[0] || 'Member';
 
     // Stats State
     const [stats, setStats] = useState({

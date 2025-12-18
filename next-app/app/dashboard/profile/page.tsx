@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { getDisplayName } from '@/lib/utils';
 import { ChevronLeft, Pencil, Send, Check, ChevronDown, ExternalLink, Hexagon, BookOpen, Shield, Award, CalendarClock, Trash2 } from 'lucide-react';
 import AchievementsWidget from '@/components/AchievementsWidget';
 
@@ -182,7 +183,7 @@ export default function ProfilePage() {
 
                                 {/* Identity Info */}
                                 <div className="mt-4 text-center space-y-1 w-full">
-                                    <h2 className="text-2xl font-bold text-[#F2F2F2] tracking-tight truncate">{profile.name || 'Member'}</h2>
+                                    <h2 className="text-2xl font-bold text-[#F2F2F2] tracking-tight truncate">{getDisplayName(profile.name) || 'Member'}</h2>
                                     <p className="text-xs text-[#666] font-mono">@{profile.student_id || user?.email?.split('@')[0]}</p>
                                 </div>
 

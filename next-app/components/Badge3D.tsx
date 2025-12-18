@@ -1,9 +1,11 @@
 'use client';
 
+
 import { Suspense, useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, Environment, Float, ContactShadows, OrbitControls, Center } from '@react-three/drei';
+import { useGLTF, Environment, Float, OrbitControls, Center, Html } from '@react-three/drei';
 import * as THREE from 'three';
+import Loader from './Loader';
 
 interface ModelProps {
     path: string;
@@ -45,7 +47,11 @@ export default function Badge3D({ modelPath, unlocked = true, scale = 2 }: Badge
                 <spotLight position={[10, 10, 10]} angle={0.25} penumbra={1} intensity={2} />
                 <pointLight position={[-10, -10, -10]} intensity={1} />
 
-                <Suspense fallback={null}>
+                <Suspense fallback={
+                    <Html center>
+                        <Loader />
+                    </Html>
+                }>
                     <Float
                         speed={2}
                         rotationIntensity={0.5}
@@ -63,9 +69,3 @@ export default function Badge3D({ modelPath, unlocked = true, scale = 2 }: Badge
         </div>
     );
 }
-
-// Preload models to prevent stutter
-useGLTF.preload('/3d/WELCOME.glb');
-useGLTF.preload('/3d/done_approvalcamp.glb');
-useGLTF.preload('/3d/500pts.glb');
-useGLTF.preload('/3d/instructor.glb');

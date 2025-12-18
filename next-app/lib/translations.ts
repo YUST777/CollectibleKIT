@@ -59,7 +59,7 @@ export const translations = {
         {
           title: 'Quiz / Assignments',
           desc: 'Test your knowledge with our interactive quizzes and problem sets directly from the community.',
-          link: '/quiz'
+          link: '/dashboard/sheets'
         },
       ],
       learnMore: 'Learn more',
@@ -204,7 +204,7 @@ export const translations = {
         {
           title: 'المسابقات / الاختبارات',
           desc: 'اختبر معلوماتك من خلال اختباراتنا التفاعلية ومجموعات المسائل مباشرة من المجتمع.',
-          link: '/quiz'
+          link: '/dashboard/sheets'
         },
       ],
       learnMore: 'اعرف المزيد',

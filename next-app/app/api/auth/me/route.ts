@@ -53,12 +53,12 @@ export async function GET(request: NextRequest) {
         }
 
         const user = userResult.rows[0];
-
-        // Get application data (profile info)
         let profile: any = null;
+
+        // Try to find application by specific ID first
         if (user.application_id) {
             const appResult = await query(
-                'SELECT id, name, faculty, student_id, student_level, codeforces_profile, leetcode_profile, telegram_username, application_type, submitted_at FROM applications WHERE id = $1',
+                'SELECT * FROM applications WHERE id = $1',
                 [user.application_id]
             );
 
@@ -67,21 +67,39 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // If no profile, use user's info
+        // Fallback: Try to find application by Email if not found by ID
+        if (!profile && user.email) {
+            const appResult = await query(
+                'SELECT * FROM applications WHERE email = $1 ORDER BY id DESC LIMIT 1',
+                [user.email]
+            );
+
+            if (appResult.rows.length > 0) {
+                profile = appResult.rows[0];
+
+                // Optional: Update the user's application_id for future faster lookups
+                // await query('UPDATE users SET application_id = $1 WHERE id = $2', [profile.id, user.id]);
+            }
+        }
+
+        // If no profile found at all, initialize empty object
         if (!profile) {
             profile = {};
         }
+
+        // Merge/Override specific fields logic
+
+        // 1. Telegram Username: User table > Application > null
         if (!profile.telegram_username && user.telegram_username) {
             profile.telegram_username = user.telegram_username;
         }
 
-        // Add codeforces_data from users table (priority source)
+        // 2. Codeforces Data: User table (priority) > Application
         if (user.codeforces_data) {
             if (typeof user.codeforces_data === 'string') {
                 try {
                     profile.codeforces_data = JSON.parse(user.codeforces_data);
                 } catch (e) {
-                    console.error('Error parsing codeforces_data:', e);
                     profile.codeforces_data = null;
                 }
             } else {
@@ -89,7 +107,7 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Use codeforces_handle from users table (plaintext) for display
+        // 3. Codeforces Handle: User table (priority) > Application
         if (user.codeforces_handle) {
             profile.codeforces_profile = user.codeforces_handle;
         }
@@ -97,23 +115,22 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             success: true,
             user: {
-                id: user.id,
+                id: user.id.toString(),
                 email: user.email,
                 isVerified: user.is_verified,
                 lastLogin: user.last_login_at,
                 createdAt: user.created_at,
                 role: user.role || 'trainee'
             },
-            profile
+            profile: {
+                ...profile,
+                // Ensure IDs are strings if they are BigInts (which node-postgres parses as strings usually, but just in case)
+                id: profile.id?.toString(),
+            }
         }, { headers });
 
     } catch (error) {
         console.error('Error getting user profile:', error);
-        // Log full error for debugging
-        if (error instanceof Error) {
-            console.error('Error message:', error.message);
-            console.error('Error stack:', error.stack);
-        }
         return NextResponse.json({ error: 'Server error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500, headers });
     }
 }
