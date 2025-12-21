@@ -27,11 +27,37 @@ export async function GET() {
             'Expires': '0'
         };
 
-        // Get all users with codeforces data from applications (matching Vite logic)
+        // Get users with codeforces data from BOTH applications AND users tables
+        // Use UNION to combine results from both sources
         const result = await query(`
-            SELECT name, codeforces_profile, codeforces_data 
-            FROM applications 
-            WHERE codeforces_data IS NOT NULL
+            SELECT DISTINCT ON (COALESCE(handle, name)) 
+                name, 
+                handle,
+                codeforces_profile, 
+                codeforces_data
+            FROM (
+                -- From applications table
+                SELECT 
+                    name, 
+                    codeforces_profile,
+                    codeforces_data,
+                    (codeforces_data::json->>'handle') as handle
+                FROM applications 
+                WHERE codeforces_data IS NOT NULL
+                
+                UNION ALL
+                
+                -- From users table (for users who updated their profile)
+                SELECT 
+                    COALESCE(a.name, u.email) as name,
+                    u.codeforces_handle as codeforces_profile,
+                    u.codeforces_data,
+                    (u.codeforces_data::json->>'handle') as handle
+                FROM users u
+                LEFT JOIN applications a ON u.application_id = a.id
+                WHERE u.codeforces_data IS NOT NULL
+            ) combined
+            ORDER BY COALESCE(handle, name)
         `);
 
         const leaderboard = result.rows.map((row: any) => {
@@ -43,11 +69,11 @@ export async function GET() {
             }
 
             const rating = parseInt(data.rating || 0, 10);
-            const username = extractUsername(row.codeforces_profile, 'codeforces') || '?';
+            const username = row.handle || extractUsername(row.codeforces_profile, 'codeforces') || '?';
 
             return {
                 name: row.name,
-                handle: username, // Prioritize extracted username from profile URL
+                handle: username,
                 rating: rating,
                 rank: data.rank || 'unrated',
                 maxRating: parseInt(data.maxRating || 0, 10),

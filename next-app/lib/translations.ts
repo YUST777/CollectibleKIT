@@ -8,8 +8,8 @@ export const translations = {
       getQuote: 'Apply Now',
     },
     hero: {
-      title: 'ICPC HUE — First ICPC Community in Hours University',
-      description: 'Competitive programming resources, training materials, and community collaboration tools. Join our training program and become part of the first ICPC community in Hours University. Ready to take your skills to the next level?',
+      title: 'ICPC HUE — First ICPC Community in Horus University',
+      description: 'Welcome to ICPC HUE, the premier competitive programming community at Horus University. We provide a comprehensive ecosystem for students to master data structures, algorithms, and problem-solving skills. Access cutting-edge training sessions, curated study materials, and a collaborative environment designed to foster excellence. Whether you are a beginner looking to write your first line of code or an advanced programmer preparing for international collegiate programming contests, our structured roadmap guides you every step of the way. Join a vibrant network of peers and mentors dedicated to pushing the boundaries of what is possible in computer science and algorithmic thinking.',
       requestQuote: 'Join Training',
       exploreSolutions: 'Explore Resources',
       stats: {
@@ -49,7 +49,7 @@ export const translations = {
     services: {
       sectionTag: 'Our Resources',
       title: 'Resources built for competitive programming',
-      description: 'Comprehensive learning materials, practice problems, and training sessions — designed to take you from beginner to ICPC competitor.',
+      description: 'Our platform offers a diverse range of resources meticulously tailored for competitive programming enthusiasts. Dive into our extensive library of recorded sessions, interactive quizzes, and challenging problem sets sourced from top platforms like Codeforces and LeetCode. We believe in practical, hands-on learning, which is why our curriculum focuses on real-world application and contest simulations. From mastering basic syntax to tackling complex dynamic programming challenges, our resources are designed to accelerate your growth and prepare you for the rigors of the ICPC circuit.',
       solutions: [
         {
           title: 'Session Library',
@@ -67,7 +67,7 @@ export const translations = {
     network: {
       sectionTag: 'Learning Path',
       title: 'Your journey to ICPC',
-      description: 'Structured roadmap from fundamentals to advanced competitive programming. Progress through levels with guided learning.',
+      description: 'Embark on a clearly defined learning path that takes you from the fundamentals of programming to advanced algorithmic concepts. Our three-stage roadmap—Fundamentals, Problem Solving, and Competition Ready—ensures a logical progression of skills. Start with syntax and logic, move on to mastering sophisticated data structures, and finally, hone your competitive edge with mock contests and advanced strategy sessions. We track your progress and provide the guidance needed to ensure you are always moving forward towards your goal of becoming a top-tier competitive programmer.',
       stats: {
         countries: 'Topics',
         offices: 'Problems',

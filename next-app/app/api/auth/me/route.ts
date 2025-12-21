@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { query } from '@/lib/db';
+import { decrypt } from '@/lib/crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
 
@@ -68,23 +69,57 @@ export async function GET(request: NextRequest) {
         }
 
         // Fallback: Try to find application by Email if not found by ID
+        // Emails are encrypted, so we need to decrypt and compare
         if (!profile && user.email) {
-            const appResult = await query(
-                'SELECT * FROM applications WHERE email = $1 ORDER BY id DESC LIMIT 1',
-                [user.email]
-            );
+            const appResult = await query('SELECT * FROM applications');
+            const normalizedEmail = user.email.toLowerCase();
 
-            if (appResult.rows.length > 0) {
-                profile = appResult.rows[0];
-
-                // Optional: Update the user's application_id for future faster lookups
-                // await query('UPDATE users SET application_id = $1 WHERE id = $2', [profile.id, user.id]);
+            for (const app of appResult.rows) {
+                if (app.email) {
+                    try {
+                        const decryptedEmail = decrypt(app.email);
+                        if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
+                            profile = app;
+                            // Update user's application_id for faster future lookups
+                            await query('UPDATE users SET application_id = $1 WHERE id = $2', [app.id, user.id]);
+                            break;
+                        }
+                    } catch (decryptErr) {
+                        // If decryption fails, try direct comparison (legacy unencrypted data)
+                        if (app.email.toLowerCase() === normalizedEmail) {
+                            profile = app;
+                            await query('UPDATE users SET application_id = $1 WHERE id = $2', [app.id, user.id]);
+                            break;
+                        }
+                    }
+                }
             }
         }
 
         // If no profile found at all, initialize empty object
         if (!profile) {
             profile = {};
+        }
+
+        // Decrypt encrypted fields from applications table
+        // These fields may be encrypted if updated via update-profile endpoint
+        if (profile.telegram_username) {
+            try {
+                const decrypted = decrypt(profile.telegram_username);
+                if (decrypted) profile.telegram_username = decrypted;
+            } catch (e) { /* Already plaintext, keep as-is */ }
+        }
+        if (profile.codeforces_profile) {
+            try {
+                const decrypted = decrypt(profile.codeforces_profile);
+                if (decrypted) profile.codeforces_profile = decrypted;
+            } catch (e) { /* Already plaintext, keep as-is */ }
+        }
+        if (profile.leetcode_profile) {
+            try {
+                const decrypted = decrypt(profile.leetcode_profile);
+                if (decrypted) profile.leetcode_profile = decrypted;
+            } catch (e) { /* Already plaintext, keep as-is */ }
         }
 
         // Merge/Override specific fields logic

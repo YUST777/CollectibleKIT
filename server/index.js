@@ -81,6 +81,10 @@ const initDB = async () => {
             );
             CREATE INDEX IF NOT EXISTS idx_login_logs_user_id ON login_logs(user_id);
             CREATE INDEX IF NOT EXISTS idx_login_logs_logged_in_at ON login_logs(logged_in_at);
+            
+            -- Enable RLS for security
+            ALTER TABLE IF EXISTS password_resets ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE IF EXISTS login_logs ENABLE ROW LEVEL SECURITY;
         `);
     console.log('✓ Password resets table initialized');
     console.log('✓ Login logs table initialized');
@@ -93,17 +97,26 @@ const initDB = async () => {
 // Trust proxy for rate limiting to work correctly behind Nginx
 app.set('trust proxy', 1);
 
-// HTTPS enforcement middleware (production only)
+app.disable('x-powered-by');
+
+// HTTPS and WWW enforcement middleware (production only)
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
-    // Check if request is secure (HTTPS)
+    const host = req.headers.host || '';
+    const isWww = host.startsWith('www.');
     const isSecure = req.secure ||
       req.headers['x-forwarded-proto'] === 'https' ||
       req.headers['x-forwarded-ssl'] === 'on';
 
+    // Redirect WWW to Non-WWW (Canonical Domain)
+    if (isWww) {
+      const newHost = host.slice(4); // Remove 'www.'
+      return res.redirect(301, `https://${newHost}${req.url}`);
+    }
+
     // Redirect HTTP to HTTPS
     if (!isSecure && req.method === 'GET') {
-      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+      return res.redirect(301, `https://${host}${req.url}`);
     }
 
     // Set HSTS header

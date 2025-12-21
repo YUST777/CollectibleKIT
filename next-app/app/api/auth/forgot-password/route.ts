@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { query } from '@/lib/db';
+import { sendPasswordResetEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
     try {
@@ -35,9 +36,13 @@ export async function POST(request: NextRequest) {
             [normalizedEmail, tokenHash, expiresAt]
         );
 
-        // In production, send email here
-        // For now, just log the token for testing
-        console.log(`Password reset token for ${normalizedEmail}: ${resetToken}`);
+        // Send password reset email
+        const emailSent = await sendPasswordResetEmail(normalizedEmail, resetToken);
+
+        if (!emailSent) {
+            console.error(`Failed to send password reset email to ${normalizedEmail}`);
+            // Still return success for security (don't reveal if email exists)
+        }
 
         return NextResponse.json({
             success: true,

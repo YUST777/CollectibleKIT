@@ -1,43 +1,65 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, LogIn, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import Providers from '@/components/Providers';
 
-function LoginContent() {
+export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const isSubmittingRef = useRef(false);
+    const hasRedirectedRef = useRef(false);
 
-    const { login, isAuthenticated } = useAuth();
+    const { login, isAuthenticated, loading: authLoading } = useAuth();
     const router = useRouter();
 
+    // Only redirect if already authenticated AND auth is done loading
     useEffect(() => {
-        if (isAuthenticated) {
+        if (!authLoading && isAuthenticated && !hasRedirectedRef.current) {
+            hasRedirectedRef.current = true;
             router.replace('/dashboard');
         }
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, authLoading, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Prevent multiple rapid submissions
+        if (loading || isSubmittingRef.current) {
+            return;
+        }
+
+        isSubmittingRef.current = true;
         setError('');
         setLoading(true);
 
         try {
             await login(email, password);
-            router.push('/dashboard');
+            // Don't redirect here - let the useEffect handle it when isAuthenticated updates
+            hasRedirectedRef.current = true;
+            router.replace('/dashboard');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed');
+            isSubmittingRef.current = false;
         } finally {
             setLoading(false);
         }
     };
+
+    // Show loading state while auth is initializing
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <Loader2 className="animate-spin text-[#d59928]" size={48} />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center px-4 relative overflow-hidden">
@@ -161,10 +183,3 @@ function LoginContent() {
     );
 }
 
-export default function Login() {
-    return (
-        <Providers>
-            <LoginContent />
-        </Providers>
-    );
-}

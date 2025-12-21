@@ -3,10 +3,10 @@
  * "Ahmed Mohamed Ebrahim" -> "Ahmed Mohamed"
  * "احمد محمد ابراهيم" -> "احمد محمد"
  */
-export function getDisplayName(fullName: string | null | undefined): string {
-    if (!fullName) return 'User';
+export function getDisplayName(fullName: string | null | undefined): string | undefined {
+    if (!fullName || !fullName.trim()) return undefined;
     const parts = fullName.trim().split(/\s+/);
-    return parts.slice(0, 2).join(' ') || 'User';
+    return parts.slice(0, 2).join(' ');
 }
 
 /**

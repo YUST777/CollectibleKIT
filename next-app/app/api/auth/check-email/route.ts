@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { decrypt } from '@/lib/crypto';
 
 export async function POST(request: NextRequest) {
     try {
@@ -11,13 +12,33 @@ export async function POST(request: NextRequest) {
 
         const normalizedEmail = email.trim().toLowerCase();
 
-        // Check if email exists in applications
-        const appResult = await query(
-            'SELECT id, name, email FROM applications WHERE email = $1',
-            [normalizedEmail]
-        );
+        // Emails are encrypted in the database, so we need to fetch all and decrypt to compare
+        const appResult = await query('SELECT id, name, email FROM applications');
 
-        if (appResult.rows.length === 0) {
+        let applicationId = null;
+        let applicationName = null;
+
+        for (const app of appResult.rows) {
+            if (app.email) {
+                try {
+                    const decryptedEmail = decrypt(app.email);
+                    if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
+                        applicationId = app.id;
+                        applicationName = app.name;
+                        break;
+                    }
+                } catch (decryptErr) {
+                    // If decryption fails, try direct comparison (for unencrypted legacy data)
+                    if (app.email.toLowerCase() === normalizedEmail) {
+                        applicationId = app.id;
+                        applicationName = app.name;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!applicationId) {
             return NextResponse.json({ exists: false, hasAccount: false });
         }
 
@@ -30,7 +51,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             exists: true,
             hasAccount: userResult.rows.length > 0,
-            name: appResult.rows[0].name
+            name: applicationName
         });
     } catch (error) {
         console.error('Check email error:', error);

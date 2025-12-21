@@ -242,20 +242,10 @@ function ApplicationFormContent() {
 
             if (response.ok) {
                 setStatus('success');
-                setFormData({
-                    name: '',
-                    faculty: 'ai',
-                    id: '',
-                    nationalId: '',
-                    studentLevel: '',
-                    telephone: '',
-                    hasLaptop: '',
-                    codeforces: '',
-                    leetcode: '',
-                    email: '',
-                });
-                setCurrentStep(1);
-                setErrors({});
+                // Redirect to register page after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/register';
+                }, 2000);
             } else {
                 setStatus('error');
                 if (data.error) {
@@ -702,8 +692,8 @@ function ApplicationFormContent() {
                             <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
                                 <p className="text-green-300 text-sm font-medium">
                                     {language === 'ar'
-                                        ? 'تم إرسال طلبك بنجاح! سنتواصل معك قريباً.'
-                                        : 'Application submitted successfully! We will contact you soon.'}
+                                        ? '✅ تم إرسال طلبك بنجاح! جاري تحويلك لإنشاء حسابك...'
+                                        : '✅ Application submitted! Redirecting you to create your account...'}
                                 </p>
                             </div>
                         )}
@@ -715,9 +705,5 @@ function ApplicationFormContent() {
 }
 
 export default function ApplicationForm() {
-    return (
-        <Providers>
-            <ApplicationFormContent />
-        </Providers>
-    );
+    return <ApplicationFormContent />;
 }

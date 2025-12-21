@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://icpchue.xyz'),
   title: "ICPC HUE - First ICPC Community in Hours University",
   description:
-    "Competitive programming resources, training materials, and community collaboration tools. Join our training program and become part of the first ICPC community in Hours University.",
+    "Join the first ICPC community at Horus University. Access comprehensive training sessions, video episodes, and competitive programming resources to master algorithms.",
   keywords: [
     "ICPC",
     "competitive programming",
@@ -53,18 +53,48 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    nocache: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
   icons: {
     icon: [
-      { url: '/icpchue-logo.webp?v=3', type: 'image/webp' },
+      { url: '/favicon.webp', sizes: '32x32', type: 'image/webp' },
+      { url: '/icpchue-logo.webp', type: 'image/webp' },
     ],
     apple: [
-      { url: '/icpchue-logo.webp?v=3', type: 'image/webp' },
+      { url: '/icpchue-logo.webp', type: 'image/webp' },
     ],
-    shortcut: ['/icpchue-logo.webp?v=3'],
+    shortcut: ['/favicon.webp'],
   },
   manifest: "/manifest.json",
+  alternates: {
+    canonical: 'https://icpchue.xyz',
+    languages: {
+      'en-US': 'https://icpchue.xyz',
+    },
+  },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'ICPC HUE',
+  url: 'https://icpchue.xyz',
+  logo: 'https://icpchue.xyz/icpchue-logo.webp',
+  sameAs: [
+    'https://www.facebook.com/ICPC.HUE',
+    'https://www.linkedin.com/company/icpc-hue'
+  ],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    email: 'icpchue@hours.edu',
+    contactType: 'customer support'
+  }
 };
 
 export const viewport: Viewport = {
@@ -84,6 +114,10 @@ export default function RootLayout({
       <body className="antialiased bg-black text-white">
         <Providers>
           <InstallBanner />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
           {children}
         </Providers>
       </body>

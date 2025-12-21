@@ -1,64 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { decrypt } from '@/lib/crypto';
 import jwt from 'jsonwebtoken';
+import { scrapeCodeforces, extractUsername } from '@/lib/codeforces';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY || '';
-
-function extractUsername(profileUrl: string, platform: string): string | null {
-    if (!profileUrl) return null;
-
-    try {
-        // If it's already just a username (no URL)
-        if (!profileUrl.includes('/') && !profileUrl.includes('.')) {
-            return profileUrl.trim();
-        }
-
-        // Extract from URL
-        const url = new URL(profileUrl.includes('://') ? profileUrl : `https://${profileUrl}`);
-        const parts = url.pathname.split('/').filter(Boolean);
-
-        if (platform === 'codeforces') {
-            // codeforces.com/profile/username
-            const profileIndex = parts.indexOf('profile');
-            if (profileIndex !== -1 && parts[profileIndex + 1]) {
-                return parts[profileIndex + 1];
-            }
-            // Direct username in path
-            if (parts.length > 0) return parts[parts.length - 1];
-        }
-
-        return parts[parts.length - 1] || null;
-    } catch {
-        return profileUrl.trim();
-    }
-}
-
-async function scrapeCodeforces(username: string): Promise<any | null> {
-    try {
-        const response = await fetch(`https://codeforces.com/api/user.info?handles=${username}`);
-        const data = await response.json();
-
-        if (data.status === 'OK' && data.result && data.result[0]) {
-            const user = data.result[0];
-            return {
-                handle: user.handle,
-                rating: user.rating || 0,
-                maxRating: user.maxRating || 0,
-                rank: user.rank || 'unrated',
-                maxRank: user.maxRank || 'unrated',
-                contribution: user.contribution || 0,
-                friendOfCount: user.friendOfCount || 0,
-                lastOnlineTimeSeconds: user.lastOnlineTimeSeconds,
-                registrationTimeSeconds: user.registrationTimeSeconds
-            };
-        }
-        return null;
-    } catch (error) {
-        console.error('Codeforces API error:', error);
-        return null;
-    }
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -120,3 +65,4 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }
+

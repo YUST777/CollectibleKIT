@@ -30,9 +30,7 @@ function SessionLibraryContent() {
                     <h1 className="text-4xl sm:text-6xl font-black mb-6 tracking-tight">
                         Session <span className="text-[#d59928]">Library</span>
                     </h1>
-                    <p className="text-lg text-white/60 leading-relaxed">
-                        Access our complete collection of training sessions, video episodes, and detailed study materials designed to master competitive programming.
-                    </p>
+
                 </div>
 
                 {/* Grid */}

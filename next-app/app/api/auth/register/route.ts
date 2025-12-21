@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { query } from '@/lib/db';
+import { decrypt } from '@/lib/crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
 const JWT_EXPIRES_IN = '7d';
@@ -27,17 +28,35 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'An account with this email already exists' }, { status: 400 });
         }
 
-        // Check if application exists
-        const appResult = await query(
-            'SELECT id, name FROM applications WHERE email = $1',
-            [normalizedEmail]
-        );
+        // Check if application exists (emails are encrypted, so decrypt and compare)
+        const appResult = await query('SELECT id, name, email FROM applications');
 
-        if (appResult.rows.length === 0) {
-            return NextResponse.json({ error: 'Application not found. Please apply first.' }, { status: 400 });
+        let applicationId = null;
+        let applicationName = null;
+
+        for (const app of appResult.rows) {
+            if (app.email) {
+                try {
+                    const decryptedEmail = decrypt(app.email);
+                    if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
+                        applicationId = app.id;
+                        applicationName = app.name;
+                        break;
+                    }
+                } catch (decryptErr) {
+                    // If decryption fails, try direct comparison (for unencrypted legacy data)
+                    if (app.email.toLowerCase() === normalizedEmail) {
+                        applicationId = app.id;
+                        applicationName = app.name;
+                        break;
+                    }
+                }
+            }
         }
 
-        const application = appResult.rows[0];
+        if (!applicationId) {
+            return NextResponse.json({ error: 'Application not found. Please apply first.' }, { status: 400 });
+        }
 
         // Hash password
         const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
@@ -47,7 +66,7 @@ export async function POST(request: NextRequest) {
             `INSERT INTO users (email, password_hash, application_id, is_verified, created_at)
        VALUES ($1, $2, $3, true, NOW())
        RETURNING id, email`,
-            [normalizedEmail, passwordHash, application.id]
+            [normalizedEmail, passwordHash, applicationId]
         );
 
         const user = userResult.rows[0];

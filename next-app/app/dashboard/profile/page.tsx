@@ -17,6 +17,7 @@ export default function ProfilePage() {
     const [saved, setSaved] = useState(false);
     const [isUserInfoOpen, setUserInfoOpen] = useState(false);
     const [approvalProgress, setApprovalProgress] = useState(0);
+    const [imageError, setImageError] = useState(false);
 
     const openEditModal = (field: string, currentValue: string) => { setEditField(field); setInputValue(currentValue || ''); setShowEditModal(true); };
 
@@ -164,18 +165,15 @@ export default function ProfilePage() {
                                 {/* Avatar */}
                                 <div className="w-24 h-24 rounded-2xl bg-[#121212] p-1.5 shadow-2xl relative group-hover:scale-105 transition-transform duration-500 ease-out">
                                     <div className="w-full h-full rounded-xl bg-gradient-to-br from-[#E8C15A] to-[#B89830] flex items-center justify-center text-3xl font-bold text-black overflow-hidden relative">
-                                        {profile.telegram_username ? (
+                                        {profile.telegram_username && !imageError ? (
                                             <img
                                                 src={`https://unavatar.io/telegram/${profile.telegram_username}`}
                                                 alt={profile.name}
                                                 className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                                                }}
+                                                onError={() => setImageError(true)}
                                             />
                                         ) : null}
-                                        <span className={`${profile.telegram_username ? 'hidden' : ''} absolute inset-0 flex items-center justify-center`}>
+                                        <span className={`${profile.telegram_username && !imageError ? 'hidden' : ''} absolute inset-0 flex items-center justify-center`}>
                                             {profile.name?.charAt(0).toUpperCase() || 'U'}
                                         </span>
                                     </div>

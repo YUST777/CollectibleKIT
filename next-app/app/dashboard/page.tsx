@@ -8,12 +8,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getDisplayName } from '@/lib/utils';
 import {
     BookOpen,
-    ChevronLeft,
     Flame,
     Target,
     Trophy,
     Zap,
-    ArrowRight,
     Calendar,
     MoreHorizontal
 } from 'lucide-react';
@@ -47,8 +45,20 @@ function StatCard({ icon: Icon, title, value, subtext, color = "text-[#E8C15A]" 
 }
 
 function WelcomeBanner({ name }: { name: string }) {
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    const [greeting, setGreeting] = useState('');
+
+    useEffect(() => {
+        const hour = new Date().getHours();
+        setGreeting(hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening');
+    }, []);
+
+    // Prevent hydration mismatch by rendering a generic greeting or nothing initially
+    // Or just render the container and wait for client.
+    // Here we'll start empty to avoid flash of wrong time, or use a default.
+    // Since it's behind a loading state usually, empty is fine, but name is passed.
+    if (!greeting) return (
+        <div className="bg-gradient-to-r from-[#E8C15A] to-[#B89830] rounded-2xl p-6 md:p-8 relative overflow-hidden mb-6 h-[104px] animate-pulse"></div>
+    );
 
     return (
         <div className="bg-gradient-to-r from-[#E8C15A] to-[#B89830] rounded-2xl p-6 md:p-8 relative overflow-hidden mb-6">
@@ -64,12 +74,20 @@ function WelcomeBanner({ name }: { name: string }) {
 }
 
 function ConsistencyCalendar({ data }: { data: Record<string, number> }) {
-    // Generate last 28 days
-    const days = Array.from({ length: 28 }).map((_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (27 - i)); // Go back from today
-        return d.toISOString().split('T')[0];
-    });
+    const [days, setDays] = useState<string[]>([]);
+
+    useEffect(() => {
+        const generatedDays = Array.from({ length: 28 }).map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (27 - i)); // Go back from today
+            return d.toISOString().split('T')[0];
+        });
+        setDays(generatedDays);
+    }, []);
+
+    if (days.length === 0) return (
+        <div className="bg-[#121212] rounded-xl border border-white/5 p-5 h-[200px] animate-pulse"></div>
+    );
 
     return (
         <div className="bg-[#121212] rounded-xl border border-white/5 p-5">
@@ -145,15 +163,29 @@ export default function DashboardHome() {
 
                     // --- Client-Side Stats Calculation ---
 
+                    // Helper to safely parse date
+                    const safeGetDate = (dateStr: any) => {
+                        if (!dateStr) return null;
+                        try {
+                            const d = new Date(dateStr);
+                            // Check if valid date
+                            if (isNaN(d.getTime())) return null;
+                            return d.toISOString().split('T')[0];
+                        } catch (e) {
+                            return null;
+                        }
+                    };
+
                     // 1. Total Problems Solved (Unique)
                     const uniqueProblems = new Set(submissions.map((s: any) => `${s.sheet_name}/${s.problem_name}`));
                     const totalSolved = uniqueProblems.size;
 
                     // 2. Streak Calculation
-                    const uniqueDates = Array.from(new Set(submissions.map((s: any) => {
-                        const date = new Date(s.submitted_at);
-                        return date.toISOString().split('T')[0]; // YYYY-MM-DD
-                    }))).sort().reverse() as string[];
+                    const validDates = submissions
+                        .map((s: any) => safeGetDate(s.submitted_at))
+                        .filter((d: string | null) => d !== null) as string[];
+
+                    const uniqueDates = Array.from(new Set(validDates)).sort().reverse();
 
                     let streak = 0;
                     const today = new Date().toISOString().split('T')[0];
@@ -188,8 +220,10 @@ export default function DashboardHome() {
                     // 3. Consistency Map
                     const consistencyMap: Record<string, number> = {};
                     submissions.forEach((s: any) => {
-                        const date = new Date(s.submitted_at).toISOString().split('T')[0];
-                        consistencyMap[date] = (consistencyMap[date] || 0) + 1;
+                        const date = safeGetDate(s.submitted_at);
+                        if (date) {
+                            consistencyMap[date] = (consistencyMap[date] || 0) + 1;
+                        }
                     });
 
                     // 4. Quiz 1 Progress
@@ -234,7 +268,7 @@ export default function DashboardHome() {
                 <WelcomeBanner name={displayName} />
 
                 {/* Stats Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                     <StatCard
                         icon={Flame}
                         title="Day Streak"
@@ -249,13 +283,15 @@ export default function DashboardHome() {
                         subtext="Total unique AC"
                         color="text-blue-500"
                     />
-                    <StatCard
-                        icon={Trophy}
-                        title="Current Rank"
-                        value={rank}
-                        subtext={rating !== 'N/A' ? `${rating} Rating` : 'Not rated yet'}
-                        color="text-[#E8C15A]"
-                    />
+                    <div className="col-span-2 md:col-span-1">
+                        <StatCard
+                            icon={Trophy}
+                            title="Current Rank"
+                            value={rank}
+                            subtext={rating !== 'N/A' ? `${rating} Rating` : 'Not rated yet'}
+                            color="text-[#E8C15A]"
+                        />
+                    </div>
                 </div>
 
                 {/* Core Activities */}
@@ -346,3 +382,4 @@ export default function DashboardHome() {
         </>
     );
 }
+

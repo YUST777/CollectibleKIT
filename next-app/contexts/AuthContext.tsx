@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { CACHE_VERSION } from '@/lib/cache-version';
 
 // Types
 interface User {
@@ -111,8 +112,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (storedToken) {
                 setToken(storedToken);
                 try {
-                    const response = await fetch('/api/auth/me', {
-                        headers: { Authorization: `Bearer ${storedToken}` },
+                    const response = await fetch(`/api/auth/me?_v=${CACHE_VERSION}`, {
+                        headers: {
+                            Authorization: `Bearer ${storedToken}`,
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        },
                     });
 
                     if (response.ok) {
@@ -143,14 +148,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (!currentToken) return; // Don't set loading false here, it's global reload
 
         try {
-            const response = await fetch('/api/auth/me', {
-                headers: { Authorization: `Bearer ${currentToken}` },
+            const response = await fetch(`/api/auth/me?_v=${CACHE_VERSION}`, {
+                headers: {
+                    Authorization: `Bearer ${currentToken}`,
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                },
             });
 
             if (response.ok) {
                 const data = await response.json();
                 setUser(data.user);
                 setProfile(data.profile);
+
+                // Smart Refresh: Check if Codeforces data is stale (> 1 hour)
+                const cfData = data.profile?.codeforces_data;
+                if (cfData) {
+                    const lastUpdated = cfData.lastUpdated ? new Date(cfData.lastUpdated).getTime() : 0;
+                    const oneHour = 60 * 60 * 1000;
+                    const now = Date.now();
+
+                    if (!lastUpdated || (now - lastUpdated > oneHour)) {
+                        console.log('[AuthContext] Codeforces data stale, refreshing in background...');
+                        // Fire and forget - don't await
+                        fetch('/api/user/refresh-cf', {
+                            method: 'POST',
+                            headers: {
+                                Authorization: `Bearer ${currentToken}`
+                            }
+                        }).catch(err => console.error('Background refresh failed:', err));
+                    }
+                }
             } else if (response.status === 401) {
                 logout();
             }
@@ -175,6 +203,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         storeToken(data.token);
         setToken(data.token);
         setUser(data.user);
+
+        // Fetch full profile immediately after login
+        await fetchUserProfile();
 
         return data;
     };

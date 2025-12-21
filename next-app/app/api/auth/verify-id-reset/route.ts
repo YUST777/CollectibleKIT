@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { decrypt } from '@/lib/crypto';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 
 export async function POST(req: NextRequest) {
     try {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
 
         // 4. Generate temporary reset token (30 mins)
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const tokenHash = await bcrypt.hash(resetToken, 10); // Use bcrypt to match reset-password verification
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
         // 5. Store in DB

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { query } from '@/lib/db';
-import { encrypt } from '@/lib/crypto';
+import { scrapeCodeforces, extractUsername } from '@/lib/codeforces';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
 
@@ -50,12 +50,28 @@ export async function POST(request: NextRequest) {
             await query('UPDATE users SET telegram_username = $1 WHERE id = $2', [telegram_username, userId]);
         }
 
-        // Update codeforces_profile in users table as well (plaintext for API use)
+        // Update codeforces_profile in users table
+        let scrapedData = null;
         if (codeforces_profile !== undefined) {
             await query('UPDATE users SET codeforces_handle = $1 WHERE id = $2', [codeforces_profile, userId]);
+
+            // Auto-scrape on save (Smart Refresh)
+            if (codeforces_profile && codeforces_profile.trim() !== '') {
+                const username = extractUsername(codeforces_profile, 'codeforces');
+                if (username) {
+                    console.log(`Auto-scraping Codeforces for updated profile: ${username}`);
+                    scrapedData = await scrapeCodeforces(username);
+                    if (scrapedData) {
+                        await query(
+                            'UPDATE users SET codeforces_data = $1 WHERE id = $2',
+                            [JSON.stringify(scrapedData), userId]
+                        );
+                    }
+                }
+            }
         }
 
-        // Update application if exists - encrypt sensitive data
+        // Update application if exists
         if (applicationId) {
             const updates: string[] = [];
             const values: any[] = [];
@@ -63,15 +79,15 @@ export async function POST(request: NextRequest) {
 
             if (telegram_username !== undefined) {
                 updates.push(`telegram_username = $${paramIndex++}`);
-                values.push(encrypt(telegram_username)); // Encrypt
+                values.push(telegram_username);
             }
             if (codeforces_profile !== undefined) {
                 updates.push(`codeforces_profile = $${paramIndex++}`);
-                values.push(encrypt(codeforces_profile)); // Encrypt
+                values.push(codeforces_profile);
             }
             if (leetcode_profile !== undefined) {
                 updates.push(`leetcode_profile = $${paramIndex++}`);
-                values.push(encrypt(leetcode_profile)); // Encrypt
+                values.push(leetcode_profile);
             }
 
             if (updates.length > 0) {
@@ -83,7 +99,11 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        return NextResponse.json({ success: true, message: 'Profile updated successfully' });
+        return NextResponse.json({
+            success: true,
+            message: 'Profile updated successfully',
+            codeforcesData: scrapedData
+        });
     } catch (error) {
         console.error('Error updating profile:', error);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
