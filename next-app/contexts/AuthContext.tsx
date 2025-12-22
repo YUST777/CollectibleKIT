@@ -11,6 +11,7 @@ interface User {
     telegram_username?: string;
     is_public?: boolean;
     role?: string;
+    profile_visibility?: 'public' | 'private';
 }
 
 interface Profile {

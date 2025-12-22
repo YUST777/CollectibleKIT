@@ -39,8 +39,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const getActivePage = () => {
         if (pathname === '/dashboard' || pathname === '/dashboard/') return 'Dashboard';
         if (pathname === '/dashboard/profile') return 'My Profile';
-        if (pathname === '/dashboard/sessions') return 'Sessions';
-        if (pathname === '/dashboard/sheets') return 'Training Sheets';
+        if (pathname === '/dashboard/sessions' || pathname.startsWith('/dashboard/sessions/')) return 'Sessions';
+        if (pathname === '/dashboard/sheets' || pathname.startsWith('/dashboard/sheets/')) return 'Training Sheets';
         if (pathname === '/dashboard/leaderboard') return 'Leaderboard';
         if (pathname === '/dashboard/achievements') return 'Achievements';
         if (pathname === '/dashboard/news') return 'Team News';
@@ -86,6 +86,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                         <nav className="flex flex-col space-y-1">
                             <button onClick={() => router.push('/')} className="flex items-center gap-3 p-3 rounded-lg text-[#A0A0A0] hover:bg-white/5 hover:text-[#F2F2F2] transition-colors w-full text-left">
                                 <Home size={18} /><span className="font-medium text-sm">Home Website</span>
+                            </button>
+                            <button onClick={() => handleNav('/dashboard/settings')} className="flex items-center gap-3 p-3 rounded-lg text-[#A0A0A0] hover:bg-white/5 hover:text-[#F2F2F2] transition-colors w-full text-left">
+                                <Settings size={18} /><span className="font-medium text-sm">Settings</span>
                             </button>
                             <div className="h-px bg-white/5 my-1" />
                             <button onClick={handleLogout} className="flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors w-full text-left">

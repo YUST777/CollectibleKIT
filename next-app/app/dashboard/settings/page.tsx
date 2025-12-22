@@ -1,24 +1,60 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDisplayName } from '@/lib/utils';
-import { ChevronLeft, Copy, Check, Settings, User, Mail, Shield } from 'lucide-react';
+import { ChevronLeft, Copy, Check, Settings, User, Mail, Shield, Loader2 } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, profile: authProfile } = useAuth();
     const profile = authProfile || { name: user?.email?.split('@')[0] || 'User' };
     const [copied, setCopied] = useState(false);
+    const [showOnLeaderboard, setShowOnLeaderboard] = useState(true);
+    const [savingPrivacy, setSavingPrivacy] = useState(false);
 
     // ALWAYS use email prefix for profile URL (student_id in DB may have user typos)
     const studentId = user?.email?.split('@')[0] || 'unknown';
     const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/profile/${studentId}` : '';
 
+    // Load current privacy setting on mount
+    useEffect(() => {
+        if (user?.profile_visibility) {
+            setShowOnLeaderboard(user.profile_visibility === 'public');
+        }
+    }, [user]);
+
     const handleCopy = () => {
         navigator.clipboard.writeText(profileUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handlePrivacyChange = async (checked: boolean) => {
+        setShowOnLeaderboard(checked);
+        setSavingPrivacy(true);
+        try {
+            const token = localStorage.getItem('authToken');
+            const res = await fetch('/api/user/privacy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ visibility: checked ? 'public' : 'private' })
+            });
+
+            if (!res.ok) {
+                // Revert on error
+                setShowOnLeaderboard(!checked);
+                console.error('Failed to update privacy setting');
+            }
+        } catch (error) {
+            setShowOnLeaderboard(!checked);
+            console.error('Error updating privacy:', error);
+        } finally {
+            setSavingPrivacy(false);
+        }
     };
 
     return (
@@ -50,12 +86,31 @@ export default function SettingsPage() {
                     <h3 className="text-lg font-bold text-[#F2F2F2] mb-4 flex items-center gap-2"><Shield size={20} className="text-[#E8C15A]" />Privacy</h3>
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <div><p className="text-sm text-[#F2F2F2]">Show on leaderboard</p><p className="text-xs text-[#666]">Display your name on the public leaderboard</p></div>
-                            <label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" defaultChecked className="sr-only peer" /><div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E8C15A]"></div></label>
+                            <div>
+                                <p className="text-sm text-[#F2F2F2]">Show on leaderboard</p>
+                                <p className="text-xs text-[#666]">Display your name on the public leaderboard (both Codeforces & Sheets)</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {savingPrivacy && <Loader2 size={16} className="animate-spin text-[#E8C15A]" />}
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={showOnLeaderboard}
+                                        onChange={(e) => handlePrivacyChange(e.target.checked)}
+                                        disabled={savingPrivacy}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E8C15A] peer-disabled:opacity-50"></div>
+                                </label>
+                            </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <div><p className="text-sm text-[#F2F2F2]">Public profile</p><p className="text-xs text-[#666]">Allow others to view your profile</p></div>
-                            <label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" defaultChecked className="sr-only peer" /><div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E8C15A]"></div></label>
+                        <div className="p-3 bg-[#1A1A1A] rounded-lg border border-white/5">
+                            <p className="text-xs text-[#666]">
+                                {showOnLeaderboard
+                                    ? '✅ Your profile is public. You appear on leaderboards and can be found by others.'
+                                    : '🔒 Your profile is private. You are hidden from leaderboards.'
+                                }
+                            </p>
                         </div>
                     </div>
                 </div>

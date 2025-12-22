@@ -12,14 +12,14 @@ export default function SessionsPage() {
         {
             title: "Approval Camp",
             description: "Fundamental C++ concepts including Data Types, I/O, Control Flow, and Loops.",
-            image: '/images/approvalcamp.webp',
+            image: '/images/lessons/approval/approvalcamp.webp',
             sessions: [
                 {
                     id: 1,
                     number: '01',
                     title: 'Data Types & I/O',
                     desc: 'Fundamentals of C++ Input/Output streams, arithmetic operators, and understanding basic data types and their limits.',
-                    thumbnail: '/images/datatypes.webp'
+                    thumbnail: '/images/lessons/approval/datatypes.webp'
                 },
                 // Session 02 is skipped as per user request
                 {
@@ -27,28 +27,28 @@ export default function SessionsPage() {
                     number: '03',
                     title: 'Control Flow',
                     desc: 'Mastering decision making with if-else statements, switch cases, and understanding program flow control.',
-                    thumbnail: '/images/controolflow.webp'
+                    thumbnail: '/images/lessons/approval/control-flow.webp'
                 },
                 {
                     id: 4,
                     number: '04',
                     title: 'Revision',
                     desc: 'Comprehensive review covering all previous topics with 3 practice problems to solidify your understanding.',
-                    thumbnail: '/images/revison.webp'
+                    thumbnail: '/images/lessons/approval/revision.webp'
                 },
             ]
         },
         {
             title: "Winter Camp",
             description: "Advanced topics and algorithms starting with Time Complexity analysis.",
-            image: '/images/wintercamp.webp',
+            image: '/images/lessons/winter/wintercamp.webp',
             sessions: [
                 {
                     id: 5,
                     number: '01',
                     title: 'Time Complexity',
                     desc: 'Introduction to Algorithms, Instructions, and Time Complexity analysis (O(n), O(1), O(n²)).',
-                    thumbnail: '/images/complexicty.webp'
+                    thumbnail: '/images/lessons/winter/complexity.webp'
                 }
             ]
         }

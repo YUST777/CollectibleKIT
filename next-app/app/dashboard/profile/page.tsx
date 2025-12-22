@@ -35,13 +35,12 @@ export default function ProfilePage() {
                     const data = await res.json();
                     const submissions = data.submissions || [];
 
-                    const quiz1Problems = new Set(
+                    const sheet1Problems = new Set(
                         submissions
-                            .filter((s: any) => s.sheet_name && s.sheet_name.includes('Quiz') && s.sheet_name.includes('1'))
+                            .filter((s: any) => (s.sheet_id === 'sheet-1' || (s.sheet_name && s.sheet_name.includes('Sheet 1'))))
                             .map((s: any) => s.problem_name)
                     );
-                    const isQuiz1Complete = quiz1Problems.size >= 3;
-                    setApprovalProgress(isQuiz1Complete ? 1 : 0);
+                    setApprovalProgress(sheet1Problems.size);
                 }
             } catch (err) {
                 console.error('Failed to load stats', err);
@@ -209,15 +208,15 @@ export default function ProfilePage() {
                                     <div className="flex gap-3">
                                         <div className="p-2 md:p-3 bg-[#E8C15A]/10 rounded-lg text-[#E8C15A] shrink-0"><BookOpen size={20} /></div>
                                         <div>
-                                            <h4 className="font-bold text-[#F2F2F2] text-sm md:text-base">Approval Camp</h4>
-                                            <p className="text-xs text-[#A0A0A0]">3 Sessions + 1 Quiz</p>
+                                            <h4 className="font-bold text-[#F2F2F2] text-sm md:text-base">Sheet 1</h4>
+                                            <p className="text-xs text-[#A0A0A0]">Say Hello With C++</p>
                                         </div>
                                     </div>
-                                    <span className="bg-[#E8C15A]/20 text-[#E8C15A] text-xs font-bold px-2 py-1 rounded w-fit">LIVE NOW</span>
+                                    <span className="bg-[#E8C15A]/20 text-[#E8C15A] text-xs font-bold px-2 py-1 rounded w-fit">IN PROGRESS</span>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="flex justify-between text-xs text-[#DCDCDC]"><span>Progress</span><span>{approvalProgress} / 4 Solved</span></div>
-                                    <div className="w-full bg-[#1A1A1A] h-2 rounded-full overflow-hidden border border-white/5"><div className="bg-[#E8C15A] h-full transition-all duration-500" style={{ width: `${(approvalProgress / 4) * 100}%` }}></div></div>
+                                    <div className="flex justify-between text-xs text-[#DCDCDC]"><span>Progress</span><span>{approvalProgress} / 26 Solved</span></div>
+                                    <div className="w-full bg-[#1A1A1A] h-2 rounded-full overflow-hidden border border-white/5"><div className="bg-[#E8C15A] h-full transition-all duration-500" style={{ width: `${(approvalProgress / 26) * 100}%` }}></div></div>
                                 </div>
                             </div>
 

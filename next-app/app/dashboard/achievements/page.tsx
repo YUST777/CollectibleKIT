@@ -74,7 +74,9 @@ export default function AchievementsPage() {
     const codeforcesData = profile?.codeforces_data;
     const codeforcesRating = codeforcesData?.rating ? parseInt(codeforcesData.rating, 10) : null;
     const is500PtsUnlocked = codeforcesRating !== null && codeforcesRating >= 500;
+
     const isInstructorUnlocked = user?.role === 'instructor' || user?.role === 'owner';
+    const isSheet1Unlocked = profile?.sheet_1_solved === true;
 
     const achievements = [
         {
@@ -91,6 +93,14 @@ export default function AchievementsPage() {
             title: 'Approval Camp',
             description: 'Complete all sessions of the Approval Camp',
             unlocked: false,
+            rarity: 'rare' as const
+        },
+        {
+            id: 'sheet-1',
+            modelPath: '/3d/sheet1.glb',
+            title: 'Sheet 1 Solved',
+            description: 'Solve all problems in Sheet 1',
+            unlocked: isSheet1Unlocked,
             rarity: 'rare' as const
         },
         {

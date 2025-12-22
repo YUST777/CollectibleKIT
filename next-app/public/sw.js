@@ -4,7 +4,7 @@ const urlsToCache = [
   '/',
   '/dashboard',
   '/icpchue-logo.webp',
-  '/images/navlogo.webp'
+  '/images/ui/navlogo.webp'
 ];
 
 // Install service worker and cache resources

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { trainingSheets } from '@/lib/problems';
 
 export async function GET(
     request: NextRequest,
@@ -78,6 +79,21 @@ export async function GET(
         };
 
         // Calculate achievements
+        const sheet1 = trainingSheets['sheet-1'];
+        let isSheet1Unlocked = false;
+
+        if (sheet1) {
+            const totalProblems = sheet1.totalProblems;
+            const solvedResult = await query(
+                `SELECT COUNT(DISTINCT problem_id) as solved_count 
+                  FROM training_submissions 
+                  WHERE user_id = $1 AND sheet_id = $2 AND verdict = 'Accepted'`,
+                [user.id, 'sheet-1']
+            );
+            const solvedCount = parseInt(solvedResult.rows[0]?.solved_count || '0');
+            isSheet1Unlocked = solvedCount >= totalProblems;
+        }
+
         const achievements = [
             {
                 id: 'welcome',
@@ -97,11 +113,18 @@ export async function GET(
                 rarity: 'rare',
                 unlocked: !!(codeforcesData && (codeforcesData as any).rating >= 500),
             },
+
             {
                 id: 'instructor',
                 name: 'Instructor',
                 rarity: 'legendary',
                 unlocked: user.role === 'instructor' || user.role === 'owner',
+            },
+            {
+                id: 'sheet-1',
+                name: 'Sheet 1 Solved',
+                rarity: 'rare',
+                unlocked: isSheet1Unlocked,
             }
         ];
 

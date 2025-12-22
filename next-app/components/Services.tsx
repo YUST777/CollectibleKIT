@@ -10,10 +10,10 @@ export default function Services() {
     const { language } = useLanguage();
     const t = translations[language].services;
     const images = [
-        '/images/modern-digital-library.webp',
-        '/images/sleek-coding.webp',
-        '/images/coding-dashboard.webp',
-        '/images/modern-coding-collaboration.webp',
+        '/images/ui/modern-digital-library.webp',
+        '/images/ui/sleek-coding.webp',
+        '/images/ui/coding-dashboard.webp',
+        '/images/ui/modern-coding-collaboration.webp',
     ];
 
     return (

@@ -30,7 +30,7 @@ export default function Navbar() {
                         {/* Logo */}
                         <Link href="/" className="flex items-center shrink-0 opacity-90 hover:opacity-100 transition-opacity">
                             <Image
-                                src="/images/navlogo.webp"
+                                src="/images/ui/navlogo.webp"
                                 alt="ICPC HUE Logo"
                                 width={180}
                                 height={60}

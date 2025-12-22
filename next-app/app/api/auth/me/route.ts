@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { query } from '@/lib/db';
 import { decrypt } from '@/lib/crypto';
+import { trainingSheets } from '@/lib/problems';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
 
@@ -147,6 +148,27 @@ export async function GET(request: NextRequest) {
             profile.codeforces_profile = user.codeforces_handle;
         }
 
+        // 4. Calculate Sheet 1 Achievement
+        try {
+            const sheet1 = trainingSheets['sheet-1'];
+            if (sheet1) {
+                const totalProblems = sheet1.totalProblems;
+                const solvedResult = await query(
+                    `SELECT COUNT(DISTINCT problem_id) as solved_count 
+                     FROM training_submissions 
+                     WHERE user_id = $1 AND sheet_id = $2 AND verdict = 'Accepted'`,
+                    [user.id, 'sheet-1']
+                );
+                const solvedCount = parseInt(solvedResult.rows[0]?.solved_count || '0');
+                profile.sheet_1_solved = solvedCount >= totalProblems;
+            } else {
+                profile.sheet_1_solved = false;
+            }
+        } catch (err) {
+            console.error('Error calculating Sheet 1 achievement:', err);
+            profile.sheet_1_solved = false;
+        }
+
         return NextResponse.json({
             success: true,
             user: {
@@ -155,7 +177,8 @@ export async function GET(request: NextRequest) {
                 isVerified: user.is_verified,
                 lastLogin: user.last_login_at,
                 createdAt: user.created_at,
-                role: user.role || 'trainee'
+                role: user.role || 'trainee',
+                profile_visibility: user.profile_visibility || 'public'
             },
             profile: {
                 ...profile,

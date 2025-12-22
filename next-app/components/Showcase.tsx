@@ -13,10 +13,10 @@ export default function Showcase() {
 
     // Demo images
     const images = [
-        '/images/futuristic-library.webp',
-        '/images/modern-coding-collaboration.webp',
-        '/images/modern-digital-library.webp',
-        '/images/coding-dashboard.webp',
+        '/images/ui/futuristic-library.webp',
+        '/images/ui/modern-coding-collaboration.webp',
+        '/images/ui/modern-digital-library.webp',
+        '/images/ui/coding-dashboard.webp',
     ];
     const slides = t.slides.map((s, i) => ({ ...s, image: images[i] || images[0] }));
 

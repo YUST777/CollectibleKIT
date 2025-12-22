@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     siteName: "ICPC HUE",
     images: [
       {
-        url: "/images/metadata.webp",
+        url: "/images/ui/metadata.webp",
         width: 1200,
         height: 630,
         alt: "ICPC HUE",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ICPC HUE",
     description: "First ICPC Community in Hours University",
-    images: ["/images/metadata.webp"],
+    images: ["/images/ui/metadata.webp"],
   },
   robots: {
     index: true,
@@ -111,7 +111,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className="antialiased bg-black text-white">
+      <body className="antialiased bg-black text-white" suppressHydrationWarning>
         <Providers>
           <InstallBanner />
           <script

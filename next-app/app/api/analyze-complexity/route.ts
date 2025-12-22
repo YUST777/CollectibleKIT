@@ -1,0 +1,171 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyAuth } from '@/lib/auth';
+import { query } from '@/lib/db';
+
+export async function POST(request: NextRequest) {
+    try {
+        // Clone the request to read body after auth check
+        const clonedRequest = request.clone();
+
+        // Verify user authentication
+        const user = await verifyAuth(request);
+        if (!user) {
+            console.log('User not authenticated');
+            return NextResponse.json({ error: 'Unauthorized - please log in' }, { status: 401 });
+        }
+
+        console.log('User authenticated:', user.id);
+
+        const body = await clonedRequest.json();
+        const { sheetId, problemId } = body;
+
+        console.log('Request body:', { sheetId, problemId });
+
+        if (!sheetId || !problemId) {
+            return NextResponse.json(
+                { error: 'sheetId and problemId are required' },
+                { status: 400 }
+            );
+        }
+
+        // Fetch user's best accepted submission from database
+        const submissionResult = await query(
+            `SELECT source_code, time_ms, memory_kb 
+             FROM training_submissions 
+             WHERE sheet_id = $1 AND problem_id = $2 AND user_id = $3 AND verdict = 'Accepted'
+             ORDER BY time_ms ASC
+             LIMIT 1`,
+            [sheetId, problemId, user.id]
+        );
+
+        if (submissionResult.rows.length === 0) {
+            return NextResponse.json(
+                { error: 'No accepted submission found for this problem' },
+                { status: 404 }
+            );
+        }
+
+        const submission = submissionResult.rows[0];
+        const code = submission.source_code;
+
+        if (!code) {
+            return NextResponse.json(
+                { error: 'Submission code not available' },
+                { status: 404 }
+            );
+        }
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        console.log('Gemini API Key present:', !!apiKey);
+
+        if (!apiKey) {
+            console.error('GEMINI_API_KEY is not set in environment variables');
+            return NextResponse.json(
+                { error: 'Gemini API key not configured. Please restart the server.' },
+                { status: 500 }
+            );
+        }
+
+        const prompt = `Analyze the following C++ code and determine its time and space complexity.
+
+Respond ONLY in this exact JSON format (no markdown, no code blocks, just raw JSON):
+{
+    "timeComplexity": "O(...)",
+    "spaceComplexity": "O(...)",
+    "explanation": "Brief explanation of why"
+}
+
+Code to analyze:
+\`\`\`cpp
+${code}
+\`\`\``;
+
+        console.log('Calling Gemini API...');
+
+        // Using Gemini 2.5 Flash (stable, free model - tested and working)
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    text: prompt
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: {
+                        temperature: 0.1,
+                        maxOutputTokens: 1024,
+                    }
+                }),
+            }
+        );
+
+        console.log('Gemini API response status:', response.status);
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            console.error('Gemini API error:', errorData);
+            return NextResponse.json(
+                { error: `Gemini API error: ${response.status}`, details: errorData },
+                { status: 500 }
+            );
+        }
+
+        const data = await response.json();
+        console.log('Gemini API response received');
+
+        // Extract the text from Gemini's response
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!textResponse) {
+            console.error('No text in Gemini response:', JSON.stringify(data));
+            return NextResponse.json(
+                { error: 'No response from Gemini', details: JSON.stringify(data) },
+                { status: 500 }
+            );
+        }
+
+        // Parse the JSON from the response (handle potential markdown wrapping)
+        let parsedResult;
+        try {
+            // Try to extract JSON if wrapped in code blocks
+            const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                parsedResult = JSON.parse(jsonMatch[0]);
+            } else {
+                parsedResult = JSON.parse(textResponse);
+            }
+        } catch (parseError) {
+            console.error('Failed to parse Gemini response:', textResponse);
+            // Return raw response if parsing fails
+            return NextResponse.json({
+                timeComplexity: 'Unknown',
+                spaceComplexity: 'Unknown',
+                explanation: textResponse,
+                raw: true
+            });
+        }
+
+        return NextResponse.json({
+            timeComplexity: parsedResult.timeComplexity || 'Unknown',
+            spaceComplexity: parsedResult.spaceComplexity || 'Unknown',
+            explanation: parsedResult.explanation || 'No explanation provided'
+        });
+
+    } catch (error) {
+        console.error('Complexity analysis error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return NextResponse.json(
+            { error: 'Internal server error', details: errorMessage },
+            { status: 500 }
+        );
+    }
+}

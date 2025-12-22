@@ -141,7 +141,7 @@ export default function DashboardHome() {
         totalSolved: 0,
         consistencyMap: {},
         approvalProgress: 0,
-        quiz1Solved: 0
+        sheet1Solved: 0
     });
     const [loadingStats, setLoadingStats] = useState(true);
 
@@ -226,24 +226,24 @@ export default function DashboardHome() {
                         }
                     });
 
-                    // 4. Quiz 1 Progress
-                    const quiz1Problems = new Set(
+                    // 4. Sheet 1 Progress
+                    const sheet1Problems = new Set(
                         submissions
-                            .filter((s: any) => s.sheet_name && s.sheet_name.includes('Quiz') && s.sheet_name.includes('1'))
+                            .filter((s: any) => (s.sheet_id === 'sheet-1' || (s.sheet_name && s.sheet_name.includes('Sheet 1'))))
                             .map((s: any) => s.problem_name)
                     );
-                    const quiz1Solved = quiz1Problems.size;
-                    const isQuiz1Complete = quiz1Solved >= 3;
+                    const sheet1Solved = sheet1Problems.size;
+                    const isSheet1Complete = sheet1Solved >= 26;
 
                     // 5. Approval Progress
-                    const approvalProgress = isQuiz1Complete ? 1 : 0;
+                    const approvalProgress = isSheet1Complete ? 1 : 0;
 
                     setStats({
                         streak,
                         totalSolved,
                         consistencyMap,
                         approvalProgress,
-                        quiz1Solved
+                        sheet1Solved
                     });
                 }
             } catch (err) {
@@ -297,7 +297,7 @@ export default function DashboardHome() {
                 {/* Core Activities */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-6">
-                        <div className="bg-[#121212] rounded-xl border border-white/5 p-5 flex flex-col justify-between">
+                        <div className="bg-[#121212] rounded-xl border border-white/5 p-5 flex flex-col justify-between h-full">
                             <div>
                                 <div className="flex items-center gap-2 mb-4">
                                     <Zap size={18} className="text-[#E8C15A]" />
@@ -309,64 +309,30 @@ export default function DashboardHome() {
                                             <BookOpen size={20} />
                                         </div>
                                         <div>
-                                            <h4 className="text-base font-bold text-white">Approval Camp</h4>
-                                            <span className="text-[10px] text-[#E8C15A] bg-[#E8C15A]/10 px-2 py-0.5 rounded-full">IN PROGRESS</span>
+                                            <h4 className="text-base font-bold text-white">Sheet 1 - Say Hello With C++</h4>
+                                            <span className="text-[10px] text-[#E8C15A] bg-[#E8C15A]/10 px-2 py-0.5 rounded-full">RECOMMENDED</span>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-[#A0A0A0] mb-3">Complete the sessions and quiz to unlock more content.</p>
+                                    <p className="text-xs text-[#A0A0A0] mb-3">Master the basics of C++ input/output and data types.</p>
                                     <div className="space-y-1.5">
                                         <div className="flex justify-between text-[10px] text-[#A0A0A0]">
                                             <span>Progress</span>
-                                            <span>{loadingStats ? '-' : stats.approvalProgress}/4</span>
+                                            <span>{loadingStats ? '-' : (stats as any).sheet1Solved || 0}/26</span>
                                         </div>
                                         <div className="h-1.5 w-full bg-[#222] rounded-full overflow-hidden">
                                             <div
                                                 className="h-full bg-[#E8C15A] transition-all duration-1000 ease-out"
-                                                style={{ width: `${(stats.approvalProgress / 4) * 100}%` }}
+                                                style={{ width: `${Math.min(((stats as any).sheet1Solved || 0) / 26 * 100, 100)}%` }}
                                             ></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <button className="w-full py-2.5 bg-[#E8C15A] hover:bg-[#D4AF37] text-black font-bold text-sm rounded-lg transition-colors">
-                                Resume Training
-                            </button>
-                        </div>
-
-                        {/* Mini Quiz Widget */}
-                        <div className="bg-[#121212] rounded-xl border border-white/5 p-5 flex flex-col justify-between">
-                            <div>
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <Zap size={18} className="text-[#E8C15A]" />
-                                        <h3 className="font-bold text-[#F2F2F2]">Mini Quiz #1</h3>
-                                    </div>
-                                    <span className="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full animate-pulse">LIVE NOW</span>
-                                </div>
-                                <div className="bg-[#1A1A1A] p-4 rounded-lg border border-white/5 mb-4">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="p-2 bg-blue-500/10 rounded text-blue-500">
-                                            <BookOpen size={20} />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-base font-bold text-white">3 Problems • Easy</h4>
-                                            <Link href="/dashboard/sheets/Mini Quiz #1" className="text-[10px] text-blue-400 hover:text-blue-300">View Problems</Link>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <div className="flex justify-between text-[10px] text-[#A0A0A0]">
-                                            <span>Progress</span>
-                                            <span>{loadingStats ? '-' : (stats as any).quiz1Solved || 0}/3</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-[#222] rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-blue-500 transition-all duration-1000 ease-out"
-                                                style={{ width: `${Math.min(((stats as any).quiz1Solved || 0) / 3 * 100, 100)}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <Link href="/dashboard/sheets/sheet-1">
+                                <button className="w-full py-2.5 bg-[#E8C15A] hover:bg-[#D4AF37] text-black font-bold text-sm rounded-lg transition-colors">
+                                    Continue Solving
+                                </button>
+                            </Link>
                         </div>
                     </div>
 

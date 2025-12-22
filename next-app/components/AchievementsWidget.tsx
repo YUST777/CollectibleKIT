@@ -60,12 +60,16 @@ export default function AchievementsWidget({ profile, user }: AchievementsWidget
     // Check if user has Instructor or Owner role
     const isInstructorUnlocked = user?.role === 'instructor' || user?.role === 'owner';
 
+    // Check if sheet 1 is solved (from profile data)
+    const isSheet1Unlocked = profile?.sheet_1_solved === true;
+
     // Rarity priority: legendary (3) > rare (2) > common (1)
     const achievements = [
-        { id: 'welcome', imageSrc: '/images/WELCOME.webp', unlocked: true, rarity: 1 },
-        { id: 'approval', imageSrc: '/images/done_approvalcamp.webp', unlocked: false, rarity: 2 },
-        { id: '500pts', imageSrc: hasCodeforcesLinked ? '/images/500pts.webp' : null, unlocked: is500PtsUnlocked, rarity: 2 },
-        { id: 'instructor', imageSrc: '/images/instructor.webp', unlocked: isInstructorUnlocked, rarity: 3 },
+        { id: 'welcome', imageSrc: '/images/achievements/WELCOME.webp', unlocked: true, rarity: 1 },
+        { id: 'approval', imageSrc: '/images/achievements/done_approvalcamp.webp', unlocked: false, rarity: 2 },
+        { id: 'sheet-1', imageSrc: '/images/achievements/sheet1acheavment.webp', unlocked: isSheet1Unlocked, rarity: 2 },
+        { id: '500pts', imageSrc: hasCodeforcesLinked ? '/images/achievements/500pts.webp' : null, unlocked: is500PtsUnlocked, rarity: 2 },
+        { id: 'instructor', imageSrc: '/images/achievements/instructor.webp', unlocked: isInstructorUnlocked, rarity: 3 },
     ];
 
     // Separate unlocked and locked achievements

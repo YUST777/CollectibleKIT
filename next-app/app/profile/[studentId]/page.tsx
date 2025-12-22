@@ -18,10 +18,10 @@ const achievementModels: Record<string, string> = {
 };
 
 const achievementImages: Record<string, string> = {
-    welcome: '/images/WELCOME.webp',
-    approval: '/images/done_approvalcamp.webp',
-    '500pts': '/images/500pts.webp',
-    instructor: '/images/instructor.webp',
+    welcome: '/images/achievements/WELCOME.webp',
+    approval: '/images/achievements/done_approvalcamp.webp',
+    '500pts': '/images/achievements/500pts.webp',
+    instructor: '/images/achievements/instructor.webp',
 };
 
 interface Profile {

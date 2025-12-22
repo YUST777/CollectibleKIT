@@ -1,395 +1,533 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { ChevronLeft, Clock, HardDrive, CheckCircle2, Loader2, Lock, List, FileText, XCircle, AlertTriangle, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-    ChevronLeft,
-    Upload,
-    FileCode,
-    CheckCircle2,
-    Loader2,
-    X,
-    AlertCircle,
-    FileText,
-    Check
-} from 'lucide-react';
 
-interface SubmissionState {
-    file: File | null;
-    status: 'pending' | 'ready' | 'success' | 'error';
-    message: string;
-    submissionId: number | null;
+interface Problem {
+    id: string;
+    title: string;
+    available: boolean;
+    timeLimit?: number;
+    memoryLimit?: number;
+    solvedCount?: number;
 }
 
-interface DifficultyState {
-    easy: SubmissionState;
-    medium: SubmissionState;
-    hard: SubmissionState;
+interface Sheet {
+    id: string;
+    title: string;
+    description: string;
+    totalProblems: number;
+    problems: Problem[];
 }
 
-export default function DashboardSheetDetail() {
+interface Submission {
+    id: number;
+    sheetId: string;
+    problemId: string;
+    problemTitle: string;
+    verdict: string;
+    timeMs: number;
+    memoryKb: number;
+    testsPassed: number;
+    totalTests: number;
+    submittedAt: string;
+    attemptNumber: number;
+    language: string;
+    sourceCode?: string;
+}
+
+// C++ Syntax Highlighting Function
+function highlightCpp(code: string): string {
+    if (!code) return '';
+    let html = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const tokenMap = new Map<string, string>();
+    let tokenId = 0;
+    const tokenize = (match: string, color: string): string => {
+        const id = `__TOKEN_${tokenId++}__`;
+        tokenMap.set(id, `<span style="color:${color}">${match}</span>`);
+        return id;
+    };
+
+    html = html.replace(/(\/\/[^\n]*)/g, (m) => tokenize(m, '#6A9955'));
+    html = html.replace(/(\/\*[\s\S]*?\*\/)/g, (m) => tokenize(m, '#6A9955'));
+    html = html.replace(/("(?:[^"\\]|\\.)*")/g, (m) => tokenize(m, '#CE9178'));
+    html = html.replace(/('(?:[^'\\]|\\.)*')/g, (m) => tokenize(m, '#CE9178'));
+    html = html.replace(/(&lt;[a-zA-Z_][a-zA-Z0-9_]*&gt;)/g, (m) => tokenize(m, '#CE9178'));
+    html = html.replace(/(#\w+)/g, '<span style="color:#C586C0">$1</span>');
+
+    const keywords = ['using', 'namespace', 'class', 'struct', 'void', 'int', 'long', 'char', 'float', 'double', 'bool', 'true', 'false', 'if', 'else', 'for', 'while', 'return', 'const', 'auto', 'cin', 'cout', 'endl', 'std', 'string', 'vector'];
+    html = html.replace(new RegExp(`\\b(${keywords.join('|')})\\b`, 'g'), '<span style="color:#569CD6">$1</span>');
+    html = html.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g, '<span style="color:#DCDCAA">$1</span>(');
+    html = html.replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#B5CEA8">$1</span>');
+
+    tokenMap.forEach((value, key) => { html = html.split(key).join(value); });
+    return html;
+}
+
+export default function SheetDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const { isAuthenticated, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const sheetId = params.id as string;
 
-    const [submissions, setSubmissions] = useState<DifficultyState>({
-        easy: { file: null, status: 'pending', message: '', submissionId: null },
-        medium: { file: null, status: 'pending', message: '', submissionId: null },
-        hard: { file: null, status: 'pending', message: '', submissionId: null }
-    });
-    const [submitting, setSubmitting] = useState(false);
-    const [fetching, setFetching] = useState(true);
-
-    const easyRef = useRef<HTMLInputElement>(null);
-    const mediumRef = useRef<HTMLInputElement>(null);
-    const hardRef = useRef<HTMLInputElement>(null);
-
-    const sheetInfo: Record<string, { title: string; subtitle: string }> = {
-        '1': { title: 'Mini Quiz #1', subtitle: 'Basics & Syntax' },
-        '2': { title: 'Mini Quiz #2', subtitle: 'Condition & Control Flow' },
-        '3': { title: 'Mini Quiz #3', subtitle: 'Loops & Arrays' }
-    };
-
-    const currentSheet = sheetInfo[sheetId] || { title: `Sheet ${sheetId}`, subtitle: '' };
-
-    // Redirect if not authenticated
-    useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            router.push('/login');
-        }
-    }, [loading, isAuthenticated, router]);
-
-    const fetchSubmissions = useCallback(async () => {
-        try {
-            const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/sheets/my-submissions', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                const mysubs = data.submissions || [];
-
-                // Filter for this specific sheet
-                const sheetSubmissions = mysubs.filter((s: any) => s.sheet_name === currentSheet.title);
-
-                setSubmissions(prev => {
-                    const nextState: DifficultyState = {
-                        easy: { file: null, status: 'pending', message: '', submissionId: null },
-                        medium: { file: null, status: 'pending', message: '', submissionId: null },
-                        hard: { file: null, status: 'pending', message: '', submissionId: null }
-                    };
-
-                    sheetSubmissions.forEach((sub: any) => {
-                        let difficulty: 'easy' | 'medium' | 'hard' | null = null;
-                        const problemName = sub.problem_name.toLowerCase();
-
-                        if (problemName.includes('easy')) difficulty = 'easy';
-                        else if (problemName.includes('medium')) difficulty = 'medium';
-                        else if (problemName.includes('hard')) difficulty = 'hard';
-                        else {
-                            const index = sheetSubmissions.indexOf(sub);
-                            if (index === 0) difficulty = 'easy';
-                            else if (index === 1) difficulty = 'medium';
-                            else if (index === 2) difficulty = 'hard';
-                        }
-
-                        if (difficulty) {
-                            nextState[difficulty] = {
-                                file: { name: sub.file_name } as File,
-                                status: 'success',
-                                message: 'Submitted',
-                                submissionId: sub.id
-                            };
-                        }
-                    });
-
-                    return nextState;
-                });
-            }
-        } catch (error) {
-            console.error('Error fetching submissions:', error);
-        } finally {
-            setFetching(false);
-        }
-    }, [currentSheet.title]);
+    const [sheet, setSheet] = useState<Sheet | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [solvedProblems, setSolvedProblems] = useState<Set<string>>(new Set());
+    const [activeTab, setActiveTab] = useState<'problems' | 'submissions'>('problems');
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [submissionsLoading, setSubmissionsLoading] = useState(false);
+    const [selectedSubmission, setSelectedSubmission] = useState<{
+        id: number;
+        verdict: string;
+        sourceCode: string;
+        submittedAt: string;
+        attemptNumber: number;
+        problemTitle: string;
+    } | null>(null);
+    const [loadingCode, setLoadingCode] = useState(false);
 
     useEffect(() => {
-        if (!isAuthenticated) return;
-        fetchSubmissions();
-    }, [isAuthenticated, fetchSubmissions]);
-
-    const handleFileSelect = (difficulty: keyof DifficultyState, e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Validate file extension
-        if (!file.name.endsWith('.cpp') && !file.name.endsWith('.c') && !file.name.endsWith('.txt')) {
-            setSubmissions(prev => ({
-                ...prev,
-                [difficulty]: { ...prev[difficulty], file: null, status: 'error', message: 'Only .cpp, .c, or .txt files allowed' }
-            }));
-            return;
-        }
-
-        // Validate file size (max 100KB)
-        if (file.size > 100 * 1024) {
-            setSubmissions(prev => ({
-                ...prev,
-                [difficulty]: { ...prev[difficulty], file: null, status: 'error', message: 'File too large (max 100KB)' }
-            }));
-            return;
-        }
-
-        setSubmissions(prev => ({
-            ...prev,
-            [difficulty]: { file, status: 'ready', message: file.name, submissionId: null }
-        }));
-    };
-
-    const removeFile = async (difficulty: keyof DifficultyState) => {
-        const sub = submissions[difficulty];
-
-        if (sub.status === 'success' && sub.submissionId) {
-            if (!window.confirm('Are you sure you want to delete this submission? You will need to re-upload it.')) {
-                return;
-            }
-
+        const fetchSheet = async () => {
             try {
-                const token = localStorage.getItem('authToken');
-                const response = await fetch(`/api/sheets/submission/${sub.submissionId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!response.ok) {
-                    alert('Failed to delete submission');
-                    return;
+                const res = await fetch(`/api/training-sheets/${sheetId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setSheet(data.sheet);
+                } else {
+                    router.push('/dashboard/sheets');
                 }
             } catch (error) {
-                console.error('Error deleting:', error);
-                alert('Error deleting submission');
-                return;
+                console.error('Failed to fetch sheet:', error);
+            } finally {
+                setLoading(false);
             }
+        };
+
+        fetchSheet();
+    }, [sheetId, router]);
+
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push('/login');
         }
+    }, [authLoading, user, router]);
 
-        setSubmissions(prev => ({
-            ...prev,
-            [difficulty]: { file: null, status: 'pending', message: '', submissionId: null }
-        }));
+    // Fetch solved problems from database on page load
+    useEffect(() => {
+        const fetchSolvedProblems = async () => {
+            if (!user) return;
+            try {
+                const token = localStorage.getItem('authToken');
+                const res = await fetch(`/api/submissions?sheetId=${sheetId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    // Get unique problem IDs that have "Accepted" verdict
+                    const acceptedProblems = new Set<string>();
+                    (data.submissions || []).forEach((sub: Submission) => {
+                        if (sub.verdict === 'Accepted') {
+                            acceptedProblems.add(sub.problemId);
+                        }
+                    });
+                    setSolvedProblems(acceptedProblems);
+                }
+            } catch (error) {
+                console.error('Failed to fetch solved problems:', error);
+            }
+        };
 
-        if (difficulty === 'easy' && easyRef.current) easyRef.current.value = '';
-        if (difficulty === 'medium' && mediumRef.current) mediumRef.current.value = '';
-        if (difficulty === 'hard' && hardRef.current) hardRef.current.value = '';
-    };
+        fetchSolvedProblems();
+    }, [sheetId, user]);
 
-    const handleSubmitAll = async () => {
-        const readyFiles = Object.entries(submissions).filter(([_, data]) => data.status === 'ready' && data.file);
-        if (readyFiles.length === 0) return;
+    // Fetch submissions when tab changes
+    useEffect(() => {
+        if (activeTab === 'submissions' && user) {
+            fetchSubmissions();
+        }
+    }, [activeTab, user]);
 
-        setSubmitting(true);
-
+    const fetchSubmissions = async () => {
+        setSubmissionsLoading(true);
         try {
             const token = localStorage.getItem('authToken');
-
-            for (const [difficulty, data] of readyFiles) {
-                if (!data.file) continue;
-                const content = await data.file.text();
-
-                const response = await fetch('/api/sheets/submit', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        sheet_name: currentSheet.title,
-                        problem_name: `${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} Problem`,
-                        file_name: data.file.name,
-                        file_content: content
-                    })
-                });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    setSubmissions(prev => ({
-                        ...prev,
-                        [difficulty as keyof DifficultyState]: { ...prev[difficulty as keyof DifficultyState], status: 'error', message: err.error || 'Failed' }
-                    }));
-                }
+            const res = await fetch(`/api/submissions?sheetId=${sheetId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setSubmissions(data.submissions || []);
             }
-
-            await fetchSubmissions();
-
         } catch (error) {
-            console.error('Submission error:', error);
+            console.error('Failed to fetch submissions:', error);
         } finally {
-            setSubmitting(false);
+            setSubmissionsLoading(false);
         }
     };
 
-    const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty) {
-            case 'easy': return { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', accent: 'bg-green-500' };
-            case 'medium': return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', accent: 'bg-yellow-500' };
-            case 'hard': return { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', accent: 'bg-red-500' };
-            default: return { bg: 'bg-white/5', border: 'border-white/10', text: 'text-white', accent: 'bg-white' };
+    const viewSubmissionCode = async (submissionId: number) => {
+        setLoadingCode(true);
+        try {
+            const token = localStorage.getItem('authToken');
+            const res = await fetch(`/api/submissions/${submissionId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const sub = data.submission;
+                setSelectedSubmission({
+                    id: sub.id,
+                    verdict: sub.verdict,
+                    sourceCode: sub.sourceCode,
+                    submittedAt: sub.submittedAt,
+                    attemptNumber: sub.attemptNumber,
+                    problemTitle: sub.problemTitle
+                });
+            }
+        } catch (error) {
+            console.error('Failed to fetch submission code:', error);
+        } finally {
+            setLoadingCode(false);
         }
     };
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'success': return <CheckCircle2 size={20} className="text-green-400" />;
-            case 'error': return <AlertCircle size={20} className="text-red-400" />;
-            case 'ready': return <FileCode size={20} className="text-[#E8C15A]" />;
-            default: return <Upload size={20} className="text-[#666]" />;
-        }
+    const getVerdictStyle = (verdict: string) => {
+        if (verdict === 'Accepted') return 'text-green-400';
+        if (verdict.includes('Wrong')) return 'text-red-400';
+        if (verdict.includes('Time')) return 'text-yellow-400';
+        if (verdict.includes('Compilation')) return 'text-orange-400';
+        if (verdict.includes('Runtime')) return 'text-purple-400';
+        return 'text-gray-400';
     };
 
-    if (loading || fetching) {
+    const getVerdictIcon = (verdict: string) => {
+        if (verdict === 'Accepted') return <CheckCircle2 size={14} className="text-green-400" />;
+        if (verdict.includes('Wrong') || verdict.includes('Runtime')) return <XCircle size={14} className="text-red-400" />;
+        return <AlertTriangle size={14} className="text-yellow-400" />;
+    };
+
+    const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    if (authLoading || loading) {
         return (
-            <div className="min-h-screen bg-[#0B0B0C] flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center">
                 <Loader2 className="animate-spin text-[#E8C15A]" size={48} />
             </div>
         );
     }
 
+    if (!sheet) {
+        return null;
+    }
+
+    const availableProblems = sheet.problems.filter(p => p.available);
+    const solvedCount = [...solvedProblems].filter(id => availableProblems.some(p => p.id === id)).length;
+
     return (
-        <div className="min-h-screen bg-[#0B0B0C] text-[#DCDCDC] font-sans">
-            <header className="border-b border-white/10 bg-[#0B0B0C] sticky top-0 z-50">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-                    <Link
-                        href="/dashboard/sheets"
-                        className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                    >
-                        <ChevronLeft size={24} className="text-[#E8C15A]" />
+        <>
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
+                <div className="flex items-center gap-2 text-sm text-[#A0A0A0] leading-none">
+                    <Link href="/dashboard/sheets" className="hover:text-[#F2F2F2] hidden md:flex items-center justify-center h-5">
+                        <ChevronLeft size={16} />
                     </Link>
-                    <div>
-                        <h1 className="text-lg md:text-xl font-bold text-[#F2F2F2]">{currentSheet.title}</h1>
-                        {currentSheet.subtitle && (
-                            <p className="text-sm text-[#A0A0A0]">{currentSheet.subtitle}</p>
-                        )}
-                    </div>
+                    <span className="hidden sm:inline">TRAINING</span>
+                    <span className="hidden sm:inline">/</span>
+                    <span className="text-[#DCDCDC] uppercase text-xs sm:text-sm">{sheet.title}</span>
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto px-4 py-6 md:py-8">
-                <div className="bg-[#121212] rounded-xl p-4 md:p-6 border border-white/10 mb-6">
-                    <h2 className="text-base font-semibold text-[#E8C15A] mb-2 flex items-center gap-2">
-                        <FileText size={18} /> Instructions
-                    </h2>
-                    <ul className="text-sm text-[#A0A0A0] space-y-1">
-                        <li>• Upload your solution files (.cpp, .c, or .txt) for each difficulty level</li>
-                        <li>• You can submit one or more problems at a time</li>
-                        <li>• <span className="text-green-400 font-bold">Existing submissions are shown below.</span> Click X to delete and re-upload.</li>
-                    </ul>
-                </div>
-
-                <div className="grid gap-4 md:gap-6">
-                    {(['easy', 'medium', 'hard'] as const).map((difficulty) => {
-                        const colors = getDifficultyColor(difficulty);
-                        const data = submissions[difficulty];
-                        const inputRef = difficulty === 'easy' ? easyRef : difficulty === 'medium' ? mediumRef : hardRef;
-                        const isSubmitted = data.status === 'success';
-
-                        return (
-                            <div
-                                key={difficulty}
-                                className={`relative bg-[#121212] rounded-xl p-5 md:p-6 border ${colors.border} ${colors.bg} transition-all`}
-                            >
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-3 h-3 rounded-full ${colors.accent}`}></div>
-                                        <span className={`text-lg font-bold ${colors.text} uppercase`}>
-                                            {difficulty}
-                                        </span>
-                                    </div>
-                                    {getStatusIcon(data.status)}
-                                </div>
-
-                                <input
-                                    type="file"
-                                    accept=".cpp,.c,.txt"
-                                    ref={inputRef}
-                                    onChange={(e) => handleFileSelect(difficulty, e)}
-                                    className="hidden"
-                                    id={`file-${difficulty}`}
-                                    disabled={isSubmitted}
-                                />
-
-                                {data.status === 'pending' ? (
-                                    <label
-                                        htmlFor={`file-${difficulty}`}
-                                        className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-white/40 hover:bg-white/5 transition-all"
-                                    >
-                                        <Upload size={32} className="text-[#666] mb-2" />
-                                        <span className="text-sm text-[#A0A0A0]">Click to upload .cpp, .c, or .txt file</span>
-                                        <span className="text-xs text-[#666] mt-1">Max 100KB</span>
-                                    </label>
-                                ) : (
-                                    <div className={`flex items-center justify-between p-4 rounded-lg ${data.status === 'success' ? 'bg-green-500/10 border border-green-500/20' : data.status === 'error' ? 'bg-red-500/10' : 'bg-[#1A1A1A]'}`}>
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <FileCode size={24} className={data.status === 'success' ? 'text-green-400' : data.status === 'error' ? 'text-red-400' : 'text-[#E8C15A]'} />
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-[#F2F2F2] truncate">
-                                                    {data.file?.name || data.message}
-                                                </p>
-                                                {data.status === 'success' && (
-                                                    <p className="text-xs text-green-400">
-                                                        {data.submissionId ? <span className="flex items-center gap-1"><Check size={12} /> Submitted (Saved on Server)</span> : 'Submitted successfully!'}
-                                                    </p>
-                                                )}
-                                                {data.status === 'error' && (
-                                                    <p className="text-xs text-red-400">{data.message}</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => removeFile(difficulty)}
-                                            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group"
-                                            title={isSubmitted ? "Delete Submission" : "Remove File"}
-                                        >
-                                            <X size={18} className="text-[#666] group-hover:text-red-400" />
-                                        </button>
-                                    </div>
-                                )}
+            <div className="space-y-6 animate-fade-in">
+                {/* Sheet Header */}
+                <div className="bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-start justify-between flex-wrap gap-4">
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-[#F2F2F2] mb-2">{sheet.title}</h1>
+                            <p className="text-[#808080] text-sm">{sheet.description}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-[#E8C15A]">{solvedCount}</div>
+                                <div className="text-xs text-[#666]">Solved</div>
                             </div>
-                        );
-                    })}
+                            <div className="w-px h-10 bg-white/10"></div>
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-[#F2F2F2]">{availableProblems.length}</div>
+                                <div className="text-xs text-[#666]">Available</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mt-4">
+                        <div className="flex justify-between text-xs text-[#666] mb-1">
+                            <span>Progress</span>
+                            <span>{Math.round((solvedCount / Math.max(availableProblems.length, 1)) * 100)}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-[#1A1A1A] rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-[#E8C15A] to-[#CFA144] rounded-full transition-all duration-500"
+                                style={{ width: `${(solvedCount / Math.max(availableProblems.length, 1)) * 100}%` }}
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                <div className="mt-6">
+                {/* Tabs */}
+                <div className="flex gap-2 border-b border-white/10">
                     <button
-                        onClick={handleSubmitAll}
-                        disabled={submitting || !Object.values(submissions).some(s => s.status === 'ready')}
-                        className="w-full py-4 bg-[#E8C15A] hover:bg-[#CFA144] disabled:bg-[#333] disabled:text-[#666] text-black font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                        onClick={() => setActiveTab('problems')}
+                        className={`px-4 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'problems'
+                            ? 'text-[#E8C15A] border-[#E8C15A]'
+                            : 'text-[#666] border-transparent hover:text-[#A0A0A0]'
+                            }`}
                     >
-                        {submitting ? (
-                            <>
-                                <Loader2 size={20} className="animate-spin" />
-                                Submitting...
-                            </>
-                        ) : (
-                            <>
-                                <Upload size={20} />
-                                Submit Solutions
-                            </>
+                        <List size={16} />
+                        Problems
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('submissions')}
+                        className={`px-4 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'submissions'
+                            ? 'text-[#E8C15A] border-[#E8C15A]'
+                            : 'text-[#666] border-transparent hover:text-[#A0A0A0]'
+                            }`}
+                    >
+                        <FileText size={16} />
+                        My Submissions
+                        {submissions.length > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 text-xs bg-white/10 rounded">
+                                {submissions.length}
+                            </span>
                         )}
                     </button>
                 </div>
 
-                <div className="mt-4 text-center">
-                    <Link
-                        href="/dashboard/sheets"
-                        className="text-sm text-[#A0A0A0] hover:text-[#E8C15A] transition-colors"
+                {/* Problems Tab */}
+                {activeTab === 'problems' && (
+                    <>
+                        {/* Problems Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                            {sheet.problems.map((problem) => {
+                                const isSolved = solvedProblems.has(problem.id);
+                                const isAvailable = problem.available;
+
+                                return (
+                                    <Link
+                                        key={problem.id}
+                                        href={isAvailable ? `/dashboard/sheets/${sheetId}/${problem.id}` : '#'}
+                                        className={`
+                                            relative group rounded-xl p-4 border transition-all text-center
+                                            ${isAvailable
+                                                ? isSolved
+                                                    ? 'bg-green-500/10 border-green-500/30 hover:border-green-500/50'
+                                                    : 'bg-[#121212] border-white/10 hover:border-[#E8C15A]/30 hover:bg-[#161616]'
+                                                : 'bg-[#0d0d0d] border-white/5 cursor-not-allowed opacity-50'
+                                            }
+                                        `}
+                                        onClick={(e) => !isAvailable && e.preventDefault()}
+                                    >
+                                        <div className={`
+                                            text-2xl font-bold mb-1
+                                            ${isAvailable
+                                                ? isSolved ? 'text-green-400' : 'text-[#F2F2F2] group-hover:text-[#E8C15A]'
+                                                : 'text-[#444]'
+                                            }
+                                        `}>
+                                            {problem.id}
+                                        </div>
+
+                                        <div className="absolute top-2 right-2">
+                                            {!isAvailable ? (
+                                                <Lock size={12} className="text-[#444]" />
+                                            ) : isSolved ? (
+                                                <CheckCircle2 size={14} className="text-green-400" />
+                                            ) : null}
+                                        </div>
+
+                                        <div className={`
+                                            text-[10px] truncate
+                                            ${isAvailable ? 'text-[#808080]' : 'text-[#333]'}
+                                        `}>
+                                            {problem.title}
+                                        </div>
+
+                                        {isAvailable && (
+                                            <div className="flex items-center justify-center gap-1.5 mt-2 text-[10px] text-[#666]" title="Users solved">
+                                                <Users size={12} />
+                                                <span className="font-medium">x{problem.solvedCount || 0}</span>
+                                            </div>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+
+                        {/* Legend */}
+                        <div className="flex items-center justify-center gap-6 text-xs text-[#666]">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded bg-[#121212] border border-white/10"></div>
+                                <span>Unsolved</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded bg-green-500/10 border border-green-500/30"></div>
+                                <span>Solved</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded bg-[#0d0d0d] border border-white/5 opacity-50"></div>
+                                <span>Coming Soon</span>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Submissions Tab */}
+                {activeTab === 'submissions' && (
+                    <div className="bg-[#121212] rounded-xl border border-white/10 overflow-hidden">
+                        {submissionsLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="animate-spin text-[#E8C15A]" size={32} />
+                            </div>
+                        ) : submissions.length === 0 ? (
+                            <div className="text-center py-12">
+                                <FileText className="mx-auto text-[#333] mb-3" size={48} />
+                                <p className="text-[#666]">No submissions yet</p>
+                                <p className="text-[#444] text-sm mt-1">Solve a problem to see your submission history</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-white/10 text-[#666] text-left">
+                                            <th className="px-4 py-3 font-medium">#</th>
+                                            <th className="px-4 py-3 font-medium">When</th>
+                                            <th className="px-4 py-3 font-medium">Problem</th>
+                                            <th className="px-4 py-3 font-medium">Lang</th>
+                                            <th className="px-4 py-3 font-medium">Verdict</th>
+                                            <th className="px-4 py-3 font-medium">Time</th>
+                                            <th className="px-4 py-3 font-medium">Memory</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {submissions.map((sub) => (
+                                            <tr
+                                                key={sub.id}
+                                                className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                                                onClick={() => viewSubmissionCode(sub.id)}
+                                            >
+                                                <td className="px-4 py-3 text-[#666]">{sub.id}</td>
+                                                <td className="px-4 py-3 text-[#808080] whitespace-nowrap">
+                                                    {formatDate(sub.submittedAt)}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="text-[#E8C15A] font-medium">{sub.problemId}</span>
+                                                    <span className="text-[#808080] ml-2">- {sub.problemTitle}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-[#666] text-xs">{sub.language}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`flex items-center gap-1.5 font-medium ${getVerdictStyle(sub.verdict)}`}>
+                                                        {getVerdictIcon(sub.verdict)}
+                                                        {sub.verdict}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-[#808080]">
+                                                    {sub.timeMs ? `${sub.timeMs} ms` : '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-[#808080]">
+                                                    {sub.memoryKb ? `${Math.round(sub.memoryKb / 1024)} KB` : '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Code Viewer Modal */}
+            {(selectedSubmission || loadingCode) && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setSelectedSubmission(null)}>
+                    <div
+                        className="bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl w-[90%] max-w-3xl max-h-[80vh] flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        ← Back to Dashboard
-                    </Link>
+                        {loadingCode ? (
+                            <div className="flex items-center justify-center py-20">
+                                <Loader2 className="animate-spin text-[#E8C15A]" size={40} />
+                            </div>
+                        ) : selectedSubmission && (
+                            <>
+                                {/* Modal Header */}
+                                <div className="flex items-center justify-between p-4 border-b border-white/10">
+                                    <div>
+                                        <h3 className="font-bold text-white">Submission #{selectedSubmission.id}</h3>
+                                        <p className="text-xs text-[#666] mt-1">
+                                            {selectedSubmission.problemTitle} • Attempt #{selectedSubmission.attemptNumber}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedSubmission.verdict === 'Accepted'
+                                            ? 'bg-green-500/20 text-green-400'
+                                            : 'bg-red-500/20 text-red-400'
+                                            }`}>
+                                            {selectedSubmission.verdict}
+                                        </span>
+                                        <button
+                                            onClick={() => setSelectedSubmission(null)}
+                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-[#666] hover:text-white"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                                {/* Code Content */}
+                                <div className="flex-1 overflow-auto p-4 bg-[#0a0a0a]">
+                                    <pre
+                                        className="font-mono text-sm leading-6 text-[#D4D4D4]"
+                                        dangerouslySetInnerHTML={{ __html: highlightCpp(selectedSubmission.sourceCode) }}
+                                    />
+                                </div>
+                                {/* Modal Footer */}
+                                <div className="flex items-center justify-between p-4 border-t border-white/10">
+                                    <span className="text-xs text-[#666]">
+                                        {new Date(selectedSubmission.submittedAt).toLocaleString()}
+                                    </span>
+                                    <button
+                                        onClick={() => setSelectedSubmission(null)}
+                                        className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </main>
-        </div>
+            )}
+
+            <style>{`
+                @keyframes fadeIn { 
+                    from { opacity: 0; transform: translateY(10px); } 
+                    to { opacity: 1; transform: translateY(0); } 
+                } 
+                .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+            `}</style>
+        </>
     );
 }

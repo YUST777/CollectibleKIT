@@ -73,7 +73,7 @@ export default function Login() {
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-block">
-                        <Image src="/images/navlogo.webp" alt="ICPC HUE" width={128} height={64} loading="eager" priority className="h-16 w-auto mx-auto" />
+                        <Image src="/images/ui/navlogo.webp" alt="ICPC HUE" width={128} height={64} loading="eager" priority className="h-16 w-auto mx-auto" />
                     </Link>
                     <p className="text-white/60 mt-4 text-sm">Sign in to your account</p>
                 </div>

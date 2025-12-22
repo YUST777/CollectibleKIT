@@ -121,7 +121,7 @@ function RegisterContent() {
             <div className="w-full max-w-md relative z-10">
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-block">
-                        <Image src="/images/navlogo.webp" alt="ICPC HUE" width={64} height={64} className="h-16 w-auto mx-auto" />
+                        <Image src="/images/ui/navlogo.webp" alt="ICPC HUE" width={64} height={64} className="h-16 w-auto mx-auto" />
                     </Link>
                     <p className="text-white/60 mt-4 text-sm">Create your account</p>
                 </div>
