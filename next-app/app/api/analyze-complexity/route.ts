@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { query } from '@/lib/db';
 
+// Add type definition for global
+declare global {
+    var complexityRateLimits: Map<string, number> | undefined;
+}
+
 export async function POST(request: NextRequest) {
     try {
         // Clone the request to read body after auth check
@@ -20,6 +25,25 @@ export async function POST(request: NextRequest) {
         const { sheetId, problemId } = body;
 
         console.log('Request body:', { sheetId, problemId });
+
+        // Rate Limiting (In-Memory)
+        const RATE_LIMIT_DURATION = 10 * 1000; // 10 seconds
+        const lastAnalysisTime = global.complexityRateLimits?.get(String(user.id)) || 0;
+        const now = Date.now();
+
+        if (now - lastAnalysisTime < RATE_LIMIT_DURATION) {
+            const waitSeconds = Math.ceil((RATE_LIMIT_DURATION - (now - lastAnalysisTime)) / 1000);
+            return NextResponse.json(
+                { error: `Please wait ${waitSeconds}s before analyzing again` },
+                { status: 429 }
+            );
+        }
+
+        // Initialize global map if needed (to persist across hot reloads in dev)
+        if (!global.complexityRateLimits) {
+            global.complexityRateLimits = new Map();
+        }
+        global.complexityRateLimits.set(String(user.id), now);
 
         if (!sheetId || !problemId) {
             return NextResponse.json(
