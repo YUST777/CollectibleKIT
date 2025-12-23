@@ -4,7 +4,7 @@ import { getProblem } from '@/lib/problems';
 import { query } from '@/lib/db';
 
 // Self-hosted Judge0 Configuration
-const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'http://localhost:2358';
+const JUDGE0_API_URL = process.env.JUDGE0_API_URL;
 
 // C++ Language ID in Judge0
 const CPP_LANGUAGE_ID = 54; // C++ (GCC 9.2.0)
@@ -70,6 +70,11 @@ export async function POST(req: NextRequest) {
         // Validate input
         if (!sheetId || !problemId || !sourceCode) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        if (!JUDGE0_API_URL) {
+            console.error('JUDGE0_API_URL not configured');
+            return NextResponse.json({ error: 'Judge service not configured' }, { status: 503 });
         }
 
         // Get problem data

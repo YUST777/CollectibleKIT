@@ -3,7 +3,7 @@ import { query } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import { scrapeCodeforces, extractUsername } from '@/lib/codeforces';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY || '';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
 
 // Add type definition for global
 declare global {
@@ -12,6 +12,11 @@ declare global {
 
 export async function POST(request: NextRequest) {
     try {
+        if (!JWT_SECRET) {
+            console.error('JWT_SECRET not configured');
+            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+        }
+
         // Get token from Authorization header
         const authHeader = request.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) {
@@ -22,7 +27,7 @@ export async function POST(request: NextRequest) {
         let decoded: any;
 
         try {
-            decoded = jwt.verify(token, JWT_SECRET);
+            decoded = jwt.verify(token, JWT_SECRET as string);
         } catch {
             return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
         }
