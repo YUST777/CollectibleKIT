@@ -160,6 +160,9 @@ Don't print any extra spaces.`,
             { input: '1 1', expectedOutput: '1 + 1 = 2\n1 * 1 = 1\n1 - 1 = 0' },
             { input: '100 200', expectedOutput: '100 + 200 = 300\n100 * 200 = 20000\n100 - 200 = -100' },
             { input: '99999 1', expectedOutput: '99999 + 1 = 100000\n99999 * 1 = 99999\n99999 - 1 = 99998' },
+            // Overflow test cases - will fail if using int instead of long long
+            { input: '100000 100000', expectedOutput: '100000 + 100000 = 200000\n100000 * 100000 = 10000000000\n100000 - 100000 = 0' },
+            { input: '50000 50000', expectedOutput: '50000 + 50000 = 100000\n50000 * 50000 = 2500000000\n50000 - 50000 = 0' },
         ],
         note: 'Be careful with spaces.'
     },
@@ -189,6 +192,10 @@ Don't print any extra spaces.`,
             { input: '0 0 0 0', expectedOutput: 'Difference = 0' },
             { input: '10 10 5 5', expectedOutput: 'Difference = 75' },
             { input: '-5 2 3 -4', expectedOutput: 'Difference = 2' },
+            // Overflow test cases - will fail if using int instead of long long
+            { input: '100000 100000 1 1', expectedOutput: 'Difference = 9999999999' },
+            { input: '100000 100000 100000 100000', expectedOutput: 'Difference = 0' },
+            { input: '-100000 100000 100000 100000', expectedOutput: 'Difference = -20000000000' },
         ]
     },
 
@@ -243,6 +250,9 @@ Note: consider π = 3.141592653`,
             { input: '123456789 987654321', expectedOutput: '10' },
             { input: '0 0', expectedOutput: '0' },
             { input: '5 5', expectedOutput: '10' },
+            // Large numbers requiring long long
+            { input: '999999999999999999 999999999999999999', expectedOutput: '18' },
+            { input: '1000000000000000000 1', expectedOutput: '1' },
         ],
         note: `Last digit in the first number is 3 and last digit in the second number is 2. So the answer is: (3 + 2 = 5)`
     },
@@ -501,6 +511,10 @@ Print the result of the mathematical expression.`,
             { input: '20/4', expectedOutput: '5' },
             { input: '10+10', expectedOutput: '20' },
             { input: '7/2', expectedOutput: '3' },
+            // Edge cases
+            { input: '10000*10000', expectedOutput: '100000000' },
+            { input: '1-10000', expectedOutput: '-9999' },
+            { input: '9999/1', expectedOutput: '9999' },
         ],
         note: `For the dividing operation you should print the division without any fractions (integer division).`
     },
@@ -783,6 +797,9 @@ Print "Yes" if the expression is Right, otherwise print the right answer of the 
             { input: '10 10 10 10', expectedOutput: '00' },
             { input: '2 2 2 2', expectedOutput: '16' },
             { input: '99 99 99 99', expectedOutput: '01' },
+            // Large numbers requiring modular arithmetic - will overflow without % 100
+            { input: '1000000000 1000000000 1000000000 1000000000', expectedOutput: '00' },
+            { input: '123456789 987654321 111111111 999999999', expectedOutput: '69' },
         ],
         note: `The multiplication of 5 * 7 * 2 * 4 = 280, so the answer is the last 2 digits: 80.`
     },

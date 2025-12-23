@@ -18,6 +18,45 @@ interface SubmitRequest {
     timeToSolve?: number;
 }
 
+// Helper Comparison Function (Codeforces Style)
+function compareOutputs(expected: string, actual: string): boolean {
+    if (!expected && !actual) return true;
+    if (!expected || !actual) return false;
+
+    // Normalize: split by whitespace to handle different spacing/newlines
+    const tokensExp = expected.trim().split(/\s+/);
+    const tokensAct = actual.trim().split(/\s+/);
+
+    if (tokensExp.length !== tokensAct.length) return false;
+
+    for (let i = 0; i < tokensExp.length; i++) {
+        const tExp = tokensExp[i];
+        const tAct = tokensAct[i];
+
+        // 1. Direct string match (Case-Insensitive)
+        if (tExp.toLowerCase() === tAct.toLowerCase()) continue;
+
+        // 2. Numeric comparison with Epsilon
+        const fExp = parseFloat(tExp);
+        const fAct = parseFloat(tAct);
+
+        // Check if both are valid numbers
+        if (!isNaN(fExp) && !isNaN(fAct)) {
+            // Calculate absolute error
+            const diff = Math.abs(fExp - fAct);
+
+            // Allow error up to 1e-5 (standard competitive programming tolerance)
+            if (diff < 1e-5) {
+                continue;
+            }
+        }
+
+        // If neither matched, fail
+        return false;
+    }
+    return true;
+}
+
 export async function POST(req: NextRequest) {
     try {
         // Verify authentication
@@ -46,6 +85,43 @@ export async function POST(req: NextRequest) {
         // Get IP address
         const forwarded = req.headers.get('x-forwarded-for');
         const ipAddress = forwarded ? forwarded.split(',')[0] : req.headers.get('x-real-ip') || 'unknown';
+
+        // Rate Limiting & Duplicate Check
+        const latestSubmissionResult = await query(
+            `SELECT submitted_at, source_code, sheet_id, problem_id 
+             FROM training_submissions 
+             WHERE user_id = $1 
+             ORDER BY submitted_at DESC 
+             LIMIT 1`,
+            [user.id]
+        );
+
+        if (latestSubmissionResult.rows.length > 0) {
+            const lastSub = latestSubmissionResult.rows[0];
+            const lastTime = new Date(lastSub.submitted_at).getTime();
+            const now = Date.now();
+
+            // 1. Global Rate Limit (10 seconds)
+            if (now - lastTime < 10000) {
+                const waitSeconds = Math.ceil((10000 - (now - lastTime)) / 1000);
+                return NextResponse.json(
+                    { error: `Please wait ${waitSeconds}s before submitting again` },
+                    { status: 429 }
+                );
+            }
+
+            // 2. Duplicate Submission Check
+            if (
+                lastSub.sheet_id === sheetId &&
+                lastSub.problem_id === problemId &&
+                lastSub.source_code === sourceCode
+            ) {
+                return NextResponse.json(
+                    { error: 'You just submitted this exact code' },
+                    { status: 400 }
+                );
+            }
+        }
 
         // Get attempt number for this user/problem
         const attemptResult = await query(
@@ -106,7 +182,8 @@ export async function POST(req: NextRequest) {
 
             switch (result.status?.id) {
                 case 3: // Accepted
-                    if (stdout === testCase.expectedOutput.trim()) {
+                    // Use new epsilon comparison logic
+                    if (compareOutputs(testCase.expectedOutput, stdout)) {
                         verdict = 'Accepted';
                         passed = true;
                     } else {

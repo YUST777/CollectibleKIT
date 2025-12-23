@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Terminal, Info, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Terminal, Info, AlertTriangle, Loader2, X, Check } from 'lucide-react';
 import Providers from '@/components/Providers';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -233,9 +233,9 @@ function Session5Content() {
                             <Info className="w-4 h-4" /> Important Clarification
                         </h4>
                         <ul className="space-y-2 text-sm">
-                            <li className="flex items-center gap-2 text-red-400"><span className="text-lg">×</span> It is not the real time in seconds.</li>
-                            <li className="flex items-center gap-2 text-red-400"><span className="text-lg">×</span> It does not depend on computer speed.</li>
-                            <li className="flex items-center gap-2 text-green-400"><span className="text-lg">✓</span> It depends on the number of executed instructions.</li>
+                            <li className="flex items-center gap-2 text-red-400"><X size={16} /> It is not the real time in seconds.</li>
+                            <li className="flex items-center gap-2 text-red-400"><X size={16} /> It does not depend on computer speed.</li>
+                            <li className="flex items-center gap-2 text-green-400"><Check size={16} /> It depends on the number of executed instructions.</li>
                         </ul>
                     </div>
 

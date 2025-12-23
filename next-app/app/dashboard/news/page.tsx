@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeft, Radio, Sparkles } from 'lucide-react';
+import { ChevronLeft, Radio, Sparkles, Rocket } from 'lucide-react';
 
 function NewsCard({ type, title, date, body, image }: { type: string; title: string; date: string; body: string; image?: string }) {
     return (
@@ -35,7 +35,7 @@ export default function NewsPage() {
             <div className="space-y-6 animate-fade-in">
                 <div className="flex items-center gap-3"><Radio className="text-[#E8C15A]" size={24} /><h2 className="text-xl md:text-2xl font-bold text-[#F2F2F2]">Team News</h2></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                    <NewsCard image="/images/sheet/sheet1.webp" type="Training" title="Sheet 1 Has Arrived! 🚀" date="Jan 2025" body="Sheet 1 - Say Hello With C++ is now live! Master the basics with 26 new problems. Go solve it now and climb the leaderboard!" />
+                    <NewsCard image="/images/sheet/sheet1.webp" type="Training" title="Sheet 1 Has Arrived!" date="Jan 2025" body="Sheet 1 - Say Hello With C++ is now live! Master the basics with 26 new problems. Go solve it now and climb the leaderboard!" />
                     <NewsCard type="Announcement" title="Welcome to ICPC HUE!" date="Jan 2025" body="Welcome to our training platform! We are excited to have you here. Start with Sheet 1 and join our competitive programming journey." />
                     <NewsCard type="Feature" title="Platform Features" date="Jan 2025" body="Track your progress, compete on the leaderboard, earn achievements, and access exclusive training materials. More features coming soon!" />
                 </div>

@@ -4,9 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Editor, OnMount } from '@monaco-editor/react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
     ChevronLeft,
+    ChevronRight,
     Clock,
     HardDrive,
     Play,
@@ -26,9 +29,9 @@ import {
     Database,
     Zap,
     X,
-    Brain
+    Brain,
+    Code2
 } from 'lucide-react';
-// ... Recharts imports ...
 import {
     BarChart,
     Bar,
@@ -38,8 +41,6 @@ import {
     ResponsiveContainer,
     Cell
 } from 'recharts';
-
-// ... interfaces ...
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -52,9 +53,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     }
     return null;
 };
-
-// ... component starts ...
-
 
 interface Example {
     input: string;
@@ -103,66 +101,6 @@ int main() {
 }
 `;
 
-// C++ Syntax Highlighting Function
-function highlightCpp(code: string): string {
-    // Guard against undefined/null
-    if (!code) return '';
-
-    // Escape HTML first
-    let html = code
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-    // Use unique placeholders that won't be touched by other regexes
-    const tokenMap = new Map<string, string>();
-    let tokenId = 0;
-
-    const tokenize = (match: string, color: string): string => {
-        const id = `__TOKEN_${tokenId++}__`;
-        tokenMap.set(id, `<span style="color:${color}">${match}</span>`);
-        return id;
-    };
-
-    // 1. Comments (single line)
-    html = html.replace(/(\/\/[^\n]*)/g, (m) => tokenize(m, '#6A9955'));
-
-    // 2. Comments (multi-line)
-    html = html.replace(/(\/\*[\s\S]*?\*\/)/g, (m) => tokenize(m, '#6A9955'));
-
-    // 3. Strings (double quotes)
-    html = html.replace(/("(?:[^"\\]|\\.)*")/g, (m) => tokenize(m, '#CE9178'));
-
-    // 4. Strings (single quotes)
-    html = html.replace(/('(?:[^'\\]|\\.)*')/g, (m) => tokenize(m, '#CE9178'));
-
-    // 5. Include brackets like <iostream>
-    html = html.replace(/(&lt;[a-zA-Z_][a-zA-Z0-9_]*&gt;)/g, (m) => tokenize(m, '#CE9178'));
-
-    // Now apply non-conflicting highlights
-
-    // Preprocessor directives
-    html = html.replace(/(#\w+)/g, '<span style="color:#C586C0">$1</span>');
-
-    // Keywords
-    const keywords = ['using', 'namespace', 'class', 'struct', 'public', 'private', 'protected', 'virtual', 'override', 'const', 'static', 'void', 'int', 'long', 'short', 'unsigned', 'signed', 'char', 'float', 'double', 'bool', 'true', 'false', 'nullptr', 'NULL', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'new', 'delete', 'try', 'catch', 'throw', 'template', 'typename', 'typedef', 'auto', 'register', 'extern', 'inline', 'sizeof', 'enum', 'union', 'friend', 'operator', 'this', 'string', 'vector', 'map', 'set', 'pair', 'queue', 'stack', 'priority_queue', 'cin', 'cout', 'cerr', 'endl', 'std'];
-    const keywordRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g');
-    html = html.replace(keywordRegex, '<span style="color:#569CD6">$1</span>');
-
-    // Function names
-    html = html.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g, '<span style="color:#DCDCAA">$1</span>(');
-
-    // Numbers
-    html = html.replace(/\b(\d+\.?\d*[fFlL]?)\b/g, '<span style="color:#B5CEA8">$1</span>');
-
-    // Restore all tokens
-    tokenMap.forEach((value, key) => {
-        html = html.split(key).join(value);
-    });
-
-    return html;
-}
-
 export default function ProblemPage() {
     const params = useParams();
     const router = useRouter();
@@ -201,6 +139,7 @@ export default function ProblemPage() {
 
     const [leftPanelWidth, setLeftPanelWidth] = useState(50);
     const [isResizing, setIsResizing] = useState(false);
+    const [mobileView, setMobileView] = useState<'problem' | 'code'>('problem');
     const [submissions, setSubmissions] = useState<Array<{
         id: number;
         verdict: string;
@@ -227,6 +166,14 @@ export default function ProblemPage() {
     const [tabSwitches, setTabSwitches] = useState(0);
     const [pasteEvents, setPasteEvents] = useState(0);
     const problemOpenTime = useRef<number>(Date.now());
+    const editorRef = useRef<any>(null);
+
+    const handleEditorDidMount: OnMount = (editor, monaco) => {
+        editorRef.current = editor;
+        editor.onDidPaste(() => {
+            setPasteEvents(prev => prev + 1);
+        });
+    };
 
     useEffect(() => {
         const fetchProblem = async () => {
@@ -319,8 +266,6 @@ export default function ProblemPage() {
             setComplexityLoading(false);
         }
     };
-
-
 
     // Track tab switches
     useEffect(() => {
@@ -425,10 +370,6 @@ export default function ProblemPage() {
         };
     }, [isResizing]);
 
-    const handlePaste = () => {
-        setPasteEvents(prev => prev + 1);
-    };
-
     const handleSubmit = async () => {
         if (!code.trim() || submitting) return;
 
@@ -499,15 +440,31 @@ export default function ProblemPage() {
         if (verdict === 'Accepted') return 'text-green-400 bg-green-400/10 border-green-400/30';
         if (verdict.includes('Wrong')) return 'text-red-400 bg-red-400/10 border-red-400/30';
         if (verdict.includes('Time')) return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30';
+        if (verdict.includes('Memory')) return 'text-blue-400 bg-blue-400/10 border-blue-400/30';
         if (verdict.includes('Compilation')) return 'text-orange-400 bg-orange-400/10 border-orange-400/30';
         if (verdict.includes('Runtime')) return 'text-purple-400 bg-purple-400/10 border-purple-400/30';
         return 'text-gray-400 bg-gray-400/10 border-gray-400/30';
     };
 
     const getVerdictIcon = (verdict: string) => {
-        if (verdict === 'Accepted') return <CheckCircle2 size={18} />;
-        if (verdict.includes('Wrong') || verdict.includes('Runtime')) return <XCircle size={18} />;
-        return <AlertTriangle size={18} />;
+        if (verdict === 'Accepted') return <CheckCircle2 size={18} className="text-green-400" />;
+        if (verdict.includes('Wrong')) return <XCircle size={18} className="text-red-400" />;
+        if (verdict.includes('Time')) return <Clock size={18} className="text-yellow-400" />;
+        if (verdict.includes('Memory')) return <Database size={18} className="text-blue-400" />;
+        if (verdict.includes('Compilation')) return <AlertTriangle size={18} className="text-orange-400" />;
+        if (verdict.includes('Runtime')) return <Zap size={18} className="text-purple-400" />;
+        return <AlertTriangle size={18} className="text-gray-400" />;
+    };
+
+    // Get short verdict code like Codeforces
+    const getVerdictShort = (verdict: string) => {
+        if (verdict === 'Accepted') return 'AC';
+        if (verdict.includes('Wrong')) return 'WA';
+        if (verdict.includes('Time')) return 'TLE';
+        if (verdict.includes('Memory')) return 'MLE';
+        if (verdict.includes('Compilation')) return 'CE';
+        if (verdict.includes('Runtime')) return 'RE';
+        return verdict;
     };
 
     if (authLoading || loading) {
@@ -525,7 +482,7 @@ export default function ProblemPage() {
     return (
         <div className="fixed inset-0 bg-[#0B0B0C] text-[#DCDCDC] z-50 flex flex-col">
             {/* Top Navbar - LeetCode Style */}
-            <header className="h-12 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between px-4 shrink-0">
+            <header className="h-10 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between px-4 shrink-0">
                 <div className="flex items-center gap-4">
                     <Link href={`/dashboard/sheets/${sheetId}`} className="flex items-center gap-2 text-[#A0A0A0] hover:text-white transition-colors">
                         <ChevronLeft size={20} />
@@ -534,7 +491,29 @@ export default function ProblemPage() {
                     <div className="h-5 w-px bg-white/10"></div>
                     <div className="flex items-center gap-2">
                         <span className="text-[#E8C15A] font-bold">{problem.id}.</span>
-                        <span className="font-medium text-white">{problem.title}</span>
+                        <span className="font-medium text-white hidden sm:inline">{problem.title}</span>
+                        <span className="font-medium text-white sm:hidden">{problem.id}</span>
+                    </div>
+                    {/* Problem Navigation */}
+                    <div className="flex items-center gap-1 ml-2">
+                        {problem.id !== 'A' && (
+                            <Link
+                                href={`/dashboard/sheets/${sheetId}/${String.fromCharCode(problem.id.charCodeAt(0) - 1)}`}
+                                className="flex items-center justify-center w-7 h-7 rounded hover:bg-white/10 text-[#666] hover:text-white transition-colors"
+                                title="Previous Problem"
+                            >
+                                <ChevronLeft size={18} />
+                            </Link>
+                        )}
+                        {problem.id !== 'Z' && (
+                            <Link
+                                href={`/dashboard/sheets/${sheetId}/${String.fromCharCode(problem.id.charCodeAt(0) + 1)}`}
+                                className="flex items-center justify-center w-7 h-7 rounded hover:bg-white/10 text-[#666] hover:text-white transition-colors"
+                                title="Next Problem"
+                            >
+                                <ChevronRight size={18} />
+                            </Link>
+                        )}
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -548,21 +527,47 @@ export default function ProblemPage() {
                             {problem.memoryLimit}MB
                         </span>
                     </div>
-                    <Link href={`/dashboard/sheets/${sheetId}`}>
-                        <Image src="/images/ui/navlogo.webp" alt="ICPCHUE" width={28} height={28} className="opacity-80 hover:opacity-100 transition-opacity" />
+                    <Link href={`/dashboard/sheets/${sheetId}`} className="flex items-center justify-center">
+                        <Image src="/icpchue-logo.webp" alt="ICPCHUE" width={36} height={36} className="opacity-90 hover:opacity-100 transition-opacity" />
                     </Link>
                 </div>
             </header>
 
-            {/* Main Split Panel */}
+            {/* Mobile View Toggle - Only visible on mobile */}
+            <div className="md:hidden flex bg-[#1a1a1a] border-b border-white/10">
+                <button
+                    onClick={() => setMobileView('problem')}
+                    className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${mobileView === 'problem'
+                        ? 'text-white bg-[#121212] border-b-2 border-[#E8C15A]'
+                        : 'text-[#666]'
+                        }`}
+                >
+                    <FileText size={16} />
+                    Problem
+                </button>
+                <button
+                    onClick={() => setMobileView('code')}
+                    className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${mobileView === 'code'
+                        ? 'text-white bg-[#0a0a0a] border-b-2 border-[#E8C15A]'
+                        : 'text-[#666]'
+                        }`}
+                >
+                    <Code2 size={16} />
+                    Code
+                </button>
+            </div>
+
+            {/* Main Split Panel - Desktop: side-by-side, Mobile: toggle */}
             <div ref={containerRef} className="flex-1 flex overflow-hidden" style={{ cursor: isResizing ? 'col-resize' : 'auto' }}>
-                {/* Left Panel - Problem Description */}
-                <div className="flex flex-col bg-[#121212]" style={{ width: `${leftPanelWidth}%` }}>
-                    {/* Tabs */}
-                    <div className="flex border-b border-white/10 bg-[#1a1a1a]">
+                {/* Left Panel - Problem Description (hidden on mobile when code view is active) */}
+                <div
+                    className={`problem-panel flex flex-col bg-[#121212] ${mobileView === 'code' ? 'hidden md:flex' : 'flex'}`}
+                >
+                    {/* Tabs - Description/Submissions/Analytics */}
+                    <div className="flex border-b border-white/10 bg-[#1a1a1a] overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('description')}
-                            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'description'
+                            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'description'
                                 ? 'text-white border-b-2 border-[#E8C15A] bg-[#121212]'
                                 : 'text-[#666] hover:text-[#A0A0A0]'
                                 }`}
@@ -572,7 +577,7 @@ export default function ProblemPage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('submissions')}
-                            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'submissions'
+                            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'submissions'
                                 ? 'text-white border-b-2 border-[#E8C15A] bg-[#121212]'
                                 : 'text-[#666] hover:text-[#A0A0A0]'
                                 }`}
@@ -582,7 +587,7 @@ export default function ProblemPage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('analytics')}
-                            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'analytics'
+                            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'analytics'
                                 ? 'text-white border-b-2 border-[#E8C15A] bg-[#121212]'
                                 : 'text-[#666] hover:text-[#A0A0A0]'
                                 }`}
@@ -914,16 +919,17 @@ export default function ProblemPage() {
                     </div>
                 </div>
 
-                {/* Resizer */}
+                {/* Resizer - Hidden on mobile */}
                 <div
-                    className="w-1 bg-white/5 hover:bg-[#E8C15A]/50 cursor-col-resize transition-colors relative group shrink-0"
+                    className="hidden md:block w-1 bg-white/5 hover:bg-[#E8C15A]/50 cursor-col-resize transition-colors relative group shrink-0"
                     onMouseDown={handleMouseDown}
                 >
                     <div className="absolute inset-y-0 -left-1 -right-1" />
                 </div>
 
-                {/* Right Panel - Code Editor */}
-                <div className="flex-1 flex flex-col bg-[#0a0a0a] min-w-0">
+                {/* Right Panel - Code Editor (hidden on mobile when problem view is active) */}
+                {/* Right Panel - Code Editor (hidden on mobile when problem view is active) */}
+                <div className={`flex-1 flex flex-col bg-[#1e1e1e] min-w-0 min-h-0 ${mobileView === 'problem' ? 'hidden md:flex' : 'flex'}`}>
                     {/* Editor Header */}
                     <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a1a] border-b border-white/10">
                         <div className="flex items-center gap-2">
@@ -934,43 +940,42 @@ export default function ProblemPage() {
                     </div>
 
                     {/* Code Editor with Syntax Highlighting */}
-                    <div className="flex-1 relative flex overflow-hidden">
-                        {/* Line Numbers */}
-                        <div className="w-12 bg-[#0a0a0a] border-r border-white/5 select-none shrink-0 overflow-hidden">
-                            <div className="py-4 pr-3 text-right font-mono text-xs text-[#444] leading-6">
-                                {code.split('\n').map((_, i) => (
-                                    <div key={i}>{i + 1}</div>
-                                ))}
-                            </div>
-                        </div>
-                        {/* Editor Container */}
-                        <div className="flex-1 relative overflow-auto">
-                            {/* Syntax Highlighted Overlay */}
-                            <pre
-                                className="absolute inset-0 font-mono text-sm py-4 pl-4 pr-4 leading-6 pointer-events-none whitespace-pre-wrap break-words"
-                                aria-hidden="true"
-                                dangerouslySetInnerHTML={{ __html: highlightCpp(code) + '\n' }}
-                            />
-                            {/* Actual Textarea */}
-                            <textarea
+                    <div className="flex-1 relative min-h-0">
+                        <div className="absolute inset-0">
+                            <Editor
+                                height="100%"
+                                defaultLanguage="cpp"
+                                theme="vs-dark"
                                 value={code}
-                                onChange={(e) => setCode(e.target.value)}
-                                onPaste={handlePaste}
-                                className="absolute inset-0 w-full h-full bg-transparent text-transparent caret-white font-mono text-sm py-4 pl-4 pr-4 resize-none focus:outline-none leading-6"
-                                placeholder="Write your C++ code here..."
-                                spellCheck={false}
-                                style={{ tabSize: 4 }}
+                                onChange={(value) => setCode(value || '')}
+                                onMount={handleEditorDidMount}
+                                options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 13,
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    padding: { top: 12, bottom: 12 },
+                                    fontLigatures: true,
+                                    lineNumbers: 'on',
+                                    renderLineHighlight: 'all',
+                                }}
+                                loading={
+                                    <div className="flex items-center justify-center h-full text-[#666]">
+                                        Loading Editor...
+                                    </div>
+                                }
                             />
                         </div>
                     </div>
 
                     {/* Bottom Action Bar */}
-                    <div className="p-3 bg-[#1a1a1a] border-t border-white/10 flex items-center justify-between gap-4">
+                    <div className="p-2 bg-[#1a1a1a] border-t border-white/10 flex items-center justify-between gap-4">
                         <div className="flex-1">
                             {result && (
-                                <div className={`flex items-center gap-2 text-sm ${result.passed ? 'text-green-400' : 'text-red-400'}`}>
+                                <div className={`flex items-center gap-2 text-sm ${getVerdictColor(result.verdict).split(' ')[0]}`}>
                                     {getVerdictIcon(result.verdict)}
-                                    <span className="font-medium">{result.verdict}</span>
+                                    <span className="font-medium">{getVerdictShort(result.verdict)}</span>
                                     {result.totalTests > 0 && (
                                         <span className="text-[#666]">({result.testsPassed}/{result.totalTests} passed)</span>
                                     )}
@@ -981,7 +986,7 @@ export default function ProblemPage() {
                         <button
                             onClick={handleSubmit}
                             disabled={submitting || !code.trim()}
-                            className="px-6 py-2 bg-gradient-to-r from-[#E8C15A] to-[#CFA144] hover:from-[#CFA144] hover:to-[#B8913A] disabled:from-[#333] disabled:to-[#333] disabled:text-[#666] text-black font-bold rounded-lg transition-all flex items-center gap-2 text-sm"
+                            className="px-4 py-1.5 bg-gradient-to-r from-[#E8C15A] to-[#CFA144] hover:from-[#CFA144] hover:to-[#B8913A] disabled:from-[#333] disabled:to-[#333] disabled:text-[#666] text-black font-bold rounded-lg transition-all flex items-center gap-2 text-xs"
                         >
                             {submitting ? (
                                 <>
@@ -1000,108 +1005,240 @@ export default function ProblemPage() {
             </div>
 
             {/* Result Modal */}
-            {result && result.results.length > 0 && (
-                <div className="absolute bottom-16 right-4 w-80 bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl overflow-hidden animate-slide-up">
-                    <div className={`p-4 border-b border-white/10 ${getVerdictColor(result.verdict)}`}>
-                        <div className="flex items-center gap-2">
-                            {getVerdictIcon(result.verdict)}
-                            <span className="font-bold">{result.verdict}</span>
+            {
+                result && result.results.length > 0 && (
+                    <div className="absolute bottom-16 right-4 w-80 bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl overflow-hidden animate-slide-up">
+                        <div className={`p-4 border-b border-white/10 ${getVerdictColor(result.verdict)}`}>
+                            <div className="flex items-center gap-2">
+                                {getVerdictIcon(result.verdict)}
+                                <span className="font-bold">{result.verdict}</span>
+                                <span className="ml-2 text-xs opacity-60">({getVerdictShort(result.verdict)})</span>
+                            </div>
+                            <p className="text-xs mt-1 opacity-70">
+                                {result.testsPassed}/{result.totalTests} tests passed
+                                {result.attemptNumber && ` • Attempt #${result.attemptNumber}`}
+                            </p>
                         </div>
-                        <p className="text-xs mt-1 opacity-70">
-                            {result.testsPassed}/{result.totalTests} tests passed
-                            {result.attemptNumber && ` • Attempt #${result.attemptNumber}`}
-                        </p>
-                    </div>
-                    <div className="p-3 max-h-48 overflow-y-auto space-y-1.5">
-                        {result.results.map((r) => (
-                            <div
-                                key={r.testCase}
-                                className={`flex items-center justify-between p-2 rounded text-xs ${r.passed ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}
-                            >
-                                <span>Test {r.testCase}</span>
-                                <div className="flex items-center gap-2">
-                                    {r.time && <span className="text-[#666]">{r.time}</span>}
-                                    <span>{r.verdict}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    {result.results[0]?.compileError && (
-                        <pre className="p-3 bg-black/50 text-[10px] text-orange-400 max-h-24 overflow-auto">
-                            {result.results[0].compileError}
-                        </pre>
-                    )}
-                </div>
-            )}
-
-            {/* Code Viewer Modal */}
-            {(selectedSubmission || loadingCode) && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setSelectedSubmission(null)}>
-                    <div
-                        className="bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl w-[90%] max-w-3xl max-h-[80vh] flex flex-col animate-slide-up"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {loadingCode ? (
-                            <div className="flex items-center justify-center py-20">
-                                <Loader2 className="animate-spin text-[#E8C15A]" size={40} />
-                            </div>
-                        ) : selectedSubmission && (
-                            <>
-                                {/* Modal Header */}
-                                <div className="flex items-center justify-between p-4 border-b border-white/10">
-                                    <div>
-                                        <h3 className="font-bold text-white">Submission #{selectedSubmission.id}</h3>
-                                        <p className="text-xs text-[#666] mt-1">
-                                            Attempt #{selectedSubmission.attemptNumber} • {new Date(selectedSubmission.submittedAt).toLocaleString()}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedSubmission.verdict === 'Accepted'
-                                            ? 'bg-green-500/20 text-green-400'
-                                            : 'bg-red-500/20 text-red-400'
-                                            }`}>
-                                            {selectedSubmission.verdict}
-                                        </span>
-                                        <button
-                                            onClick={() => setSelectedSubmission(null)}
-                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-[#666] hover:text-white"
-                                        >
-                                            ✕
-                                        </button>
+                        <div className="p-3 max-h-48 overflow-y-auto space-y-1.5">
+                            {result.results.map((r) => (
+                                <div
+                                    key={r.testCase}
+                                    className={`flex items-center justify-between p-2 rounded text-xs ${r.passed ? 'bg-green-500/10 text-green-400' : getVerdictColor(r.verdict)}`}
+                                >
+                                    <span>Test {r.testCase}</span>
+                                    <div className="flex items-center gap-2">
+                                        {r.time && <span className="text-[#666]">{r.time}</span>}
+                                        <span className="font-medium">{getVerdictShort(r.verdict)}</span>
                                     </div>
                                 </div>
-                                {/* Code Content */}
-                                <div className="flex-1 overflow-auto p-4">
-                                    <pre
-                                        className="font-mono text-sm leading-6 text-[#D4D4D4]"
-                                        dangerouslySetInnerHTML={{ __html: highlightCpp(selectedSubmission.sourceCode) }}
-                                    />
+                            ))}
+                        </div>
+                        {/* Compilation Error Display */}
+                        {result.results[0]?.compileError && (
+                            <div className="border-t border-white/10">
+                                <div className="px-3 py-2 bg-orange-500/10 text-orange-400 text-xs font-medium">
+                                    Compilation Error
                                 </div>
-                                {/* Modal Footer */}
-                                <div className="flex items-center justify-end gap-2 p-4 border-t border-white/10">
-                                    <button
-                                        onClick={() => {
-                                            setCode(selectedSubmission.sourceCode);
-                                            setSelectedSubmission(null);
-                                            setActiveTab('description');
-                                        }}
-                                        className="px-4 py-2 bg-[#E8C15A]/20 text-[#E8C15A] rounded-lg hover:bg-[#E8C15A]/30 transition-colors text-sm font-medium"
-                                    >
-                                        Load to Editor
-                                    </button>
-                                    <button
-                                        onClick={() => setSelectedSubmission(null)}
-                                        className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
-                                    >
-                                        Close
-                                    </button>
+                                <pre className="p-3 bg-black/50 text-[10px] text-orange-300 max-h-32 overflow-auto whitespace-pre-wrap">
+                                    {result.results[0].compileError}
+                                </pre>
+                            </div>
+                        )}
+                        {/* Runtime Error Display */}
+                        {result.results[0]?.runtimeError && !result.results[0]?.compileError && (
+                            <div className="border-t border-white/10">
+                                <div className="px-3 py-2 bg-purple-500/10 text-purple-400 text-xs font-medium">
+                                    Runtime Error
                                 </div>
-                            </>
+                                <pre className="p-3 bg-black/50 text-[10px] text-purple-300 max-h-32 overflow-auto whitespace-pre-wrap">
+                                    {result.results[0].runtimeError}
+                                </pre>
+                            </div>
                         )}
                     </div>
-                </div>
-            )}
+                )
+            }
 
+            {/* Code Viewer Modal */}
+            {
+                (selectedSubmission || loadingCode) && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setSelectedSubmission(null)}>
+                        <div
+                            className="bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl w-[90%] max-w-3xl max-h-[80vh] flex flex-col animate-slide-up"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {loadingCode ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 className="animate-spin text-[#E8C15A]" size={40} />
+                                </div>
+                            ) : selectedSubmission && (
+                                <>
+                                    {/* Modal Header */}
+                                    <div className="flex items-center justify-between p-4 border-b border-white/10">
+                                        <div>
+                                            <h3 className="font-bold text-white">Submission #{selectedSubmission.id}</h3>
+                                            <p className="text-xs text-[#666] mt-1">
+                                                Attempt #{selectedSubmission.attemptNumber} • {new Date(selectedSubmission.submittedAt).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedSubmission.verdict === 'Accepted'
+                                                ? 'bg-green-500/20 text-green-400'
+                                                : 'bg-red-500/20 text-red-400'
+                                                }`}>
+                                                {selectedSubmission.verdict}
+                                            </span>
+                                            <button
+                                                onClick={() => setSelectedSubmission(null)}
+                                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-[#666] hover:text-white"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {/* Code Content */}
+                                    <div className="flex-1 overflow-hidden p-4 relative h-96">
+                                        <Editor
+                                            height="100%"
+                                            defaultLanguage="cpp"
+                                            theme="vs-dark"
+                                            value={selectedSubmission.sourceCode}
+                                            options={{
+                                                readOnly: true,
+                                                minimap: { enabled: false },
+                                                fontSize: 13,
+                                                fontFamily: "'JetBrains Mono', monospace",
+                                                scrollBeyondLastLine: false,
+                                                automaticLayout: true,
+                                                renderLineHighlight: 'none',
+                                            }}
+                                        />
+                                    </div>
+                                    {/* Modal Footer */}
+                                    <div className="flex items-center justify-end gap-2 p-4 border-t border-white/10">
+                                        <button
+                                            onClick={() => {
+                                                setCode(selectedSubmission.sourceCode);
+                                                setSelectedSubmission(null);
+                                                setActiveTab('description');
+                                            }}
+                                            className="px-4 py-2 bg-[#E8C15A]/20 text-[#E8C15A] rounded-lg hover:bg-[#E8C15A]/30 transition-colors text-sm font-medium"
+                                        >
+                                            Load to Editor
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedSubmission(null)}
+                                            className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Complexity Analysis Modal */}
+            {
+                showComplexityModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        {/* Backdrop */}
+                        <div
+                            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                            onClick={() => setShowComplexityModal(false)}
+                        />
+
+                        {/* Modal Content */}
+                        <div className="relative bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] border border-white/10 rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-slide-up">
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E8C15A]/20 to-[#CFA144]/10 flex items-center justify-center border border-[#E8C15A]/20">
+                                        <Brain size={20} className="text-[#E8C15A]" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">Complexity Analysis</h3>
+                                        <p className="text-xs text-[#666]">Powered by Gemini AI</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowComplexityModal(false)}
+                                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                                >
+                                    <X size={16} className="text-[#888]" />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            {complexityLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <div className="relative">
+                                        <div className="w-16 h-16 border-4 border-[#E8C15A]/20 rounded-full" />
+                                        <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-[#E8C15A] rounded-full animate-spin" />
+                                    </div>
+                                    <p className="mt-4 text-[#888] text-sm">Analyzing your code...</p>
+                                </div>
+                            ) : complexityResult ? (
+                                <div className="space-y-6">
+                                    {/* Complexity Cards */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {/* Time Complexity */}
+                                        <div className="relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
+                                            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-2xl" />
+                                            <div className="relative">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Clock size={14} className="text-emerald-400" />
+                                                    <span className="text-xs font-medium text-emerald-400/80">Time</span>
+                                                </div>
+                                                <p className="text-2xl font-bold text-white font-serif italic">
+                                                    {complexityResult.timeComplexity}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Space Complexity */}
+                                        <div className="relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20">
+                                            <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-full blur-2xl" />
+                                            <div className="relative">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Database size={14} className="text-blue-400" />
+                                                    <span className="text-xs font-medium text-blue-400/80">Space</span>
+                                                </div>
+                                                <p className="text-2xl font-bold text-white font-serif italic">
+                                                    {complexityResult.spaceComplexity}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Explanation */}
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Zap size={14} className="text-yellow-400" />
+                                            <span className="text-xs font-medium text-[#888]">Explanation</span>
+                                        </div>
+                                        <p className="text-sm text-[#ccc] leading-relaxed">
+                                            {complexityResult.explanation}
+                                        </p>
+                                    </div>
+
+                                    {/* Action Button */}
+                                    <button
+                                        onClick={() => setShowComplexityModal(false)}
+                                        className="w-full py-3 bg-gradient-to-r from-[#E8C15A] to-[#CFA144] hover:from-[#CFA144] hover:to-[#B8913A] text-black font-bold rounded-xl transition-all hover:shadow-lg hover:shadow-[#E8C15A]/20"
+                                    >
+                                        Got it!
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Responsive styles for problem panel */}
             <style>{`
                 @keyframes slide-up {
                     from { opacity: 0; transform: translateY(10px); }
@@ -1112,103 +1249,17 @@ export default function ProblemPage() {
                 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
                 .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
                 .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+                .problem-panel {
+                    width: 100%;
+                    flex: 1;
+                }
+                @media (min-width: 768px) {
+                    .problem-panel {
+                        width: ${leftPanelWidth}%;
+                        flex: none;
+                    }
+                }
             `}</style>
-
-            {/* Complexity Analysis Modal */}
-            {showComplexityModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                        onClick={() => setShowComplexityModal(false)}
-                    />
-
-                    {/* Modal Content */}
-                    <div className="relative bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] border border-white/10 rounded-2xl p-6 max-w-lg w-full shadow-2xl animate-slide-up">
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E8C15A]/20 to-[#CFA144]/10 flex items-center justify-center border border-[#E8C15A]/20">
-                                    <Brain size={20} className="text-[#E8C15A]" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-white">Complexity Analysis</h3>
-                                    <p className="text-xs text-[#666]">Powered by Gemini AI</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setShowComplexityModal(false)}
-                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                            >
-                                <X size={16} className="text-[#888]" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        {complexityLoading ? (
-                            <div className="flex flex-col items-center justify-center py-12">
-                                <div className="relative">
-                                    <div className="w-16 h-16 border-4 border-[#E8C15A]/20 rounded-full" />
-                                    <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-[#E8C15A] rounded-full animate-spin" />
-                                </div>
-                                <p className="mt-4 text-[#888] text-sm">Analyzing your code...</p>
-                            </div>
-                        ) : complexityResult ? (
-                            <div className="space-y-6">
-                                {/* Complexity Cards */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    {/* Time Complexity */}
-                                    <div className="relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
-                                        <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-2xl" />
-                                        <div className="relative">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Clock size={14} className="text-emerald-400" />
-                                                <span className="text-xs font-medium text-emerald-400/80">Time</span>
-                                            </div>
-                                            <p className="text-2xl font-bold text-white font-serif italic">
-                                                {complexityResult.timeComplexity}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Space Complexity */}
-                                    <div className="relative overflow-hidden p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20">
-                                        <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-full blur-2xl" />
-                                        <div className="relative">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Database size={14} className="text-blue-400" />
-                                                <span className="text-xs font-medium text-blue-400/80">Space</span>
-                                            </div>
-                                            <p className="text-2xl font-bold text-white font-serif italic">
-                                                {complexityResult.spaceComplexity}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Explanation */}
-                                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Zap size={14} className="text-yellow-400" />
-                                        <span className="text-xs font-medium text-[#888]">Explanation</span>
-                                    </div>
-                                    <p className="text-sm text-[#ccc] leading-relaxed">
-                                        {complexityResult.explanation}
-                                    </p>
-                                </div>
-
-                                {/* Action Button */}
-                                <button
-                                    onClick={() => setShowComplexityModal(false)}
-                                    className="w-full py-3 bg-gradient-to-r from-[#E8C15A] to-[#CFA144] hover:from-[#CFA144] hover:to-[#B8913A] text-black font-bold rounded-xl transition-all hover:shadow-lg hover:shadow-[#E8C15A]/20"
-                                >
-                                    Got it!
-                                </button>
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

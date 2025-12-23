@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDisplayName } from '@/lib/utils';
-import { ChevronLeft, Copy, Check, Settings, User, Mail, Shield, Loader2 } from 'lucide-react';
+import { ChevronLeft, Copy, Check, Settings, User, Mail, Shield, Loader2, MessageCircle, Lock, CheckCircle } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, profile: authProfile } = useAuth();
@@ -105,10 +105,10 @@ export default function SettingsPage() {
                             </div>
                         </div>
                         <div className="p-3 bg-[#1A1A1A] rounded-lg border border-white/5">
-                            <p className="text-xs text-[#666]">
+                            <p className="text-xs text-[#666] flex items-center gap-1.5">
                                 {showOnLeaderboard
-                                    ? '✅ Your profile is public. You appear on leaderboards and can be found by others.'
-                                    : '🔒 Your profile is private. You are hidden from leaderboards.'
+                                    ? <><CheckCircle size={12} className="text-green-500" /> Your profile is public. You appear on leaderboards and can be found by others.</>
+                                    : <><Lock size={12} className="text-[#888]" /> Your profile is private. You are hidden from leaderboards.</>
                                 }
                             </p>
                         </div>
@@ -123,6 +123,21 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Name</span><span className="text-sm text-[#F2F2F2]">{getDisplayName(profile.name) || 'Not set'}</span></div>
                         <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Member since</span><span className="text-sm text-[#F2F2F2]">December 2024</span></div>
                     </div>
+                </div>
+
+                {/* Support */}
+                <div className="bg-[#121212] rounded-xl border border-white/5 p-5 md:p-6">
+                    <h3 className="text-lg font-bold text-[#F2F2F2] mb-4 flex items-center gap-2"><MessageCircle size={20} className="text-[#E8C15A]" />Support</h3>
+                    <p className="text-sm text-[#A0A0A0] mb-4">Need help? Have questions or feedback? Reach out to us directly.</p>
+                    <a
+                        href="https://t.me/yousefmsm1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold rounded-lg transition-colors"
+                    >
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>
+                        Talk to Support
+                    </a>
                 </div>
             </div>
             <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }`}</style>

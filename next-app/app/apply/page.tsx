@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Mail, ArrowLeft, ArrowRight, Check, XCircle } from 'lucide-react';
+import { Mail, ArrowLeft, ArrowRight, Check, XCircle, CheckCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/lib/translations';
 import { executeRecaptcha, loadRecaptcha } from '@/lib/recaptcha';
@@ -690,10 +690,11 @@ function ApplicationFormContent() {
                         {/* Success message display */}
                         {status === 'success' && (
                             <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
-                                <p className="text-green-300 text-sm font-medium">
+                                <p className="text-green-300 text-sm font-medium flex items-center gap-2">
+                                    <CheckCircle size={16} className="text-green-400" />
                                     {language === 'ar'
-                                        ? '✅ تم إرسال طلبك بنجاح! جاري تحويلك لإنشاء حسابك...'
-                                        : '✅ Application submitted! Redirecting you to create your account...'}
+                                        ? 'تم إرسال طلبك بنجاح! جاري تحويلك لإنشاء حسابك...'
+                                        : 'Application submitted! Redirecting you to create your account...'}
                                 </p>
                             </div>
                         )}

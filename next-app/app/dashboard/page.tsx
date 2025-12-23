@@ -13,7 +13,8 @@ import {
     Trophy,
     Zap,
     Calendar,
-    MoreHorizontal
+    MoreHorizontal,
+    Hand
 } from 'lucide-react';
 
 function StatCard({ icon: Icon, title, value, subtext, color = "text-[#E8C15A]" }: any) {
@@ -64,7 +65,7 @@ function WelcomeBanner({ name }: { name: string }) {
         <div className="bg-gradient-to-r from-[#E8C15A] to-[#B89830] rounded-2xl p-6 md:p-8 relative overflow-hidden mb-6">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
             <div className="relative z-10 text-[#0f0f0f]">
-                <h1 className="text-2xl md:text-3xl font-bold mb-2">{greeting}, {name}! 👋</h1>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2 flex items-center gap-2">{greeting}, {name}! <Hand size={28} className="text-[#0f0f0f] animate-wave" /></h1>
                 <p className="text-sm md:text-base opacity-80 max-w-lg font-medium">
                     Ready to crush some problems today? consistency is the key to mastery.
                 </p>
@@ -344,6 +345,8 @@ export default function DashboardHome() {
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+                @keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(20deg); } 75% { transform: rotate(-10deg); } }
+                .animate-wave { animation: wave 1.5s ease-in-out infinite; transform-origin: 70% 70%; }
             `}</style>
         </>
     );
