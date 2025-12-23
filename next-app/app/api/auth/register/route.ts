@@ -8,6 +8,11 @@ const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
 const JWT_EXPIRES_IN = '7d';
 const SALT_ROUNDS = 10;
 
+// Add type definition for global
+declare global {
+    var authRegisterRateLimits: Map<string, number> | undefined;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const { email, password } = await request.json();
@@ -18,6 +23,30 @@ export async function POST(request: NextRequest) {
 
         if (!JWT_SECRET) {
             return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+        }
+
+        // Rate Limiting (In-Memory by IP) - 1 attempt per 5 minutes
+        const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+            request.headers.get('x-real-ip') || 'unknown';
+
+        if (clientIP !== 'unknown' && clientIP !== '::1') {
+            if (!global.authRegisterRateLimits) {
+                global.authRegisterRateLimits = new Map();
+            }
+
+            const now = Date.now();
+            const lastAttempt = global.authRegisterRateLimits.get(clientIP) || 0;
+            const RATE_LIMIT_DURATION = 5 * 60 * 1000; // 5 minutes
+
+            if (now - lastAttempt < RATE_LIMIT_DURATION) {
+                const waitMinutes = Math.ceil((RATE_LIMIT_DURATION - (now - lastAttempt)) / 60000);
+                return NextResponse.json(
+                    { error: `Please wait ${waitMinutes}m before registering another account.` },
+                    { status: 429 }
+                );
+            }
+
+            global.authRegisterRateLimits.set(clientIP, now);
         }
 
         const normalizedEmail = email.trim().toLowerCase();

@@ -7,6 +7,11 @@ function sanitizeInput(input: string): string {
     return input.replace(/[<>'"]/g, '').trim();
 }
 
+// Add type definition for global
+declare global {
+    var appSubmitRateLimits: Map<string, number> | undefined;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
@@ -20,15 +25,38 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
+        // Get IP address (Robust)
+        const forwarded = request.headers.get('x-forwarded-for');
+        const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
+        const userAgent = request.headers.get('user-agent') || 'unknown';
+
+        // Rate Limiting (In-Memory by IP) - 10 minutes cooldown
+        // Prevents flooding the database with fake applications
+        if (ip !== 'unknown' && ip !== '::1' && ip !== '127.0.0.1') {
+            const RATE_LIMIT_DURATION = 10 * 60 * 1000; // 10 minutes
+            const lastSubmitTime = global.appSubmitRateLimits?.get(ip) || 0;
+            const now = Date.now();
+
+            if (now - lastSubmitTime < RATE_LIMIT_DURATION) {
+                const waitMinutes = Math.ceil((RATE_LIMIT_DURATION - (now - lastSubmitTime)) / 60000);
+                return NextResponse.json(
+                    { error: `Please wait ${waitMinutes}m before submitting another application` },
+                    { status: 429 }
+                );
+            }
+
+            // Initialize global map if needed
+            if (!global.appSubmitRateLimits) {
+                global.appSubmitRateLimits = new Map();
+            }
+            global.appSubmitRateLimits.set(ip, now);
+        }
+
         // Sanitize inputs
         const sanitizedName = sanitizeInput(name);
         const sanitizedFaculty = sanitizeInput(faculty);
         const sanitizedId = sanitizeInput(id);
         const sanitizedLevel = sanitizeInput(studentLevel || '');
-
-        // Get client info
-        const ip = request.headers.get('x-forwarded-for') || 'unknown';
-        const userAgent = request.headers.get('user-agent') || 'unknown';
 
         // Insert into database
         const result = await query(

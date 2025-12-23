@@ -6,6 +6,11 @@ import { query } from '@/lib/db';
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
 const JWT_EXPIRES_IN = '7d';
 
+// Add type definition for global
+declare global {
+    var authLoginRateLimits: Map<string, { count: number, lastAttempt: number }> | undefined;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const { email, password } = await request.json();
@@ -17,6 +22,36 @@ export async function POST(request: NextRequest) {
         if (!JWT_SECRET) {
             console.error('JWT_SECRET not configured');
             return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+        }
+
+        // Rate Limiting (In-Memory by IP) - 5 attempts per 60 seconds
+        const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+            request.headers.get('x-real-ip') || 'unknown';
+
+        if (clientIP !== 'unknown' && clientIP !== '::1') {
+            if (!global.authLoginRateLimits) {
+                global.authLoginRateLimits = new Map();
+            }
+
+            const now = Date.now();
+            const record = global.authLoginRateLimits.get(clientIP) || { count: 0, lastAttempt: 0 };
+
+            // Reset count if window passed
+            if (now - record.lastAttempt > 60000) {
+                record.count = 0;
+                record.lastAttempt = now;
+            }
+
+            if (record.count >= 5) {
+                const waitSeconds = Math.ceil((60000 - (now - record.lastAttempt)) / 1000);
+                return NextResponse.json(
+                    { error: `Too many login attempts. Please wait ${waitSeconds}s.` },
+                    { status: 429 }
+                );
+            }
+
+            record.count++;
+            global.authLoginRateLimits.set(clientIP, record);
         }
 
         // Find user by email
@@ -48,8 +83,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Log successful login
-        const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-            request.headers.get('x-real-ip') || 'unknown';
+        // clientIP is already defined at the top
         const userAgent = request.headers.get('user-agent') || 'unknown';
 
         try {

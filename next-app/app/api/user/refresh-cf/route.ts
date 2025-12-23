@@ -5,6 +5,11 @@ import { scrapeCodeforces, extractUsername } from '@/lib/codeforces';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY || '';
 
+// Add type definition for global
+declare global {
+    var cfRefreshRateLimits: Map<string, number> | undefined;
+}
+
 export async function POST(request: NextRequest) {
     try {
         // Get token from Authorization header
@@ -26,6 +31,25 @@ export async function POST(request: NextRequest) {
         if (!userId) {
             return NextResponse.json({ error: 'Invalid token payload' }, { status: 401 });
         }
+
+        // Rate Limiting (In-Memory) - Strictly limit scraping to avoid IP Ban
+        const RATE_LIMIT_DURATION = 60 * 1000; // 60 seconds
+        const lastRefreshTime = global.cfRefreshRateLimits?.get(String(userId)) || 0;
+        const now = Date.now();
+
+        if (now - lastRefreshTime < RATE_LIMIT_DURATION) {
+            const waitSeconds = Math.ceil((RATE_LIMIT_DURATION - (now - lastRefreshTime)) / 1000);
+            return NextResponse.json(
+                { error: `Please wait ${waitSeconds}s before refreshing again` },
+                { status: 429 }
+            );
+        }
+
+        // Initialize global map if needed
+        if (!global.cfRefreshRateLimits) {
+            global.cfRefreshRateLimits = new Map();
+        }
+        global.cfRefreshRateLimits.set(String(userId), now);
 
         // Get user's codeforces_handle from users table
         const userResult = await query('SELECT codeforces_handle FROM users WHERE id = $1', [userId]);
