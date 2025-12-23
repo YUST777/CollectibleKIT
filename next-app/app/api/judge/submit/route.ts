@@ -112,9 +112,9 @@ export async function POST(req: NextRequest) {
 
             // 2. Duplicate Submission Check
             if (
-                lastSub.sheet_id === sheetId &&
-                lastSub.problem_id === problemId &&
-                lastSub.source_code === sourceCode
+                String(lastSub.sheet_id) === String(sheetId) &&
+                String(lastSub.problem_id) === String(problemId) &&
+                lastSub.source_code.trim() === sourceCode.trim()
             ) {
                 return NextResponse.json(
                     { error: 'You just submitted this exact code' },
