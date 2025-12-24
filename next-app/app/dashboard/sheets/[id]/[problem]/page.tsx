@@ -30,7 +30,9 @@ import {
     Zap,
     X,
     Brain,
-    Code2
+    Code2,
+    Terminal,
+    CloudUpload
 } from 'lucide-react';
 import {
     BarChart,
@@ -68,6 +70,7 @@ interface Problem {
     inputFormat: string;
     outputFormat: string;
     examples: Example[];
+    testCases?: Example[];
     note?: string;
 }
 
@@ -86,6 +89,7 @@ interface SubmissionResult {
         passed: boolean;
         time?: string;
         memory?: string;
+        output?: string;
         compileError?: string;
         runtimeError?: string;
     }>;
@@ -161,6 +165,15 @@ export default function ProblemPage() {
     } | null>(null);
     const [loadingCode, setLoadingCode] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const editorContainerRef = useRef<HTMLDivElement>(null);
+
+    // Vertical split panel state (Test Cases Panel)
+    const [testPanelHeight, setTestPanelHeight] = useState(35); // percentage
+    const [isTestPanelVisible, setIsTestPanelVisible] = useState(true);
+    const [isResizingVertical, setIsResizingVertical] = useState(false);
+    const [testPanelTab, setTestPanelTab] = useState<'testcase' | 'result'>('testcase');
+    const [selectedTestCase, setSelectedTestCase] = useState(0);
+    const [testCases, setTestCases] = useState<Array<{ input: string; expectedOutput: string }>>([]);
 
     // Behavior tracking
     const [tabSwitches, setTabSwitches] = useState(0);
@@ -182,6 +195,15 @@ export default function ProblemPage() {
                 if (res.ok) {
                     const data = await res.json();
                     setProblem(data.problem);
+                    // Populate test cases for the test panel
+                    // Prefer full test cases if available, otherwise fallback to examples
+                    const casesToDisplay = data.problem.testCases || data.problem.examples;
+                    if (casesToDisplay) {
+                        setTestCases(casesToDisplay.map((ex: any) => ({
+                            input: ex.input,
+                            expectedOutput: ex.output || ex.expectedOutput // Handle both naming conventions
+                        })));
+                    }
                 } else {
                     router.push(`/dashboard/sheets/${sheetId}`);
                 }
@@ -370,6 +392,36 @@ export default function ProblemPage() {
         };
     }, [isResizing]);
 
+    // Vertical resize handlers (for test case panel)
+    const handleVerticalMouseDown = () => {
+        setIsResizingVertical(true);
+    };
+
+    useEffect(() => {
+        const handleVerticalMouseMove = (e: MouseEvent) => {
+            if (!isResizingVertical || !editorContainerRef.current) return;
+            const containerRect = editorContainerRef.current.getBoundingClientRect();
+            const newHeight = ((containerRect.bottom - e.clientY) / containerRect.height) * 100;
+            if (newHeight >= 15 && newHeight <= 60) {
+                setTestPanelHeight(newHeight);
+            }
+        };
+
+        const handleVerticalMouseUp = () => {
+            setIsResizingVertical(false);
+        };
+
+        if (isResizingVertical) {
+            document.addEventListener('mousemove', handleVerticalMouseMove);
+            document.addEventListener('mouseup', handleVerticalMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleVerticalMouseMove);
+            document.removeEventListener('mouseup', handleVerticalMouseUp);
+        };
+    }, [isResizingVertical]);
+
     const handleSubmit = async () => {
         if (!code.trim() || submitting) return;
 
@@ -400,6 +452,11 @@ export default function ProblemPage() {
 
             if (res.ok) {
                 setResult(data);
+
+                // Auto-open test panel and switch to result tab
+                setIsTestPanelVisible(true);
+                setTestPanelTab('result');
+
                 if (data.passed) {
                     const key = `solved-${sheetId}`;
                     const saved = localStorage.getItem(key);
@@ -415,6 +472,9 @@ export default function ProblemPage() {
                     totalTests: 0,
                     results: [],
                 });
+                // Also open panel on error to show verdict
+                setIsTestPanelVisible(true);
+                setTestPanelTab('result');
             }
         } catch (error) {
             console.error('Submission error:', error);
@@ -927,20 +987,56 @@ export default function ProblemPage() {
                     <div className="absolute inset-y-0 -left-1 -right-1" />
                 </div>
 
-                {/* Right Panel - Code Editor (hidden on mobile when problem view is active) */}
-                {/* Right Panel - Code Editor (hidden on mobile when problem view is active) */}
-                <div className={`flex-1 flex flex-col bg-[#1e1e1e] min-w-0 min-h-0 ${mobileView === 'problem' ? 'hidden md:flex' : 'flex'}`}>
-                    {/* Editor Header */}
-                    <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a1a] border-b border-white/10">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white">Code</span>
-                            <span className="text-xs px-2 py-0.5 bg-white/10 rounded text-[#A0A0A0]">C++</span>
+                {/* Right Panel - Code Editor + Test Cases */}
+                <div
+                    ref={editorContainerRef}
+                    className={`flex-1 flex flex-col bg-[#1e1e1e] min-w-0 min-h-0 ${mobileView === 'problem' ? 'hidden md:flex' : 'flex'}`}
+                    style={{ cursor: isResizingVertical ? 'row-resize' : 'auto' }}
+                >
+                    {/* Editor Header - LeetCode Style */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a1a] border-b border-white/10 shrink-0">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-white">Code</span>
+                                <span className="text-xs px-2 py-0.5 bg-white/10 rounded text-[#A0A0A0]">C++</span>
+                            </div>
                         </div>
-                        <span className="text-xs text-[#666]">Auto-saved</span>
+
+                        {/* Top Actions */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsTestPanelVisible(!isTestPanelVisible)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isTestPanelVisible
+                                    ? 'bg-white/10 text-white'
+                                    : 'text-[#666] hover:bg-white/5 hover:text-[#A0A0A0]'
+                                    }`}
+                            >
+                                <Terminal size={14} />
+                                Testcase
+                            </button>
+
+                            <button
+                                onClick={handleSubmit}
+                                disabled={submitting || !code.trim()}
+                                className="px-4 py-1.5 bg-gradient-to-r from-[#E8C15A] to-[#CFA144] hover:from-[#CFA15A] hover:to-[#B8913A] disabled:from-[#333] disabled:to-[#333] disabled:text-[#666] text-black font-bold rounded-lg transition-all flex items-center gap-2 text-xs"
+                            >
+                                {submitting ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Running...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CloudUpload size={16} />
+                                        Submit
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Code Editor with Syntax Highlighting */}
-                    <div className="flex-1 relative min-h-0">
+                    {/* Code Editor */}
+                    <div className="relative min-h-0" style={{ flex: isTestPanelVisible ? `1 1 ${100 - testPanelHeight}%` : '1 1 100%' }}>
                         <div className="absolute inset-0">
                             <Editor
                                 height="100%"
@@ -980,95 +1076,206 @@ export default function ProblemPage() {
                         </div>
                     </div>
 
-                    {/* Bottom Action Bar */}
-                    <div className="p-2 bg-[#1a1a1a] border-t border-white/10 flex items-center justify-between gap-4">
-                        <div className="flex-1">
-                            {result && (
-                                <div className={`flex items-center gap-2 text-sm ${getVerdictColor(result.verdict).split(' ')[0]}`}>
-                                    {getVerdictIcon(result.verdict)}
-                                    <span className="font-medium">{getVerdictShort(result.verdict)}</span>
-                                    {result.totalTests > 0 && (
-                                        <span className="text-[#666]">({result.testsPassed}/{result.totalTests} passed)</span>
-                                    )}
-                                    {result.time && <span className="text-[#666]">• {result.time}</span>}
+                    {/* Test Panel Section (Conditional) */}
+                    {isTestPanelVisible && (
+                        <>
+                            {/* Vertical Resizer Bar */}
+                            <div
+                                className="h-1.5 bg-[#1a1a1a] hover:bg-[#E8C15A]/50 cursor-row-resize transition-colors relative group shrink-0 border-y border-white/5"
+                                onMouseDown={handleVerticalMouseDown}
+                            >
+                                <div className="absolute inset-x-0 -top-1 -bottom-1" />
+                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-1 bg-white/20 rounded-full group-hover:bg-[#E8C15A]/50 transition-colors" />
+                            </div>
+
+                            {/* Test Case Panel */}
+                            <div
+                                className="bg-[#1a1a1a] flex flex-col min-h-0 shrink-0"
+                                style={{ height: `${testPanelHeight}%` }}
+                            >
+                                {/* Test Panel Tabs - Simplified */}
+                                <div className="flex items-center justify-between border-b border-white/10 shrink-0 px-2 bg-[#252526]">
+                                    <div className="flex items-center">
+                                        <button
+                                            onClick={() => setTestPanelTab('testcase')}
+                                            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors border-t-2 border-transparent ${testPanelTab === 'testcase'
+                                                ? 'text-white border-t-[#E8C15A] bg-[#1e1e1e]'
+                                                : 'text-[#666] hover:text-[#A0A0A0]'
+                                                }`}
+                                        >
+                                            <CheckCircle2 size={12} />
+                                            Testcase
+                                        </button>
+                                        <button
+                                            onClick={() => setTestPanelTab('result')}
+                                            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors border-t-2 border-transparent ${testPanelTab === 'result'
+                                                ? 'text-white border-t-[#E8C15A] bg-[#1e1e1e]'
+                                                : 'text-[#666] hover:text-[#A0A0A0]'
+                                                }`}
+                                        >
+                                            <Play size={12} />
+                                            Test Result
+                                        </button>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsTestPanelVisible(false)}
+                                        className="p-1 text-[#666] hover:text-white transition-colors"
+                                    >
+                                        <Minimize2 size={14} />
+                                    </button>
                                 </div>
-                            )}
-                        </div>
-                        <button
-                            onClick={handleSubmit}
-                            disabled={submitting || !code.trim()}
-                            className="px-4 py-1.5 bg-gradient-to-r from-[#E8C15A] to-[#CFA144] hover:from-[#CFA144] hover:to-[#B8913A] disabled:from-[#333] disabled:to-[#333] disabled:text-[#666] text-black font-bold rounded-lg transition-all flex items-center gap-2 text-xs"
-                        >
-                            {submitting ? (
-                                <>
-                                    <Loader2 size={16} className="animate-spin" />
-                                    Judging...
-                                </>
-                            ) : (
-                                <>
-                                    <Play size={16} />
-                                    Submit
-                                </>
-                            )}
-                        </button>
-                    </div>
+
+                                {/* Test Panel Content */}
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1e1e1e]">
+                                    {testPanelTab === 'testcase' ? (
+                                        <>
+                                            {/* Case Tabs */}
+                                            <div className="flex items-center gap-2 flex-wrap mb-4">
+                                                {testCases.map((_, index) => (
+                                                    <button
+                                                        key={index}
+                                                        onClick={() => setSelectedTestCase(index)}
+                                                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${selectedTestCase === index
+                                                            ? 'bg-[#2d2d2d] text-white shadow-sm'
+                                                            : 'text-[#666] hover:text-[#A0A0A0] hover:bg-[#2d2d2d]/50'
+                                                            }`}
+                                                    >
+                                                        {result && result.results[index] && (
+                                                            result.results[index].passed
+                                                                ? <CheckCircle2 size={12} className="text-green-400" />
+                                                                : <XCircle size={12} className="text-red-400" />
+                                                        )}
+                                                        Case {index + 1}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Selected Test Case Details */}
+                                            {testCases[selectedTestCase] && (
+                                                <div className="space-y-4 animate-fade-in">
+                                                    {/* Input */}
+                                                    <div>
+                                                        <label className="text-xs font-medium text-[#888] mb-2 block uppercase tracking-wider">Input</label>
+                                                        <div className="bg-[#2d2d2d] rounded-lg p-4 border border-white/5 font-mono text-sm text-[#d4d4d4] whitespace-pre-wrap leading-relaxed shadow-inner">
+                                                            {testCases[selectedTestCase].input}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Expected Output */}
+                                                    <div>
+                                                        <label className="text-xs font-medium text-[#888] mb-2 block uppercase tracking-wider">Expected Output</label>
+                                                        <div className="bg-[#2d2d2d] rounded-lg p-4 border border-white/5 font-mono text-sm text-[#d4d4d4] whitespace-pre-wrap leading-relaxed shadow-inner">
+                                                            {testCases[selectedTestCase].expectedOutput}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Actual Output (from last run) */}
+                                                    {result && result.results[selectedTestCase] && (
+                                                        <div className="animate-fade-in border-t border-white/5 pt-4 mt-2">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <label className="text-xs font-medium text-[#888] block uppercase tracking-wider">Actual Output</label>
+                                                                <span className={`text-xs font-bold ${result.results[selectedTestCase].passed ? 'text-green-400' : 'text-red-400'}`}>
+                                                                    {result.results[selectedTestCase].verdict}
+                                                                </span>
+                                                            </div>
+                                                            <div className={`bg-[#2d2d2d] rounded-lg p-4 border font-mono text-sm whitespace-pre-wrap leading-relaxed shadow-inner ${result.results[selectedTestCase].passed
+                                                                ? 'border-green-500/20 text-[#d4d4d4]'
+                                                                : 'border-red-500/20 text-red-300'
+                                                                }`}>
+                                                                {result.results[selectedTestCase].output || (
+                                                                    <span className="italic opacity-50">No output captured</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        /* Test Result Tab */
+                                        result ? (
+                                            <div className="space-y-4 animate-fade-in">
+                                                {/* Verdict Header */}
+                                                <div className={`flex items-center gap-3 p-4 rounded-xl border ${result.passed
+                                                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                                                    : 'bg-red-500/10 border-red-500/20 text-red-400'
+                                                    }`}>
+                                                    <div className={`p-2 rounded-full ${result.passed ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                                                        {getVerdictIcon(result.verdict)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-lg">{result.verdict}</div>
+                                                        <div className="text-xs opacity-70 mt-0.5 font-mono">
+                                                            {result.testsPassed}/{result.totalTests} tests passed • {result.time || '0ms'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Compilation/Runtime Errors */}
+                                                {result.results[0]?.compileError && (
+                                                    <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg overflow-hidden">
+                                                        <div className="px-3 py-2 text-orange-400 text-xs font-medium border-b border-orange-500/20">
+                                                            Compilation Error
+                                                        </div>
+                                                        <pre className="p-3 text-[10px] text-orange-300 max-h-32 overflow-auto whitespace-pre-wrap font-mono">
+                                                            {result.results[0].compileError}
+                                                        </pre>
+                                                    </div>
+                                                )}
+                                                {result.results[0]?.runtimeError && !result.results[0]?.compileError && (
+                                                    <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg overflow-hidden">
+                                                        <div className="px-3 py-2 text-purple-400 text-xs font-medium border-b border-purple-500/20">
+                                                            Runtime Error
+                                                        </div>
+                                                        <pre className="p-3 text-[10px] text-purple-300 max-h-32 overflow-auto whitespace-pre-wrap font-mono">
+                                                            {result.results[0].runtimeError}
+                                                        </pre>
+                                                    </div>
+                                                )}
+
+                                                {/* All Test Results List */}
+                                                <div className="bg-[#252526] rounded-xl border border-white/5 overflow-hidden">
+                                                    {result.results.map((r, i) => (
+                                                        <div
+                                                            key={r.testCase}
+                                                            className={`flex items-center justify-between p-3 text-xs border-b border-white/5 last:border-0 hover:bg-[#2d2d2d] transition-colors ${!r.passed ? 'bg-red-500/5' : ''
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                {r.passed
+                                                                    ? <CheckCircle2 size={16} className="text-green-500" />
+                                                                    : <XCircle size={16} className="text-red-500" />
+                                                                }
+                                                                <span className="font-medium text-[#d4d4d4]">Test Case {r.testCase}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-4 font-mono text-[#888]">
+                                                                <span>{r.time || '0ms'}</span>
+                                                                <span>{r.memory || '0KB'}</span>
+                                                                <span className={`font-bold w-12 text-right ${r.passed ? 'text-green-400' : 'text-red-400'}`}>
+                                                                    {getVerdictShort(r.verdict)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center h-full text-[#666] gap-3">
+                                                <div className="w-12 h-12 rounded-full bg-[#2d2d2d] flex items-center justify-center">
+                                                    <CloudUpload size={24} className="opacity-50" />
+                                                </div>
+                                                <p className="text-sm font-medium">Run your code to see results</p>
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Result Modal */}
-            {
-                result && result.results.length > 0 && (
-                    <div className="absolute bottom-16 right-4 w-80 bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl overflow-hidden animate-slide-up">
-                        <div className={`p-4 border-b border-white/10 ${getVerdictColor(result.verdict)}`}>
-                            <div className="flex items-center gap-2">
-                                {getVerdictIcon(result.verdict)}
-                                <span className="font-bold">{result.verdict}</span>
-                                <span className="ml-2 text-xs opacity-60">({getVerdictShort(result.verdict)})</span>
-                            </div>
-                            <p className="text-xs mt-1 opacity-70">
-                                {result.testsPassed}/{result.totalTests} tests passed
-                                {result.attemptNumber && ` • Attempt #${result.attemptNumber}`}
-                            </p>
-                        </div>
-                        <div className="p-3 max-h-48 overflow-y-auto space-y-1.5">
-                            {result.results.map((r) => (
-                                <div
-                                    key={r.testCase}
-                                    className={`flex items-center justify-between p-2 rounded text-xs ${r.passed ? 'bg-green-500/10 text-green-400' : getVerdictColor(r.verdict)}`}
-                                >
-                                    <span>Test {r.testCase}</span>
-                                    <div className="flex items-center gap-2">
-                                        {r.time && <span className="text-[#666]">{r.time}</span>}
-                                        <span className="font-medium">{getVerdictShort(r.verdict)}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        {/* Compilation Error Display */}
-                        {result.results[0]?.compileError && (
-                            <div className="border-t border-white/10">
-                                <div className="px-3 py-2 bg-orange-500/10 text-orange-400 text-xs font-medium">
-                                    Compilation Error
-                                </div>
-                                <pre className="p-3 bg-black/50 text-[10px] text-orange-300 max-h-32 overflow-auto whitespace-pre-wrap">
-                                    {result.results[0].compileError}
-                                </pre>
-                            </div>
-                        )}
-                        {/* Runtime Error Display */}
-                        {result.results[0]?.runtimeError && !result.results[0]?.compileError && (
-                            <div className="border-t border-white/10">
-                                <div className="px-3 py-2 bg-purple-500/10 text-purple-400 text-xs font-medium">
-                                    Runtime Error
-                                </div>
-                                <pre className="p-3 bg-black/50 text-[10px] text-purple-300 max-h-32 overflow-auto whitespace-pre-wrap">
-                                    {result.results[0].runtimeError}
-                                </pre>
-                            </div>
-                        )}
-                    </div>
-                )
-            }
+            {/* Result modal removed - now integrated into test panel */}
 
             {/* Code Viewer Modal */}
             {

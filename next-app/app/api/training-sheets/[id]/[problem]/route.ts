@@ -31,6 +31,7 @@ export async function GET(
                 inputFormat: problem.inputFormat,
                 outputFormat: problem.outputFormat,
                 examples: problem.examples,
+                testCases: problem.testCases, // Return all test cases
                 note: problem.note || null,
             }
         });

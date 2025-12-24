@@ -240,6 +240,7 @@ export async function POST(req: NextRequest) {
                 passed,
                 time: result.time ? `${result.time}s` : null,
                 memory: result.memory ? `${Math.round(result.memory / 1024)}MB` : null,
+                output: stdout, // Include actual output for debugging
                 ...(verdict === 'Compilation Error' && { compileError: compileOutput }),
                 ...(verdict === 'Runtime Error' && { runtimeError: stderr }),
             });
