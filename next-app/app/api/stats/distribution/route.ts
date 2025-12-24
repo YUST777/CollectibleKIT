@@ -128,6 +128,7 @@ export async function GET(req: NextRequest) {
             .sort((a, b) => a.range - b.range);
 
 
+        // Cache stats for 30 seconds to reduce load (distribution doesn't change rapidly)
         return NextResponse.json({
             runtimeDistribution,
             memoryDistribution,
@@ -142,6 +143,10 @@ export async function GET(req: NextRequest) {
                     percentile: memoryPercentile
                 }
             } : null
+        }, {
+            headers: {
+                'Cache-Control': 'private, max-age=30, stale-while-revalidate=60'
+            }
         });
 
     } catch (error) {

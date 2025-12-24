@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Editor } from '@monaco-editor/react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, Clock, HardDrive, CheckCircle2, Loader2, Lock, List, FileText, XCircle, AlertTriangle, Users } from 'lucide-react';
+import { ChevronLeft, Clock, HardDrive, CheckCircle2, Loader2, Lock, List, FileText, XCircle, AlertTriangle, Users, Filter, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Problem {
@@ -55,12 +56,23 @@ function highlightCpp(code: string): string {
         return id;
     };
 
-    html = html.replace(/(\/\/[^\n]*)/g, (m) => tokenize(m, '#6A9955'));
-    html = html.replace(/(\/\*[\s\S]*?\*\/)/g, (m) => tokenize(m, '#6A9955'));
-    html = html.replace(/("(?:[^"\\]|\\.)*")/g, (m) => tokenize(m, '#CE9178'));
-    html = html.replace(/('(?:[^'\\]|\\.)*')/g, (m) => tokenize(m, '#CE9178'));
-    html = html.replace(/(&lt;[a-zA-Z_][a-zA-Z0-9_]*&gt;)/g, (m) => tokenize(m, '#CE9178'));
-    html = html.replace(/(#\w+)/g, '<span style="color:#C586C0">$1</span>');
+    // Use VS Code Dark+ colors
+    html = html.replace(/(\/\/[^\n]*)/g, (m) => tokenize(m, '#6A9955')); // Comments
+    html = html.replace(/(\/\*[\s\S]*?\*\/)/g, (m) => tokenize(m, '#6A9955')); // Block comments
+    html = html.replace(/("(?:[^"\\]|\\.)*")/g, (m) => tokenize(m, '#CE9178')); // Strings
+    html = html.replace(/('#?.)/g, (m) => tokenize(m, '#b5cea8')); // Chars/Numbers
+
+    // Control flow keywords (Purple)
+    html = html.replace(/\b(if|else|for|while|return|switch|case|break|continue|do)\b/g, (m) => tokenize(m, '#C586C0'));
+
+    // Types and definitions (Blue)
+    html = html.replace(/\b(int|long|double|float|char|void|bool|auto|const|static|struct|class|namespace|using|template|typename|private|public|protected)\b/g, (m) => tokenize(m, '#569CD6'));
+
+    // STL types (Teal)
+    html = html.replace(/\b(vector|string|map|set|stack|queue|deque|pair|cin|cout|endl)\b/g, (m) => tokenize(m, '#4EC9B0'));
+
+    // Macros (Blue/Purple mix)
+    html = html.replace(/#\s*(include|define|ifdef|ifndef|endif)\b/g, (m) => tokenize(m, '#C586C0'));
 
     const keywords = ['using', 'namespace', 'class', 'struct', 'void', 'int', 'long', 'char', 'float', 'double', 'bool', 'true', 'false', 'if', 'else', 'for', 'while', 'return', 'const', 'auto', 'cin', 'cout', 'endl', 'std', 'string', 'vector'];
     html = html.replace(new RegExp(`\\b(${keywords.join('|')})\\b`, 'g'), '<span style="color:#569CD6">$1</span>');
@@ -83,6 +95,9 @@ export default function SheetDetailPage() {
     const [activeTab, setActiveTab] = useState<'problems' | 'submissions'>('problems');
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [submissionsLoading, setSubmissionsLoading] = useState(false);
+    const [submissionsPage, setSubmissionsPage] = useState(1);
+    const [hasMoreSubmissions, setHasMoreSubmissions] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [selectedSubmission, setSelectedSubmission] = useState<{
         id: number;
         verdict: string;
@@ -92,6 +107,57 @@ export default function SheetDetailPage() {
         problemTitle: string;
     } | null>(null);
     const [loadingCode, setLoadingCode] = useState(false);
+
+    // Filter and Sort state
+    const [verdictFilter, setVerdictFilter] = useState<'all' | 'accepted' | 'wrong'>('all');
+    const [problemFilter, setProblemFilter] = useState<string>('all');
+    const [sortBy, setSortBy] = useState<'date' | 'time' | 'memory' | 'problem'>('date');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    // Computed filtered and sorted submissions
+    const filteredSubmissions = useMemo(() => {
+        let result = [...submissions];
+
+        // Apply verdict filter
+        if (verdictFilter === 'accepted') {
+            result = result.filter(s => s.verdict === 'Accepted');
+        } else if (verdictFilter === 'wrong') {
+            result = result.filter(s => s.verdict !== 'Accepted');
+        }
+
+        // Apply problem filter
+        if (problemFilter !== 'all') {
+            result = result.filter(s => s.problemId === problemFilter);
+        }
+
+        // Apply sorting
+        result.sort((a, b) => {
+            let comparison = 0;
+            switch (sortBy) {
+                case 'date':
+                    comparison = new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
+                    break;
+                case 'time':
+                    comparison = (a.timeMs || 0) - (b.timeMs || 0);
+                    break;
+                case 'memory':
+                    comparison = (a.memoryKb || 0) - (b.memoryKb || 0);
+                    break;
+                case 'problem':
+                    comparison = a.problemId.localeCompare(b.problemId);
+                    break;
+            }
+            return sortOrder === 'desc' ? -comparison : comparison;
+        });
+
+        return result;
+    }, [submissions, verdictFilter, problemFilter, sortBy, sortOrder]);
+
+    // Get unique problem IDs for filter dropdown
+    const uniqueProblems = useMemo(() => {
+        const ids = new Set(submissions.map(s => s.problemId));
+        return Array.from(ids).sort();
+    }, [submissions]);
 
     useEffect(() => {
         const fetchSheet = async () => {
@@ -120,24 +186,33 @@ export default function SheetDetailPage() {
     }, [authLoading, user, router]);
 
     // Fetch solved problems from database on page load
+    // Strategy: Show cached data instantly, then fetch fresh from smart endpoint
     useEffect(() => {
         const fetchSolvedProblems = async () => {
             if (!user) return;
+
+            // Step 1: Load from localStorage immediately for instant UI
+            const cachedSolved = localStorage.getItem(`solved-${sheetId}`);
+            if (cachedSolved) {
+                try {
+                    setSolvedProblems(new Set(JSON.parse(cachedSolved)));
+                } catch (e) {
+                    console.error('Failed to parse cached solved problems:', e);
+                }
+            }
+
+            // Step 2: Fetch solved problem IDs from SMART endpoint (efficient)
             try {
                 const token = localStorage.getItem('authToken');
-                const res = await fetch(`/api/submissions?sheetId=${sheetId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const res = await fetch(`/api/sheets/solved?sheetId=${sheetId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    cache: 'no-store'
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    // Get unique problem IDs that have "Accepted" verdict
-                    const acceptedProblems = new Set<string>();
-                    (data.submissions || []).forEach((sub: Submission) => {
-                        if (sub.verdict === 'Accepted') {
-                            acceptedProblems.add(sub.problemId);
-                        }
-                    });
-                    setSolvedProblems(acceptedProblems);
+                    const solvedIds = new Set<string>(data.solvedProblemIds || []);
+                    setSolvedProblems(solvedIds);
+                    localStorage.setItem(`solved-${sheetId}`, JSON.stringify([...solvedIds]));
                 }
             } catch (error) {
                 console.error('Failed to fetch solved problems:', error);
@@ -147,30 +222,60 @@ export default function SheetDetailPage() {
         fetchSolvedProblems();
     }, [sheetId, user]);
 
-    // Fetch submissions when tab changes
+    // Fetch submissions for the submissions tab (separate concern)
     useEffect(() => {
-        if (activeTab === 'submissions' && user) {
-            fetchSubmissions();
-        }
-    }, [activeTab, user]);
+        const fetchSubmissions = async () => {
+            if (!user) return;
+            setSubmissionsLoading(true);
+            setSubmissionsPage(1);
+            try {
+                const token = localStorage.getItem('authToken');
+                const res = await fetch(`/api/submissions?sheetId=${sheetId}&limit=50&page=1`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setSubmissions(data.submissions || []);
+                    setHasMoreSubmissions(data.pagination?.page < data.pagination?.totalPages);
+                }
+            } catch (error) {
+                console.error('Failed to fetch submissions:', error);
+            } finally {
+                setSubmissionsLoading(false);
+            }
+        };
 
-    const fetchSubmissions = async () => {
-        setSubmissionsLoading(true);
+        fetchSubmissions();
+    }, [sheetId, user]);
+
+    // Load more submissions handler
+    const loadMoreSubmissions = async () => {
+        if (loadingMore || !hasMoreSubmissions) return;
+        setLoadingMore(true);
+        const nextPage = submissionsPage + 1;
         try {
             const token = localStorage.getItem('authToken');
-            const res = await fetch(`/api/submissions?sheetId=${sheetId}`, {
+            const res = await fetch(`/api/submissions?sheetId=${sheetId}&limit=50&page=${nextPage}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
-                setSubmissions(data.submissions || []);
+                setSubmissions(prev => [...prev, ...(data.submissions || [])]);
+                setSubmissionsPage(nextPage);
+                setHasMoreSubmissions(data.pagination?.page < data.pagination?.totalPages);
             }
         } catch (error) {
-            console.error('Failed to fetch submissions:', error);
+            console.error('Failed to load more submissions:', error);
         } finally {
-            setSubmissionsLoading(false);
+            setLoadingMore(false);
         }
     };
+
+    // Use cached submissions when switching to submissions tab (no refetch needed)
+    useEffect(() => {
+        // Data already loaded in the first useEffect above
+        // No need to fetch again when switching tabs
+    }, [activeTab]);
 
     const viewSubmissionCode = async (submissionId: number) => {
         setLoadingCode(true);
@@ -330,6 +435,7 @@ export default function SheetDetailPage() {
                                     <Link
                                         key={problem.id}
                                         href={isAvailable ? `/dashboard/sheets/${sheetId}/${problem.id}` : '#'}
+                                        prefetch={false}
                                         className={`
                                             relative group rounded-xl p-4 border transition-all text-center
                                             ${isAvailable
@@ -377,21 +483,7 @@ export default function SheetDetailPage() {
                             })}
                         </div>
 
-                        {/* Legend */}
-                        <div className="flex items-center justify-center gap-6 text-xs text-[#666]">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-[#121212] border border-white/10"></div>
-                                <span>Unsolved</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-green-500/10 border border-green-500/30"></div>
-                                <span>Solved</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-[#0d0d0d] border border-white/5 opacity-50"></div>
-                                <span>Coming Soon</span>
-                            </div>
-                        </div>
+
                     </>
                 )}
 
@@ -409,52 +501,143 @@ export default function SheetDetailPage() {
                                 <p className="text-[#444] text-sm mt-1">Solve a problem to see your submission history</p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b border-white/10 text-[#666] text-left">
-                                            <th className="px-4 py-3 font-medium">#</th>
-                                            <th className="px-4 py-3 font-medium">When</th>
-                                            <th className="px-4 py-3 font-medium">Problem</th>
-                                            <th className="px-4 py-3 font-medium">Lang</th>
-                                            <th className="px-4 py-3 font-medium">Verdict</th>
-                                            <th className="px-4 py-3 font-medium">Time</th>
-                                            <th className="px-4 py-3 font-medium">Memory</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {submissions.map((sub) => (
-                                            <tr
-                                                key={sub.id}
-                                                className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
-                                                onClick={() => viewSubmissionCode(sub.id)}
-                                            >
-                                                <td className="px-4 py-3 text-[#666]">{sub.id}</td>
-                                                <td className="px-4 py-3 text-[#808080] whitespace-nowrap">
-                                                    {formatDate(sub.submittedAt)}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className="text-[#E8C15A] font-medium">{sub.problemId}</span>
-                                                    <span className="text-[#808080] ml-2">- {sub.problemTitle}</span>
-                                                </td>
-                                                <td className="px-4 py-3 text-[#666] text-xs">{sub.language}</td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`flex items-center gap-1.5 font-medium ${getVerdictStyle(sub.verdict)}`}>
-                                                        {getVerdictIcon(sub.verdict)}
-                                                        {sub.verdict}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-[#808080]">
-                                                    {sub.timeMs ? `${sub.timeMs} ms` : '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-[#808080]">
-                                                    {sub.memoryKb ? `${Math.round(sub.memoryKb / 1024)} KB` : '-'}
-                                                </td>
-                                            </tr>
+                            <>
+                                {/* Filter & Sort Toolbar */}
+                                <div className="flex flex-wrap items-center gap-3 p-4 border-b border-white/10 bg-[#0d0d0d]">
+                                    {/* Filter Icon */}
+                                    <div className="flex items-center gap-2 text-[#666]">
+                                        <Filter size={16} />
+                                        <span className="text-xs font-medium">Filter:</span>
+                                    </div>
+
+                                    {/* Verdict Filter */}
+                                    <select
+                                        value={verdictFilter}
+                                        onChange={(e) => setVerdictFilter(e.target.value as 'all' | 'accepted' | 'wrong')}
+                                        className="bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#E8C15A]/50 cursor-pointer"
+                                    >
+                                        <option value="all">All Verdicts</option>
+                                        <option value="accepted">✓ Accepted</option>
+                                        <option value="wrong">✗ Wrong</option>
+                                    </select>
+
+                                    {/* Problem Filter */}
+                                    <select
+                                        value={problemFilter}
+                                        onChange={(e) => setProblemFilter(e.target.value)}
+                                        className="bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#E8C15A]/50 cursor-pointer"
+                                    >
+                                        <option value="all">All Problems</option>
+                                        {uniqueProblems.map(p => (
+                                            <option key={p} value={p}>Problem {p}</option>
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </select>
+
+                                    {/* Divider */}
+                                    <div className="w-px h-6 bg-white/10 mx-1" />
+
+                                    {/* Sort Icon */}
+                                    <div className="flex items-center gap-2 text-[#666]">
+                                        <ArrowUpDown size={16} />
+                                        <span className="text-xs font-medium">Sort:</span>
+                                    </div>
+
+                                    {/* Sort By */}
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value as 'date' | 'time' | 'memory' | 'problem')}
+                                        className="bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#E8C15A]/50 cursor-pointer"
+                                    >
+                                        <option value="date">Date</option>
+                                        <option value="time">Runtime (ms)</option>
+                                        <option value="memory">Memory (KB)</option>
+                                        <option value="problem">Problem ID</option>
+                                    </select>
+
+                                    {/* Sort Order Toggle */}
+                                    <button
+                                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-colors text-xs ${sortOrder === 'desc'
+                                            ? 'bg-[#E8C15A]/10 border-[#E8C15A]/30 text-[#E8C15A]'
+                                            : 'bg-white/5 border-white/10 text-[#888]'
+                                            }`}
+                                    >
+                                        {sortOrder === 'desc' ? '↓ Desc' : '↑ Asc'}
+                                    </button>
+
+                                    {/* Results Count */}
+                                    <div className="ml-auto text-xs text-[#666]">
+                                        {filteredSubmissions.length} of {submissions.length} submissions
+                                    </div>
+                                </div>
+
+                                {/* Table */}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-white/10 text-[#666] text-left">
+                                                <th className="px-4 py-3 font-medium">#</th>
+                                                <th className="px-4 py-3 font-medium">When</th>
+                                                <th className="px-4 py-3 font-medium">Problem</th>
+                                                <th className="px-4 py-3 font-medium">Lang</th>
+                                                <th className="px-4 py-3 font-medium">Verdict</th>
+                                                <th className="px-4 py-3 font-medium">Time</th>
+                                                <th className="px-4 py-3 font-medium">Memory</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredSubmissions.map((sub) => (
+                                                <tr
+                                                    key={sub.id}
+                                                    className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                                                    onClick={() => viewSubmissionCode(sub.id)}
+                                                >
+                                                    <td className="px-4 py-3 text-[#666]">{sub.id}</td>
+                                                    <td className="px-4 py-3 text-[#808080] whitespace-nowrap">
+                                                        {formatDate(sub.submittedAt)}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-[#E8C15A] font-medium">{sub.problemId}</span>
+                                                        <span className="text-[#808080] ml-2">- {sub.problemTitle}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-[#666] text-xs">{sub.language}</td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`flex items-center gap-1.5 font-medium ${getVerdictStyle(sub.verdict)}`}>
+                                                            {getVerdictIcon(sub.verdict)}
+                                                            {sub.verdict}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-[#808080]">
+                                                        {sub.timeMs ? `${sub.timeMs} ms` : '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-[#808080]">
+                                                        {sub.memoryKb ? `${Math.round(sub.memoryKb / 1024)} KB` : '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {/* Load More Button */}
+                                    {hasMoreSubmissions && (
+                                        <div className="flex justify-center py-4 border-t border-white/5">
+                                            <button
+                                                onClick={loadMoreSubmissions}
+                                                disabled={loadingMore}
+                                                className="flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 text-[#888] hover:text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                                            >
+                                                {loadingMore ? (
+                                                    <>
+                                                        <Loader2 size={16} className="animate-spin" />
+                                                        Loading...
+                                                    </>
+                                                ) : (
+                                                    'Load More Submissions'
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
                 )}
@@ -462,27 +645,32 @@ export default function SheetDetailPage() {
 
             {/* Code Viewer Modal */}
             {(selectedSubmission || loadingCode) && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setSelectedSubmission(null)}>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setSelectedSubmission(null)}>
                     <div
-                        className="bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl w-[90%] max-w-3xl max-h-[80vh] flex flex-col"
+                        className="bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl w-[98%] h-[90vh] flex flex-col overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {loadingCode ? (
-                            <div className="flex items-center justify-center py-20">
+                            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-[#888]">
                                 <Loader2 className="animate-spin text-[#E8C15A]" size={40} />
+                                <span className="text-sm">Fetching source code...</span>
                             </div>
                         ) : selectedSubmission && (
                             <>
                                 {/* Modal Header */}
-                                <div className="flex items-center justify-between p-4 border-b border-white/10">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0 bg-[#1a1a1a]">
                                     <div>
-                                        <h3 className="font-bold text-white">Submission #{selectedSubmission.id}</h3>
-                                        <p className="text-xs text-[#666] mt-1">
-                                            {selectedSubmission.problemTitle} • Attempt #{selectedSubmission.attemptNumber}
-                                        </p>
+                                        <h3 className="text-xl font-bold text-white">Submission #{selectedSubmission.id}</h3>
+                                        <div className="flex items-center gap-2 mt-1 text-sm text-[#888]">
+                                            <span>{selectedSubmission.problemTitle}</span>
+                                            <span>•</span>
+                                            <span>Attempt #{selectedSubmission.attemptNumber}</span>
+                                            <span>•</span>
+                                            <span>{new Date(selectedSubmission.submittedAt).toLocaleString()}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedSubmission.verdict === 'Accepted'
+                                    <div className="flex items-center gap-4">
+                                        <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${selectedSubmission.verdict === 'Accepted'
                                             ? 'bg-green-500/20 text-green-400'
                                             : 'bg-red-500/20 text-red-400'
                                             }`}>
@@ -490,27 +678,41 @@ export default function SheetDetailPage() {
                                         </span>
                                         <button
                                             onClick={() => setSelectedSubmission(null)}
-                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-[#666] hover:text-white"
+                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-[#888] hover:text-white"
                                         >
-                                            ✕
+                                            <XCircle size={24} />
                                         </button>
                                     </div>
                                 </div>
-                                {/* Code Content */}
-                                <div className="flex-1 overflow-auto p-4 bg-[#0a0a0a]">
-                                    <pre
-                                        className="font-mono text-sm leading-6 text-[#D4D4D4]"
-                                        dangerouslySetInnerHTML={{ __html: highlightCpp(selectedSubmission.sourceCode) }}
+
+                                {/* Code Content - Monaco Editor */}
+                                <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
+                                    <Editor
+                                        height="100%"
+                                        defaultLanguage="cpp"
+                                        theme="vs-dark"
+                                        value={selectedSubmission.sourceCode}
+                                        options={{
+                                            readOnly: true,
+                                            minimap: { enabled: false },
+                                            fontSize: 14,
+                                            fontFamily: "'JetBrains Mono', 'Consolas', monospace",
+                                            scrollBeyondLastLine: false,
+                                            automaticLayout: true,
+                                            renderLineHighlight: 'none',
+                                            padding: { top: 32, bottom: 32 },
+                                        }}
                                     />
                                 </div>
+
                                 {/* Modal Footer */}
-                                <div className="flex items-center justify-between p-4 border-t border-white/10">
-                                    <span className="text-xs text-[#666]">
-                                        {new Date(selectedSubmission.submittedAt).toLocaleString()}
-                                    </span>
+                                <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 flex-shrink-0 bg-[#1a1a1a]">
+                                    <div className="text-sm text-[#666]">
+                                        Read-only mode
+                                    </div>
                                     <button
                                         onClick={() => setSelectedSubmission(null)}
-                                        className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
+                                        className="px-6 py-2.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
                                     >
                                         Close
                                     </button>

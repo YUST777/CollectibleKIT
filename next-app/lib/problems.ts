@@ -222,7 +222,7 @@ Note: consider π = 3.141592653`,
             { input: '1', expectedOutput: '3.141592653' },
             { input: '5', expectedOutput: '78.539816325' },
             { input: '10', expectedOutput: '314.159265300' },
-            { input: '3.5', expectedOutput: '38.484510007' },
+            { input: '3.5', expectedOutput: '38.484509999' },
         ],
         note: `* Use the data type double for this problem.
 ** Use setprecision(9) to print 9 digits after decimal point.

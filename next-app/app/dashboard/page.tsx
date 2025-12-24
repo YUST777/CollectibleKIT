@@ -345,8 +345,16 @@ export default function DashboardHome() {
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-                @keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(20deg); } 75% { transform: rotate(-10deg); } }
-                .animate-wave { animation: wave 1.5s ease-in-out infinite; transform-origin: 70% 70%; }
+                @keyframes wave { 
+                    0%, 100% { transform: rotate(0deg); } 
+                    10% { transform: rotate(14deg); } 
+                    20% { transform: rotate(-8deg); } 
+                    30% { transform: rotate(14deg); } 
+                    40% { transform: rotate(-4deg); } 
+                    50% { transform: rotate(10deg); } 
+                    60% { transform: rotate(0deg); } 
+                }
+                .animate-wave { animation: wave 2.5s ease-in-out infinite; transform-origin: 70% 70%; display: inline-block; }
             `}</style>
         </>
     );

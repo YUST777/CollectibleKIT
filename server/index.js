@@ -325,9 +325,9 @@ app.use(express.json({ limit: '10mb' }));
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 300, // Limit each IP to 300 requests per windowMs (increased from 100 for normal browsing)
   message: {
-    error: 'تم تجاوز الحد المسموح. يرجى المحاولة مرة أخرى لاحقاً',
+    error: 'Too many requests. Please try again later.',
     retryAfter: '15 minutes'
   },
   standardHeaders: true,
@@ -3360,7 +3360,7 @@ app.get('/', (req, res) => {
 
 app.get('/api/health', (req, res) => {
   console.log('[HEALTH] Health check from', req.headers['x-forwarded-for'] || req.ip);
-  res.json({ status: 'ok', timestamp: new Date(), version: '1.0.0' });
+  res.json({ status: 'ok', timestamp: new Date(), version: '1.5.0' });
 });
 
 // Get client IP endpoint (for maintenance bypass check)
@@ -3395,7 +3395,7 @@ const JWT_EXPIRES_IN = '1d'; // 1 day (reduced from 7 days for better security)
 // Auth rate limiter (stricter than general API)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 auth requests per window
+  max: 50, // Limit each IP to 50 auth requests per window (increased from 10)
   message: {
     error: 'Too many authentication attempts. Please try again later.',
     retryAfter: '15 minutes'

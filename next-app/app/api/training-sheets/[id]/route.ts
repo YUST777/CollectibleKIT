@@ -43,6 +43,8 @@ export async function GET(
             };
         });
 
+        // Add short cache to reduce DB load (30 seconds)
+        // Solved counts don't need to be real-time
         return NextResponse.json({
             success: true,
             sheet: {
@@ -51,6 +53,10 @@ export async function GET(
                 description: sheet.description,
                 totalProblems: sheet.totalProblems,
                 problems: problemsList,
+            }
+        }, {
+            headers: {
+                'Cache-Control': 'public, max-age=30, stale-while-revalidate=60'
             }
         });
     } catch (error) {

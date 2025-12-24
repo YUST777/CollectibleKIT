@@ -1,6 +1,6 @@
 {
   "name": "icpchue-server",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "Backend server for ICPC HUE application form",
   "type": "module",
   "main": "index.js",

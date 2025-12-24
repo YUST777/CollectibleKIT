@@ -131,9 +131,14 @@ export async function GET(
         (profile as any).achievements = achievements;
         (profile as any).achievementsCount = achievements.filter(a => a.unlocked).length;
 
+        // Cache public profiles for 60 seconds
         return NextResponse.json({
             success: true,
             profile
+        }, {
+            headers: {
+                'Cache-Control': 'public, max-age=60, stale-while-revalidate=120'
+            }
         });
 
     } catch (error) {

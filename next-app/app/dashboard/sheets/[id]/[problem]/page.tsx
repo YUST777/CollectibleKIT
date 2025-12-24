@@ -567,7 +567,7 @@ export default function ProblemPage() {
                     <div className="flex border-b border-white/10 bg-[#1a1a1a] overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('description')}
-                            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'description'
+                            className={`flex items-center gap-2 px-6 py-3 text-xs font-medium transition-colors ${activeTab === 'description'
                                 ? 'text-white border-b-2 border-[#E8C15A] bg-[#121212]'
                                 : 'text-[#666] hover:text-[#A0A0A0]'
                                 }`}
@@ -577,7 +577,7 @@ export default function ProblemPage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('submissions')}
-                            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'submissions'
+                            className={`flex items-center gap-2 px-6 py-3 text-xs font-medium transition-colors ${activeTab === 'submissions'
                                 ? 'text-white border-b-2 border-[#E8C15A] bg-[#121212]'
                                 : 'text-[#666] hover:text-[#A0A0A0]'
                                 }`}
@@ -587,7 +587,7 @@ export default function ProblemPage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('analytics')}
-                            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors ${activeTab === 'analytics'
+                            className={`flex items-center gap-2 px-6 py-3 text-xs font-medium transition-colors ${activeTab === 'analytics'
                                 ? 'text-white border-b-2 border-[#E8C15A] bg-[#121212]'
                                 : 'text-[#666] hover:text-[#A0A0A0]'
                                 }`}
@@ -959,6 +959,17 @@ export default function ProblemPage() {
                                     fontLigatures: true,
                                     lineNumbers: 'on',
                                     renderLineHighlight: 'all',
+                                    suggest: {
+                                        filterGraceful: false,
+                                        matchOnWordStartOnly: true,
+                                        showWords: true,
+                                        insertMode: 'replace',
+                                    },
+                                    quickSuggestions: {
+                                        other: true,
+                                        comments: false,
+                                        strings: false
+                                    },
                                 }}
                                 loading={
                                     <div className="flex items-center justify-center h-full text-[#666]">
@@ -1062,27 +1073,30 @@ export default function ProblemPage() {
             {/* Code Viewer Modal */}
             {
                 (selectedSubmission || loadingCode) && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setSelectedSubmission(null)}>
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setSelectedSubmission(null)}>
                         <div
-                            className="bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl w-[90%] max-w-3xl max-h-[80vh] flex flex-col animate-slide-up"
+                            className="bg-[#1a1a1a] rounded-xl border border-white/10 shadow-2xl w-[98%] h-[90vh] flex flex-col overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {loadingCode ? (
-                                <div className="flex items-center justify-center py-20">
+                                <div className="flex-1 flex flex-col items-center justify-center gap-4 text-[#888]">
                                     <Loader2 className="animate-spin text-[#E8C15A]" size={40} />
+                                    <span className="text-sm">Fetching source code...</span>
                                 </div>
                             ) : selectedSubmission && (
                                 <>
                                     {/* Modal Header */}
-                                    <div className="flex items-center justify-between p-4 border-b border-white/10">
+                                    <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0 bg-[#1a1a1a]">
                                         <div>
-                                            <h3 className="font-bold text-white">Submission #{selectedSubmission.id}</h3>
-                                            <p className="text-xs text-[#666] mt-1">
-                                                Attempt #{selectedSubmission.attemptNumber} • {new Date(selectedSubmission.submittedAt).toLocaleString()}
-                                            </p>
+                                            <h3 className="text-xl font-bold text-white">Submission #{selectedSubmission.id}</h3>
+                                            <div className="flex items-center gap-2 mt-1 text-sm text-[#888]">
+                                                <span>Attempt #{selectedSubmission.attemptNumber}</span>
+                                                <span>•</span>
+                                                <span>{new Date(selectedSubmission.submittedAt).toLocaleString()}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedSubmission.verdict === 'Accepted'
+                                        <div className="flex items-center gap-4">
+                                            <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${selectedSubmission.verdict === 'Accepted'
                                                 ? 'bg-green-500/20 text-green-400'
                                                 : 'bg-red-500/20 text-red-400'
                                                 }`}>
@@ -1090,14 +1104,14 @@ export default function ProblemPage() {
                                             </span>
                                             <button
                                                 onClick={() => setSelectedSubmission(null)}
-                                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-[#666] hover:text-white"
+                                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-[#888] hover:text-white"
                                             >
-                                                ✕
+                                                <XCircle size={24} />
                                             </button>
                                         </div>
                                     </div>
                                     {/* Code Content */}
-                                    <div className="flex-1 overflow-hidden p-4 relative h-96">
+                                    <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
                                         <Editor
                                             height="100%"
                                             defaultLanguage="cpp"
@@ -1106,29 +1120,30 @@ export default function ProblemPage() {
                                             options={{
                                                 readOnly: true,
                                                 minimap: { enabled: false },
-                                                fontSize: 13,
-                                                fontFamily: "'JetBrains Mono', monospace",
+                                                fontSize: 14,
+                                                fontFamily: "'JetBrains Mono', 'Consolas', monospace",
                                                 scrollBeyondLastLine: false,
                                                 automaticLayout: true,
                                                 renderLineHighlight: 'none',
+                                                padding: { top: 32, bottom: 32 },
                                             }}
                                         />
                                     </div>
                                     {/* Modal Footer */}
-                                    <div className="flex items-center justify-end gap-2 p-4 border-t border-white/10">
+                                    <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10 flex-shrink-0 bg-[#1a1a1a]">
                                         <button
                                             onClick={() => {
                                                 setCode(selectedSubmission.sourceCode);
                                                 setSelectedSubmission(null);
                                                 setActiveTab('description');
                                             }}
-                                            className="px-4 py-2 bg-[#E8C15A]/20 text-[#E8C15A] rounded-lg hover:bg-[#E8C15A]/30 transition-colors text-sm font-medium"
+                                            className="px-6 py-2.5 bg-[#E8C15A]/20 text-[#E8C15A] rounded-lg hover:bg-[#E8C15A]/30 transition-colors text-sm font-medium"
                                         >
                                             Load to Editor
                                         </button>
                                         <button
                                             onClick={() => setSelectedSubmission(null)}
-                                            className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
+                                            className="px-6 py-2.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
                                         >
                                             Close
                                         </button>

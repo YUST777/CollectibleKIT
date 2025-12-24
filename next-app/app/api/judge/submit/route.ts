@@ -91,9 +91,9 @@ export async function POST(req: NextRequest) {
         const forwarded = req.headers.get('x-forwarded-for');
         const ipAddress = forwarded ? forwarded.split(',')[0] : req.headers.get('x-real-ip') || 'unknown';
 
-        // Rate Limiting & Duplicate Check
+        // Rate Limiting - Check last submission time (any problem)
         const latestSubmissionResult = await query(
-            `SELECT submitted_at, source_code, sheet_id, problem_id 
+            `SELECT submitted_at
              FROM training_submissions 
              WHERE user_id = $1 
              ORDER BY submitted_at DESC 
@@ -106,26 +106,34 @@ export async function POST(req: NextRequest) {
             const lastTime = new Date(lastSub.submitted_at).getTime();
             const now = Date.now();
 
-            // 1. Global Rate Limit (10 seconds)
-            if (now - lastTime < 10000) {
-                const waitSeconds = Math.ceil((10000 - (now - lastTime)) / 1000);
+            // Global Rate Limit (5 seconds)
+            if (now - lastTime < 5000) {
+                const waitSeconds = Math.ceil((5000 - (now - lastTime)) / 1000);
                 return NextResponse.json(
                     { error: `Please wait ${waitSeconds}s before submitting again` },
                     { status: 429 }
                 );
             }
+        }
 
-            // 2. Duplicate Submission Check
-            if (
-                String(lastSub.sheet_id) === String(sheetId) &&
-                String(lastSub.problem_id) === String(problemId) &&
-                lastSub.source_code.trim() === sourceCode.trim()
-            ) {
-                return NextResponse.json(
-                    { error: 'You just submitted this exact code' },
-                    { status: 400 }
-                );
-            }
+        // Duplicate Check - Check ALL previous submissions for this specific problem
+        // Uses MD5 hash for efficient comparison (like Codeforces)
+        const normalizedCode = sourceCode.trim();
+        const duplicateCheck = await query(
+            `SELECT id FROM training_submissions 
+             WHERE user_id = $1 
+               AND sheet_id = $2 
+               AND problem_id = $3 
+               AND MD5(TRIM(source_code)) = MD5($4)
+             LIMIT 1`,
+            [user.id, sheetId, problemId, normalizedCode]
+        );
+
+        if (duplicateCheck.rows.length > 0) {
+            return NextResponse.json(
+                { error: 'You have already submitted this exact code for this problem' },
+                { status: 400 }
+            );
         }
 
         // Get attempt number for this user/problem

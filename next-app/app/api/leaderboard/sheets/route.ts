@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+// Extract first and last name only (skip middle names)
+function getShortName(fullName: string | null): string {
+    if (!fullName) return 'Anonymous';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 2) return fullName.trim();
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+}
+
 export async function GET(req: NextRequest) {
     try {
         const result = await query(`
@@ -26,7 +34,7 @@ export async function GET(req: NextRequest) {
 
         const leaderboard = result.rows.map((row: any) => ({
             userId: row.id,
-            username: row.name || row.email?.split('@')[0] || 'Anonymous',
+            username: getShortName(row.name) || row.email?.split('@')[0] || 'Anonymous',
             solvedCount: parseInt(row.solved_count) || 0,
             totalSubmissions: parseInt(row.total_submissions) || 0,
             acceptedCount: parseInt(row.accepted_count) || 0,

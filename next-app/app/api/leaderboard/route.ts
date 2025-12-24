@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+// Extract first and last name only (skip middle names)
+function getShortName(fullName: string | null): string {
+    if (!fullName) return 'Anonymous';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 2) return fullName.trim();
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+}
+
 function extractUsername(profileUrl: string, platform: string): string | null {
     if (!profileUrl) return null;
     try {
@@ -72,7 +80,7 @@ export async function GET() {
             const username = row.handle || extractUsername(row.codeforces_profile, 'codeforces') || '?';
 
             return {
-                name: row.name,
+                name: getShortName(row.name),
                 handle: username,
                 rating: rating,
                 rank: data.rank || 'unrated',

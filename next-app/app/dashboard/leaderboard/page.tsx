@@ -57,10 +57,19 @@ export default function LeaderboardPage() {
     const [cfLeaderboard, setCfLeaderboard] = useState<CFUser[]>([]);
     const [sheetsLeaderboard, setSheetsLeaderboard] = useState<SheetUser[]>([]);
     const [loading, setLoading] = useState(true);
+    const [dataFetched, setDataFetched] = useState({ codeforces: false, sheets: false });
     const isVisible = user?.profile_visibility === 'public' || !user?.profile_visibility;
 
     useEffect(() => {
-        fetchLeaderboard();
+        // Only fetch if not already cached
+        if (activeTab === 'codeforces' && !dataFetched.codeforces) {
+            fetchLeaderboard();
+        } else if (activeTab === 'sheets' && !dataFetched.sheets) {
+            fetchLeaderboard();
+        } else {
+            // Data already cached, just hide loading
+            setLoading(false);
+        }
     }, [activeTab]);
 
     const fetchLeaderboard = async () => {
@@ -70,10 +79,12 @@ export default function LeaderboardPage() {
                 const res = await fetch('/api/leaderboard');
                 const data = await res.json();
                 setCfLeaderboard(data.leaderboard || []);
+                setDataFetched(prev => ({ ...prev, codeforces: true }));
             } else {
                 const res = await fetch('/api/leaderboard/sheets');
                 const data = await res.json();
                 setSheetsLeaderboard(data.leaderboard || []);
+                setDataFetched(prev => ({ ...prev, sheets: true }));
             }
         } catch (err) {
             console.error('Failed to fetch leaderboard:', err);
@@ -129,8 +140,8 @@ export default function LeaderboardPage() {
                         <Link
                             href="/dashboard/settings"
                             className={`p-2 rounded-lg border transition-all flex items-center gap-2 ${isVisible
-                                    ? 'bg-[#1A1A1A] border-white/10 text-green-400 hover:bg-[#222]'
-                                    : 'bg-[#1A1A1A] border-white/10 text-[#666] hover:text-[#A0A0A0] hover:bg-[#222]'
+                                ? 'bg-[#1A1A1A] border-white/10 text-green-400 hover:bg-[#222]'
+                                : 'bg-[#1A1A1A] border-white/10 text-[#666] hover:text-[#A0A0A0] hover:bg-[#222]'
                                 }`}
                             title={isVisible ? "You are visible on the leaderboard" : "You are hidden from the leaderboard"}
                         >

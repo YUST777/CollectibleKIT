@@ -11,57 +11,55 @@ interface JWTPayload {
 }
 
 export async function GET(request: NextRequest) {
-    // Set cache control headers to prevent caching of dynamic stats
-    const headers = {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-    };
-
     try {
         const authHeader = request.headers.get('authorization');
         const token = authHeader?.replace('Bearer ', '');
 
         if (!token) {
-            return NextResponse.json({ error: 'No token provided' }, { status: 401, headers });
+            return NextResponse.json({ error: 'No token provided' }, { status: 401 });
         }
 
         if (!JWT_SECRET) {
-            return NextResponse.json({ error: 'Server configuration error' }, { status: 500, headers });
+            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
         }
 
         let decoded: JWTPayload;
         try {
             decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
         } catch (err) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401, headers });
+            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
         }
 
         const userId = decoded.id || decoded.userId;
 
-        // Fetch user submissions
+        // Fetch solved problems from training_submissions (the correct table)
         const result = await query(
-            `SELECT id, sheet_name, problem_name, submitted_at 
-             FROM sheet_submissions 
-             WHERE user_id = $1 
-             ORDER BY submitted_at DESC`,
+            `SELECT DISTINCT ON (sheet_id, problem_id)
+                sheet_id, 
+                problem_id, 
+                submitted_at
+             FROM training_submissions
+             WHERE user_id = $1 AND verdict = 'Accepted'
+             ORDER BY sheet_id, problem_id, submitted_at ASC`,
             [userId]
         );
 
-        const submissions = result.rows;
+        const submissions = result.rows.map((row: any) => ({
+            sheet_name: row.sheet_id === 'sheet-1' ? 'Sheet 1' : row.sheet_id,
+            problem_name: row.problem_id,
+            submitted_at: row.submitted_at
+        }));
 
         // --- Calculate Stats ---
 
         // 1. Total Problems Solved (Unique problems)
-        // Create a set of "sheet_name/problem_name" to count uniques efficiently
-        const solvedProblems = new Set(submissions.map(s => `${s.sheet_name}/${s.problem_name}`));
-        const totalSolved = solvedProblems.size;
+        const totalSolved = submissions.length;
 
         // 2. Streak Calculation
-        const uniqueDates = Array.from(new Set(submissions.map(s => {
+        const uniqueDates = Array.from(new Set(submissions.map((s: any) => {
             const date = new Date(s.submitted_at);
             return date.toISOString().split('T')[0]; // YYYY-MM-DD
-        }))).sort().reverse(); // Newest first
+        }))).sort().reverse() as string[]; // Newest first
 
         let streak = 0;
         const today = new Date().toISOString().split('T')[0];
@@ -97,40 +95,24 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // 3. Consistency Data (Last 28 days for heatmap)
-        // Return a map of date -> count
+        // 3. Consistency Data (for heatmap)
         const consistencyMap: Record<string, number> = {};
-        submissions.forEach(s => {
+        submissions.forEach((s: any) => {
             const date = new Date(s.submitted_at).toISOString().split('T')[0];
             consistencyMap[date] = (consistencyMap[date] || 0) + 1;
         });
-
-        // 4. Quiz 1 Progress (Mini Quiz #1)
-        // Filter submissions where sheet_name contains "Quiz" and "1"
-        const quiz1Problems = new Set(
-            submissions
-                .filter(s => s.sheet_name && s.sheet_name.includes('Quiz') && s.sheet_name.includes('1'))
-                .map(s => s.problem_name)
-        );
-        const quiz1Solved = quiz1Problems.size;
-        const isQuiz1Complete = quiz1Solved >= 3;
-
-        // 5. Approval Camp Progress (Milestones)
-        // Milestone 1: Quiz 1 Completed
-        // Milestone 2-4: Placeholder for future sessions/quizzes
-        const approvalProgress = (isQuiz1Complete ? 1 : 0);
 
         return NextResponse.json({
             streak,
             totalSolved,
             consistencyMap,
-            quiz1Solved,
-            isQuiz1Complete,
-            approvalProgress
-        }, { headers });
+            quiz1Solved: 0,
+            isQuiz1Complete: false,
+            approvalProgress: 0
+        });
 
     } catch (error) {
         console.error('Error calculating dashboard stats:', error);
-        return NextResponse.json({ error: 'Server error' }, { status: 500, headers });
+        return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }

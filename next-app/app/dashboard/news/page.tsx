@@ -2,27 +2,51 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeft, Radio, Sparkles, Rocket } from 'lucide-react';
+import { ChevronLeft, Radio, Calendar, ArrowRight } from 'lucide-react';
 
-function NewsCard({ type, title, date, body, image }: { type: string; title: string; date: string; body: string; image?: string }) {
-    return (
-        <div className="bg-[#121212] p-4 md:p-5 rounded-xl border border-white/5 hover:border-[#E8C15A]/30 transition-all group">
-            {image && (
-                <div className="mb-4 relative w-full h-40 rounded-lg overflow-hidden border border-white/5">
-                    <Image src={image} alt={title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
-                </div>
-            )}
-            <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-                <span className="text-xs font-bold text-[#E8C15A] uppercase border border-[#E8C15A]/30 px-2 py-0.5 rounded">{type}</span>
-                <span className="text-xs text-[#666]">{date}</span>
-            </div>
-            <h3 className="text-base md:text-lg font-bold text-[#F2F2F2] mb-2">{title}</h3>
-            <p className="text-xs md:text-sm text-[#A0A0A0] leading-relaxed">{body}</p>
-        </div>
-    );
+// News data
+const newsItems = [
+    {
+        id: 1,
+        type: 'Training',
+        title: 'Sheet 1 Has Arrived!',
+        date: 'Jan 2025',
+        body: 'Sheet 1 - Say Hello With C++ is now live! Master the basics with 26 new problems. Go solve it now and climb the leaderboard!',
+        image: '/images/sheet/sheet1.webp',
+        featured: true,
+        link: '/dashboard/sheets/sheet-1'
+    },
+    {
+        id: 2,
+        type: 'Announcement',
+        title: 'Welcome to ICPC HUE!',
+        date: 'Jan 2025',
+        body: 'Welcome to our training platform! We are excited to have you here. Start with Sheet 1 and join our competitive programming journey.',
+        featured: false
+    },
+    {
+        id: 3,
+        type: 'Feature',
+        title: 'Platform Features',
+        date: 'Jan 2025',
+        body: 'Track your progress, compete on the leaderboard, earn achievements, and access exclusive training materials. More features coming soon!',
+        featured: false
+    }
+];
+
+function getTypeColor(type: string) {
+    switch (type.toLowerCase()) {
+        case 'training': return 'bg-[#E8C15A]/10 text-[#E8C15A] border-[#E8C15A]/30';
+        case 'announcement': return 'bg-green-500/10 text-green-400 border-green-500/30';
+        case 'feature': return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+        default: return 'bg-white/10 text-white border-white/30';
+    }
 }
 
 export default function NewsPage() {
+    const featuredNews = newsItems.find(n => n.featured);
+    const otherNews = newsItems.filter(n => !n.featured);
+
     return (
         <>
             <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
@@ -32,15 +56,100 @@ export default function NewsPage() {
                     <span className="text-[#DCDCDC] uppercase text-xs sm:text-sm">Team News</span>
                 </div>
             </header>
-            <div className="space-y-6 animate-fade-in">
-                <div className="flex items-center gap-3"><Radio className="text-[#E8C15A]" size={24} /><h2 className="text-xl md:text-2xl font-bold text-[#F2F2F2]">Team News</h2></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                    <NewsCard image="/images/sheet/sheet1.webp" type="Training" title="Sheet 1 Has Arrived!" date="Jan 2025" body="Sheet 1 - Say Hello With C++ is now live! Master the basics with 26 new problems. Go solve it now and climb the leaderboard!" />
-                    <NewsCard type="Announcement" title="Welcome to ICPC HUE!" date="Jan 2025" body="Welcome to our training platform! We are excited to have you here. Start with Sheet 1 and join our competitive programming journey." />
-                    <NewsCard type="Feature" title="Platform Features" date="Jan 2025" body="Track your progress, compete on the leaderboard, earn achievements, and access exclusive training materials. More features coming soon!" />
+
+            <div className="space-y-8 animate-fade-in">
+                {/* Page Title */}
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[#E8C15A]/10">
+                        <Radio className="text-[#E8C15A]" size={22} />
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#F2F2F2]">Team News</h2>
+                </div>
+
+                {/* Featured News Card */}
+                {featuredNews && (
+                    <Link href={featuredNews.link || '#'} className="block group">
+                        <div className="relative bg-gradient-to-br from-[#1a1a1a] to-[#121212] rounded-2xl border border-white/10 overflow-hidden hover:border-[#E8C15A]/40 transition-all duration-300">
+                            <div className="grid md:grid-cols-2 gap-0">
+                                {/* Image Side */}
+                                <div className="relative h-48 md:h-72 overflow-hidden">
+                                    <Image
+                                        src={featuredNews.image || ''}
+                                        alt={featuredNews.title}
+                                        fill
+                                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#121212]/80 md:hidden" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-transparent md:hidden" />
+                                </div>
+
+                                {/* Content Side */}
+                                <div className="p-6 md:p-8 flex flex-col justify-center">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full border ${getTypeColor(featuredNews.type)}`}>
+                                            {featuredNews.type}
+                                        </span>
+                                        <span className="flex items-center gap-1.5 text-xs text-[#666]">
+                                            <Calendar size={12} />
+                                            {featuredNews.date}
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-xl md:text-2xl font-bold text-white mb-3 group-hover:text-[#E8C15A] transition-colors">
+                                        {featuredNews.title}
+                                    </h3>
+
+                                    <p className="text-sm md:text-base text-[#888] leading-relaxed mb-6">
+                                        {featuredNews.body}
+                                    </p>
+
+                                    <div className="flex items-center gap-2 text-[#E8C15A] text-sm font-medium group-hover:gap-3 transition-all">
+                                        <span>Start Training</span>
+                                        <ArrowRight size={16} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Link>
+                )}
+
+                {/* Other News Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {otherNews.map((news) => (
+                        <div
+                            key={news.id}
+                            className="bg-[#121212] p-5 rounded-xl border border-white/5 hover:border-[#E8C15A]/30 transition-all group"
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-4">
+                                <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full border ${getTypeColor(news.type)}`}>
+                                    {news.type}
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs text-[#555]">
+                                    <Calendar size={11} />
+                                    {news.date}
+                                </span>
+                            </div>
+
+                            {/* Content */}
+                            <h3 className="text-lg font-bold text-white mb-2 group-hover:text-[#E8C15A] transition-colors">
+                                {news.title}
+                            </h3>
+                            <p className="text-sm text-[#777] leading-relaxed">
+                                {news.body}
+                            </p>
+                        </div>
+                    ))}
                 </div>
             </div>
-            <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }`}</style>
+
+            <style>{`
+                @keyframes fadeIn { 
+                    from { opacity: 0; transform: translateY(10px); } 
+                    to { opacity: 1; transform: translateY(0); } 
+                } 
+                .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+            `}</style>
         </>
     );
 }
