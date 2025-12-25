@@ -94,9 +94,11 @@ export async function GET(req: NextRequest) {
                         acceptedCount: parseInt(row.accepted_count) || 0,
                     };
 
-                    // Find correct position and inject
+                    // Find correct position and inject (consider acceptedCount as tiebreaker)
                     let insertIndex = leaderboard.findIndex(
-                        (entry: any) => entry.solvedCount < shadowEntry.solvedCount
+                        (entry: any) =>
+                            entry.solvedCount < shadowEntry.solvedCount ||
+                            (entry.solvedCount === shadowEntry.solvedCount && entry.acceptedCount < shadowEntry.acceptedCount)
                     );
                     if (insertIndex === -1) insertIndex = leaderboard.length;
 

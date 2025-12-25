@@ -305,8 +305,8 @@ export async function POST(req: NextRequest) {
                     const newFlagCount = updateResult.rows[0]?.cheating_flags || 0;
                     console.log(`⚠️ CHEAT DETECTION: User ${user.id} now has ${newFlagCount} flags`);
 
-                    // Auto shadow ban after 3 flags
-                    if (newFlagCount >= 3) {
+                    // Auto shadow ban after 5 flags (more lenient for first few easy problems)
+                    if (newFlagCount >= 5) {
                         await query(
                             `UPDATE users SET is_shadow_banned = TRUE WHERE id = $1`,
                             [user.id]
