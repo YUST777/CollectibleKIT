@@ -30,7 +30,7 @@ export function middleware(request: NextRequest) {
 
     // Content-Security-Policy (Permissive to avoid breaking existing features like 3D models/images)
     // Adjust 'img-src', 'connect-src' etc. as needed for your specific external resources.
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: blob:; media-src 'self' https:; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests;"
+    headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: blob:; media-src 'self' https:; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests;");
 
     // --- 2. Bot Blocking ---
     const userAgent = request.headers.get('user-agent')?.toLowerCase() || '';
