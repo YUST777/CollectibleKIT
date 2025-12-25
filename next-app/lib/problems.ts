@@ -799,7 +799,7 @@ Print "Yes" if the expression is Right, otherwise print the right answer of the 
             { input: '99 99 99 99', expectedOutput: '01' },
             // Large numbers requiring modular arithmetic - will overflow without % 100
             { input: '1000000000 1000000000 1000000000 1000000000', expectedOutput: '00' },
-            { input: '123456789 987654321 111111111 999999999', expectedOutput: '69' },
+            { input: '123456789 987654321 111111111 999999999', expectedOutput: '41' },
         ],
         note: `The multiplication of 5 * 7 * 2 * 4 = 280, so the answer is the last 2 digits: 80.`
     },
