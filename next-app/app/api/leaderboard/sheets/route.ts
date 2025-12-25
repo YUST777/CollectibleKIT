@@ -2,12 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
 
-// Extract first and last name only (skip middle names)
+// Extract first and last name, handling compound family names (Al-, Abd-, El-, etc.)
 function getShortName(fullName: string | null): string {
     if (!fullName) return 'Anonymous';
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length <= 2) return fullName.trim();
-    return `${parts[0]} ${parts[parts.length - 1]}`;
+
+    // Clean up mixed format like "nabila / نبيلة"
+    const cleaned = fullName.split('/')[0].trim();
+    const parts = cleaned.trim().split(/\s+/);
+
+    if (parts.length <= 2) return cleaned.trim();
+
+    const firstName = parts[0];
+    const lastPart = parts[parts.length - 1];
+    const secondToLast = parts.length > 2 ? parts[parts.length - 2] : null;
+
+    // Common compound prefixes: Al, El, Abd, Abu, Ben, Ibn
+    const compoundPrefixes = /^(al|el|abd|abu|ben|ibn)[-]?$/i;
+
+    if (secondToLast && compoundPrefixes.test(secondToLast)) {
+        return `${firstName} ${secondToLast} ${lastPart}`;
+    }
+
+    if (/^(al|el|abd|abu)-/i.test(lastPart)) {
+        return `${firstName} ${lastPart}`;
+    }
+
+    return `${firstName} ${lastPart}`;
 }
 
 export async function GET(req: NextRequest) {

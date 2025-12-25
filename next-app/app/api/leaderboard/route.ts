@@ -1,12 +1,37 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
-// Extract first and last name only (skip middle names)
+// Extract first and last name, handling compound family names (Al-, Abd-, El-, etc.)
 function getShortName(fullName: string | null): string {
     if (!fullName) return 'Anonymous';
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length <= 2) return fullName.trim();
-    return `${parts[0]} ${parts[parts.length - 1]}`;
+
+    // Clean up mixed format like "nabila / نبيلة"
+    const cleaned = fullName.split('/')[0].trim();
+    const parts = cleaned.trim().split(/\s+/);
+
+    if (parts.length <= 2) return cleaned.trim();
+
+    const firstName = parts[0];
+
+    // Check if last part is a compound name prefix (Al-, Abd-, El-)
+    // In that case, include the previous part as part of the family name
+    const lastPart = parts[parts.length - 1];
+    const secondToLast = parts.length > 2 ? parts[parts.length - 2] : null;
+
+    // Common compound prefixes: Al, El, Abd, Abu, Ben, Ibn
+    const compoundPrefixes = /^(al|el|abd|abu|ben|ibn)[-]?$/i;
+
+    if (secondToLast && compoundPrefixes.test(secondToLast)) {
+        // Family name is compound (e.g., "Al Basuony" or "Abd Elhameed")
+        return `${firstName} ${secondToLast} ${lastPart}`;
+    }
+
+    // Check if last part itself starts with a compound (e.g., "Al-Basuony")
+    if (/^(al|el|abd|abu)-/i.test(lastPart)) {
+        return `${firstName} ${lastPart}`;
+    }
+
+    return `${firstName} ${lastPart}`;
 }
 
 function extractUsername(profileUrl: string, platform: string): string | null {
