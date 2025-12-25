@@ -38,7 +38,6 @@ export async function GET(req: NextRequest) {
 
         try {
             currentUser = await verifyAuth(req);
-            console.log('[LEADERBOARD DEBUG] currentUser:', currentUser?.id || 'null');
             if (currentUser) {
                 // Check if user is shadow banned
                 const userCheck = await query(
@@ -46,11 +45,9 @@ export async function GET(req: NextRequest) {
                     [currentUser.id]
                 );
                 isShadowBanned = userCheck.rows[0]?.is_shadow_banned === true;
-                console.log('[LEADERBOARD DEBUG] isShadowBanned:', isShadowBanned);
             }
         } catch (authError) {
             // Not authenticated - that's fine for leaderboard
-            console.log('[LEADERBOARD DEBUG] Auth failed:', (authError as Error).message);
         }
 
         // ============================================

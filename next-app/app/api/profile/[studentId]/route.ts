@@ -18,7 +18,7 @@ export async function GET(
         // 1. Find user by email prefix (student ID)
         // Note: Using ILIKE for case-insensitivity consistency
         const userResult = await query(
-            `SELECT u.id, u.role, u.profile_visibility, u.created_at, u.application_id
+            `SELECT u.id, u.role, u.profile_visibility, u.show_public_profile, u.created_at, u.application_id
              FROM users u
              WHERE u.email LIKE $1`,
             [studentIdPart + '@%']
@@ -30,8 +30,9 @@ export async function GET(
 
         const user = userResult.rows[0];
 
-        // 2. Check if profile is private
-        if (user.profile_visibility === 'private') {
+        // 2. Check if profile is private (use new column, fallback to old)
+        const isPublic = user.show_public_profile ?? (user.profile_visibility !== 'private');
+        if (!isPublic) {
             return NextResponse.json({ error: 'This profile is private' }, { status: 403 });
         }
 
