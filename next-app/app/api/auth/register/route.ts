@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { query } from '@/lib/db';
-import { decrypt } from '@/lib/crypto';
+import { decrypt, hashEmail } from '@/lib/crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
 const JWT_EXPIRES_IN = '7d';
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         }
 
         const normalizedEmail = email.trim().toLowerCase();
+        const emailHashValue = hashEmail(normalizedEmail);
 
         // Check if user already exists
         const existingUser = await query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
@@ -57,27 +58,39 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'An account with this email already exists' }, { status: 400 });
         }
 
-        // Check if application exists (emails are encrypted, so decrypt and compare)
-        const appResult = await query('SELECT id, name, email FROM applications');
-
+        // O(1) lookup using email_hash index
         let applicationId = null;
         let applicationName = null;
 
-        for (const app of appResult.rows) {
-            if (app.email) {
-                try {
-                    const decryptedEmail = decrypt(app.email);
-                    if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
-                        applicationId = app.id;
-                        applicationName = app.name;
-                        break;
-                    }
-                } catch (decryptErr) {
-                    // If decryption fails, try direct comparison (for unencrypted legacy data)
-                    if (app.email.toLowerCase() === normalizedEmail) {
-                        applicationId = app.id;
-                        applicationName = app.name;
-                        break;
+        const appResult = await query(
+            'SELECT id, name FROM applications WHERE email_hash = $1',
+            [emailHashValue]
+        );
+
+        if (appResult.rows.length > 0) {
+            applicationId = appResult.rows[0].id;
+            applicationName = appResult.rows[0].name;
+        } else {
+            // Fallback for legacy data without hash (scan only NULL hashes)
+            const legacyApps = await query('SELECT id, name, email FROM applications WHERE email_hash IS NULL');
+            for (const app of legacyApps.rows) {
+                if (app.email) {
+                    try {
+                        const decryptedEmail = decrypt(app.email);
+                        if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
+                            applicationId = app.id;
+                            applicationName = app.name;
+                            // Backfill hash for future lookups
+                            await query('UPDATE applications SET email_hash = $1 WHERE id = $2', [emailHashValue, app.id]);
+                            break;
+                        }
+                    } catch {
+                        if (app.email.toLowerCase() === normalizedEmail) {
+                            applicationId = app.id;
+                            applicationName = app.name;
+                            await query('UPDATE applications SET email_hash = $1 WHERE id = $2', [emailHashValue, app.id]);
+                            break;
+                        }
                     }
                 }
             }

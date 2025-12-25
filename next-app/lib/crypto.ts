@@ -39,3 +39,11 @@ export const decrypt = (encryptedText: string | null): string | null => {
         return encryptedText; // Return original on error
     }
 };
+
+// Hash email for O(1) lookups (SHA256, deterministic)
+// Used instead of O(n) decrypt-and-compare scans
+export const hashEmail = (email: string | null): string | null => {
+    if (!email) return null;
+    const normalized = email.trim().toLowerCase();
+    return CryptoJS.SHA256(normalized).toString(CryptoJS.enc.Hex);
+};

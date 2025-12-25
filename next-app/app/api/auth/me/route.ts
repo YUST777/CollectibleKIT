@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { query } from '@/lib/db';
-import { decrypt } from '@/lib/crypto';
+import { decrypt, hashEmail } from '@/lib/crypto';
 import { trainingSheets } from '@/lib/problems';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY;
@@ -69,28 +69,40 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Fallback: Try to find application by Email if not found by ID
-        // Emails are encrypted, so we need to decrypt and compare
+        // Fallback: Try to find application by Email hash if not found by ID
         if (!profile && user.email) {
-            const appResult = await query('SELECT * FROM applications');
             const normalizedEmail = user.email.toLowerCase();
+            const emailHashValue = hashEmail(normalizedEmail);
 
-            for (const app of appResult.rows) {
-                if (app.email) {
-                    try {
-                        const decryptedEmail = decrypt(app.email);
-                        if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
-                            profile = app;
-                            // Update user's application_id for faster future lookups
-                            await query('UPDATE users SET application_id = $1 WHERE id = $2', [app.id, user.id]);
-                            break;
-                        }
-                    } catch (decryptErr) {
-                        // If decryption fails, try direct comparison (legacy unencrypted data)
-                        if (app.email.toLowerCase() === normalizedEmail) {
-                            profile = app;
-                            await query('UPDATE users SET application_id = $1 WHERE id = $2', [app.id, user.id]);
-                            break;
+            // O(1) lookup using hash
+            const hashResult = await query(
+                'SELECT * FROM applications WHERE email_hash = $1',
+                [emailHashValue]
+            );
+
+            if (hashResult.rows.length > 0) {
+                profile = hashResult.rows[0];
+                await query('UPDATE users SET application_id = $1 WHERE id = $2', [profile.id, user.id]);
+            } else {
+                // Final fallback for legacy data without hash (scan only NULL hashes)
+                const legacyApps = await query('SELECT * FROM applications WHERE email_hash IS NULL');
+                for (const app of legacyApps.rows) {
+                    if (app.email) {
+                        try {
+                            const decryptedEmail = decrypt(app.email);
+                            if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
+                                profile = app;
+                                await query('UPDATE users SET application_id = $1 WHERE id = $2', [app.id, user.id]);
+                                await query('UPDATE applications SET email_hash = $1 WHERE id = $2', [emailHashValue, app.id]);
+                                break;
+                            }
+                        } catch {
+                            if (app.email.toLowerCase() === normalizedEmail) {
+                                profile = app;
+                                await query('UPDATE users SET application_id = $1 WHERE id = $2', [app.id, user.id]);
+                                await query('UPDATE applications SET email_hash = $1 WHERE id = $2', [emailHashValue, app.id]);
+                                break;
+                            }
                         }
                     }
                 }

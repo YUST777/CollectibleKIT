@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { decrypt } from '@/lib/crypto';
+import { hashEmail, decrypt } from '@/lib/crypto';
 
 export async function POST(request: NextRequest) {
     try {
@@ -11,36 +11,52 @@ export async function POST(request: NextRequest) {
         }
 
         const normalizedEmail = email.trim().toLowerCase();
+        const emailHash = hashEmail(normalizedEmail);
 
-        // Emails are encrypted in the database, so we need to fetch all and decrypt to compare
-        const appResult = await query('SELECT id, name, email FROM applications');
+        // O(1) lookup using email_hash index
+        const appResult = await query(
+            'SELECT id, name FROM applications WHERE email_hash = $1',
+            [emailHash]
+        );
 
-        let applicationId = null;
-        let applicationName = null;
+        // Fallback to O(n) scan for legacy data without hash (temporary)
+        if (appResult.rows.length === 0) {
+            const allApps = await query('SELECT id, name, email FROM applications WHERE email_hash IS NULL');
+            for (const app of allApps.rows) {
+                if (app.email) {
+                    try {
+                        const decryptedEmail = decrypt(app.email);
+                        if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
+                            // Found - update hash for future lookups
+                            await query('UPDATE applications SET email_hash = $1 WHERE id = $2', [emailHash, app.id]);
 
-        for (const app of appResult.rows) {
-            if (app.email) {
-                try {
-                    const decryptedEmail = decrypt(app.email);
-                    if (decryptedEmail && decryptedEmail.toLowerCase() === normalizedEmail) {
-                        applicationId = app.id;
-                        applicationName = app.name;
-                        break;
-                    }
-                } catch (decryptErr) {
-                    // If decryption fails, try direct comparison (for unencrypted legacy data)
-                    if (app.email.toLowerCase() === normalizedEmail) {
-                        applicationId = app.id;
-                        applicationName = app.name;
-                        break;
+                            const userResult = await query(
+                                'SELECT id FROM users WHERE email = $1',
+                                [normalizedEmail]
+                            );
+                            return NextResponse.json({
+                                exists: true,
+                                hasAccount: userResult.rows.length > 0,
+                                name: app.name
+                            });
+                        }
+                    } catch {
+                        if (app.email.toLowerCase() === normalizedEmail) {
+                            await query('UPDATE applications SET email_hash = $1 WHERE id = $2', [emailHash, app.id]);
+                            const userResult = await query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
+                            return NextResponse.json({
+                                exists: true,
+                                hasAccount: userResult.rows.length > 0,
+                                name: app.name
+                            });
+                        }
                     }
                 }
             }
-        }
-
-        if (!applicationId) {
             return NextResponse.json({ exists: false, hasAccount: false });
         }
+
+        const app = appResult.rows[0];
 
         // Check if user account already exists
         const userResult = await query(
@@ -51,7 +67,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             exists: true,
             hasAccount: userResult.rows.length > 0,
-            name: applicationName
+            name: app.name
         });
     } catch (error) {
         console.error('Check email error:', error);
