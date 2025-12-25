@@ -170,7 +170,7 @@ export default function ProblemPage() {
 
     // Vertical split panel state (Test Cases Panel)
     const [testPanelHeight, setTestPanelHeight] = useState(35); // percentage
-    const [isTestPanelVisible, setIsTestPanelVisible] = useState(false); // Hidden until first submission
+    const [isTestPanelVisible, setIsTestPanelVisible] = useState(true); // Always visible
     const [isResizingVertical, setIsResizingVertical] = useState(false);
     const [testPanelTab, setTestPanelTab] = useState<'testcase' | 'result'>('testcase');
     const [selectedTestCase, setSelectedTestCase] = useState(0);
@@ -1134,69 +1134,80 @@ export default function ProblemPage() {
                                 {/* Test Panel Content */}
                                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1e1e1e]">
                                     {testPanelTab === 'testcase' ? (
-                                        <>
-                                            {/* Case Tabs */}
-                                            <div className="flex items-center gap-2 flex-wrap mb-4">
-                                                {testCases.map((_, index) => (
-                                                    <button
-                                                        key={index}
-                                                        onClick={() => setSelectedTestCase(index)}
-                                                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${selectedTestCase === index
-                                                            ? 'bg-[#2d2d2d] text-white shadow-sm'
-                                                            : 'text-[#666] hover:text-[#A0A0A0] hover:bg-[#2d2d2d]/50'
-                                                            }`}
-                                                    >
-                                                        {result && result.results[index] && (
-                                                            result.results[index].passed
-                                                                ? <CheckCircle2 size={12} className="text-green-400" />
-                                                                : <XCircle size={12} className="text-red-400" />
-                                                        )}
-                                                        Case {index + 1}
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            {/* Selected Test Case Details */}
-                                            {testCases[selectedTestCase] && (
-                                                <div className="space-y-4 animate-fade-in">
-                                                    {/* Input */}
-                                                    <div>
-                                                        <label className="text-xs font-medium text-[#888] mb-2 block uppercase tracking-wider">Input</label>
-                                                        <div className="bg-[#2d2d2d] rounded-lg p-4 border border-white/5 font-mono text-sm text-[#d4d4d4] whitespace-pre-wrap leading-relaxed shadow-inner">
-                                                            {testCases[selectedTestCase].input}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Expected Output */}
-                                                    <div>
-                                                        <label className="text-xs font-medium text-[#888] mb-2 block uppercase tracking-wider">Expected Output</label>
-                                                        <div className="bg-[#2d2d2d] rounded-lg p-4 border border-white/5 font-mono text-sm text-[#d4d4d4] whitespace-pre-wrap leading-relaxed shadow-inner">
-                                                            {testCases[selectedTestCase].expectedOutput}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Actual Output (from last run) */}
-                                                    {result && result.results[selectedTestCase] && (
-                                                        <div className="animate-fade-in border-t border-white/5 pt-4 mt-2">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <label className="text-xs font-medium text-[#888] block uppercase tracking-wider">Actual Output</label>
-                                                                <span className={`text-xs font-bold ${result.results[selectedTestCase].passed ? 'text-green-400' : 'text-red-400'}`}>
-                                                                    {result.results[selectedTestCase].verdict}
-                                                                </span>
-                                                            </div>
-                                                            <div className={`bg-[#2d2d2d] rounded-lg p-4 border font-mono text-sm whitespace-pre-wrap leading-relaxed shadow-inner ${result.results[selectedTestCase].passed
-                                                                ? 'border-green-500/20 text-[#d4d4d4]'
-                                                                : 'border-red-500/20 text-red-300'
-                                                                }`}>
-                                                                {result.results[selectedTestCase].output || (
-                                                                    <span className="italic opacity-50">No output captured</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                        hasSubmitted ? (
+                                            <>
+                                                {/* Case Tabs */}
+                                                <div className="flex items-center gap-2 flex-wrap mb-4">
+                                                    {testCases.map((_, index) => (
+                                                        <button
+                                                            key={index}
+                                                            onClick={() => setSelectedTestCase(index)}
+                                                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${selectedTestCase === index
+                                                                ? 'bg-[#2d2d2d] text-white shadow-sm'
+                                                                : 'text-[#666] hover:text-[#A0A0A0] hover:bg-[#2d2d2d]/50'
+                                                                }`}
+                                                        >
+                                                            {result && result.results[index] && (
+                                                                result.results[index].passed
+                                                                    ? <CheckCircle2 size={12} className="text-green-400" />
+                                                                    : <XCircle size={12} className="text-red-400" />
+                                                            )}
+                                                            Case {index + 1}
+                                                        </button>
+                                                    ))}
                                                 </div>
-                                            )}
-                                        </>
+
+                                                {/* Selected Test Case Details */}
+                                                {testCases[selectedTestCase] && (
+                                                    <div className="space-y-4 animate-fade-in">
+                                                        {/* Input */}
+                                                        <div>
+                                                            <label className="text-xs font-medium text-[#888] mb-2 block uppercase tracking-wider">Input</label>
+                                                            <div className="bg-[#2d2d2d] rounded-lg p-4 border border-white/5 font-mono text-sm text-[#d4d4d4] whitespace-pre-wrap leading-relaxed shadow-inner">
+                                                                {testCases[selectedTestCase].input}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Expected Output */}
+                                                        <div>
+                                                            <label className="text-xs font-medium text-[#888] mb-2 block uppercase tracking-wider">Expected Output</label>
+                                                            <div className="bg-[#2d2d2d] rounded-lg p-4 border border-white/5 font-mono text-sm text-[#d4d4d4] whitespace-pre-wrap leading-relaxed shadow-inner">
+                                                                {testCases[selectedTestCase].expectedOutput}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Actual Output (from last run) */}
+                                                        {result && result.results[selectedTestCase] && (
+                                                            <div className="animate-fade-in border-t border-white/5 pt-4 mt-2">
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <label className="text-xs font-medium text-[#888] block uppercase tracking-wider">Actual Output</label>
+                                                                    <span className={`text-xs font-bold ${result.results[selectedTestCase].passed ? 'text-green-400' : 'text-red-400'}`}>
+                                                                        {result.results[selectedTestCase].verdict}
+                                                                    </span>
+                                                                </div>
+                                                                <div className={`bg-[#2d2d2d] rounded-lg p-4 border font-mono text-sm whitespace-pre-wrap leading-relaxed shadow-inner ${result.results[selectedTestCase].passed
+                                                                    ? 'border-green-500/20 text-[#d4d4d4]'
+                                                                    : 'border-red-500/20 text-red-300'
+                                                                    }`}>
+                                                                    {result.results[selectedTestCase].output || (
+                                                                        <span className="italic opacity-50">No output captured</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            /* Placeholder - Run code first */
+                                            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                                                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                                                    <Play size={28} className="text-[#444]" />
+                                                </div>
+                                                <p className="text-[#666] text-sm">You must run your code first</p>
+                                                <p className="text-[#444] text-xs mt-1">Submit your solution to see test results</p>
+                                            </div>
+                                        )
                                     ) : (
                                         /* Test Result Tab */
                                         result ? (
