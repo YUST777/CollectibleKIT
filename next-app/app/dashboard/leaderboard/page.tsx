@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronLeft, RefreshCw, Loader2, ExternalLink, Trophy, Code, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, RefreshCw, Loader2, ExternalLink, Trophy, Code } from 'lucide-react';
 
 // Dynamic import for Lottie to avoid SSR issues
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
@@ -59,38 +59,6 @@ export default function LeaderboardPage() {
     const [loading, setLoading] = useState(true);
     const [dataFetched, setDataFetched] = useState({ codeforces: false, sheets: false });
 
-    // Per-tab privacy state
-    const [showOnCfLeaderboard, setShowOnCfLeaderboard] = useState(true);
-    const [showOnSheetsLeaderboard, setShowOnSheetsLeaderboard] = useState(true);
-    const [savingPrivacy, setSavingPrivacy] = useState(false);
-
-    // Get current tab's visibility
-    const isVisible = activeTab === 'codeforces' ? showOnCfLeaderboard : showOnSheetsLeaderboard;
-
-    // Fetch privacy settings on mount
-    useEffect(() => {
-        const fetchPrivacy = async () => {
-            try {
-                const token = localStorage.getItem('authToken');
-                if (!token) return;
-
-                const res = await fetch('/api/user/privacy', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setShowOnCfLeaderboard(data.showOnCfLeaderboard ?? true);
-                    setShowOnSheetsLeaderboard(data.showOnSheetsLeaderboard ?? true);
-                }
-            } catch (error) {
-                console.error('Error fetching privacy:', error);
-            }
-        };
-
-        fetchPrivacy();
-    }, []);
-
     useEffect(() => {
         // Only fetch if not already cached
         if (activeTab === 'codeforces' && !dataFetched.codeforces) {
@@ -127,52 +95,6 @@ export default function LeaderboardPage() {
             console.error('Failed to fetch leaderboard:', err);
         }
         setLoading(false);
-    };
-
-    const handlePrivacyToggle = async () => {
-        if (!user) return;
-        setSavingPrivacy(true);
-
-        const field = activeTab === 'codeforces' ? 'showOnCfLeaderboard' : 'showOnSheetsLeaderboard';
-        const currentValue = activeTab === 'codeforces' ? showOnCfLeaderboard : showOnSheetsLeaderboard;
-        const newValue = !currentValue;
-
-        // Optimistic update
-        if (activeTab === 'codeforces') {
-            setShowOnCfLeaderboard(newValue);
-        } else {
-            setShowOnSheetsLeaderboard(newValue);
-        }
-
-        try {
-            const token = localStorage.getItem('authToken');
-            const res = await fetch('/api/user/privacy', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ [field]: newValue })
-            });
-
-            if (!res.ok) {
-                // Revert on error
-                if (activeTab === 'codeforces') {
-                    setShowOnCfLeaderboard(currentValue);
-                } else {
-                    setShowOnSheetsLeaderboard(currentValue);
-                }
-            }
-        } catch (error) {
-            // Revert on error
-            if (activeTab === 'codeforces') {
-                setShowOnCfLeaderboard(currentValue);
-            } else {
-                setShowOnSheetsLeaderboard(currentValue);
-            }
-        } finally {
-            setSavingPrivacy(false);
-        }
     };
 
     const getRatingColor = (rating: number) => {
@@ -219,32 +141,6 @@ export default function LeaderboardPage() {
                     </div>
 
                     <div className="flex items-center gap-2 ml-10 md:ml-0">
-                        {/* Privacy Control - Toggles visibility for current tab */}
-                        {user && (
-                            <button
-                                onClick={handlePrivacyToggle}
-                                disabled={savingPrivacy}
-                                className={`p-2 rounded-lg border transition-all flex items-center gap-2 ${isVisible
-                                    ? 'bg-[#1A1A1A] border-white/10 text-green-400 hover:bg-[#222]'
-                                    : 'bg-[#1A1A1A] border-white/10 text-[#666] hover:text-[#A0A0A0] hover:bg-[#222]'
-                                    } ${savingPrivacy ? 'opacity-50' : ''}`}
-                                title={isVisible
-                                    ? `You are visible on the ${activeTab === 'codeforces' ? 'Codeforces' : 'Sheets'} leaderboard`
-                                    : `You are hidden from the ${activeTab === 'codeforces' ? 'Codeforces' : 'Sheets'} leaderboard`}
-                            >
-                                {savingPrivacy ? (
-                                    <Loader2 size={20} className="animate-spin" />
-                                ) : isVisible ? (
-                                    <Eye size={20} />
-                                ) : (
-                                    <EyeOff size={20} />
-                                )}
-                                <span className="text-sm font-medium hidden sm:inline">
-                                    {isVisible ? 'Visible' : 'Hidden'}
-                                </span>
-                            </button>
-                        )}
-
                         <button
                             onClick={fetchLeaderboard}
                             disabled={loading}
@@ -296,12 +192,12 @@ export default function LeaderboardPage() {
                 <div className="bg-[#121212] rounded-xl border border-white/5 overflow-hidden">
                     {activeTab === 'codeforces' ? (
                         <>
-                            {/* CF Header */}
-                            <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 text-xs text-[#666] uppercase tracking-wider">
+                            {/* CF Header - Mobile Responsive */}
+                            <div className="grid grid-cols-8 sm:grid-cols-12 gap-2 sm:gap-4 p-3 sm:p-4 border-b border-white/5 text-xs text-[#666] uppercase tracking-wider">
                                 <div className="col-span-1">#</div>
-                                <div className="col-span-5">Handle</div>
+                                <div className="col-span-4 sm:col-span-5">Handle</div>
                                 <div className="col-span-3">Rating</div>
-                                <div className="col-span-3">Rank</div>
+                                <div className="hidden sm:block col-span-3">Rank</div>
                             </div>
                             {loading ? (
                                 <div className="p-8 flex items-center justify-center">
@@ -330,7 +226,7 @@ export default function LeaderboardPage() {
                             ) : (
                                 <div className="divide-y divide-white/5">
                                     {cfLeaderboard.map((user, index) => (
-                                        <div key={index} className="grid grid-cols-12 gap-4 p-4 hover:bg-white/5 transition-colors items-center">
+                                        <div key={index} className="grid grid-cols-8 sm:grid-cols-12 gap-2 sm:gap-4 p-3 sm:p-4 hover:bg-white/5 transition-colors items-center">
                                             <div className="col-span-1 flex items-center justify-center">
                                                 {index < 3 ? (
                                                     <MedalAnimation place={(index + 1) as 1 | 2 | 3} />
@@ -338,22 +234,22 @@ export default function LeaderboardPage() {
                                                     <span className="text-sm font-bold text-[#666]">{index + 1}</span>
                                                 )}
                                             </div>
-                                            <div className="col-span-5">
+                                            <div className="col-span-4 sm:col-span-5 min-w-0">
                                                 <a
                                                     href={`https://codeforces.com/profile/${user.handle}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-sm font-medium text-[#F2F2F2] hover:text-[#E8C15A] flex items-center gap-2"
+                                                    className="text-sm font-medium text-[#F2F2F2] hover:text-[#E8C15A] flex items-center gap-1 sm:gap-2 truncate"
                                                 >
-                                                    {user.handle}
-                                                    <ExternalLink size={12} className="text-[#666]" />
+                                                    <span className="truncate">{user.handle}</span>
+                                                    <ExternalLink size={12} className="text-[#666] flex-shrink-0 hidden sm:block" />
                                                 </a>
-                                                <p className="text-xs text-[#666]">{user.name}</p>
+                                                <p className="text-xs text-[#666] truncate">{user.name}</p>
                                             </div>
                                             <div className={`col-span-3 text-sm font-bold ${getRatingColor(user.rating)}`}>
                                                 {user.rating}
                                             </div>
-                                            <div className="col-span-3 text-sm text-[#A0A0A0] capitalize">{user.rank}</div>
+                                            <div className="hidden sm:block col-span-3 text-sm text-[#A0A0A0] capitalize">{user.rank}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -383,13 +279,13 @@ export default function LeaderboardPage() {
                         </>
                     ) : (
                         <>
-                            {/* Sheets Header */}
-                            <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 text-xs text-[#666] uppercase tracking-wider">
+                            {/* Sheets Header - Mobile Responsive */}
+                            <div className="grid grid-cols-6 sm:grid-cols-12 gap-2 sm:gap-4 p-3 sm:p-4 border-b border-white/5 text-xs text-[#666] uppercase tracking-wider">
                                 <div className="col-span-1">#</div>
-                                <div className="col-span-4">Username</div>
-                                <div className="col-span-3">Problems Solved</div>
-                                <div className="col-span-2">Accepted</div>
-                                <div className="col-span-2">Submissions</div>
+                                <div className="col-span-2 sm:col-span-4">Username</div>
+                                <div className="col-span-3 sm:col-span-3">Solved</div>
+                                <div className="hidden sm:block col-span-2">Accepted</div>
+                                <div className="hidden sm:block col-span-2">Submissions</div>
                             </div>
                             {loading ? (
                                 <div className="p-8 flex items-center justify-center">
@@ -414,7 +310,7 @@ export default function LeaderboardPage() {
                             ) : (
                                 <div className="divide-y divide-white/5">
                                     {sheetsLeaderboard.map((user, index) => (
-                                        <div key={user.userId} className="grid grid-cols-12 gap-4 p-4 hover:bg-white/5 transition-colors items-center">
+                                        <div key={user.userId} className="grid grid-cols-6 sm:grid-cols-12 gap-2 sm:gap-4 p-3 sm:p-4 hover:bg-white/5 transition-colors items-center">
                                             <div className="col-span-1 flex items-center justify-center">
                                                 {index < 3 ? (
                                                     <MedalAnimation place={(index + 1) as 1 | 2 | 3} />
@@ -422,18 +318,18 @@ export default function LeaderboardPage() {
                                                     <span className="text-sm font-bold text-[#666]">{index + 1}</span>
                                                 )}
                                             </div>
-                                            <div className="col-span-4">
-                                                <span className="text-sm font-medium text-[#F2F2F2]">{user.username}</span>
+                                            <div className="col-span-2 sm:col-span-4 min-w-0">
+                                                <span className="text-sm font-medium text-[#F2F2F2] truncate block">{user.username}</span>
                                             </div>
                                             <div className="col-span-3">
-                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${getSolvedBadge(user.solvedCount)}`}>
-                                                    {user.solvedCount} solved
+                                                <span className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-xs font-bold ${getSolvedBadge(user.solvedCount)}`}>
+                                                    {user.solvedCount}
                                                 </span>
                                             </div>
-                                            <div className="col-span-2 text-sm text-green-400 font-medium">
+                                            <div className="hidden sm:block col-span-2 text-sm text-green-400 font-medium">
                                                 {user.acceptedCount}
                                             </div>
-                                            <div className="col-span-2 text-sm text-[#666]">
+                                            <div className="hidden sm:block col-span-2 text-sm text-[#666]">
                                                 {user.totalSubmissions}
                                             </div>
                                         </div>
