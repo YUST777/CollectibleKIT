@@ -35,11 +35,21 @@ export async function GET(req: NextRequest) {
 
         // ============================================
         // QUERY LOGIC:
-        // - If cheater: Show ALL users (normal + cheaters)
-        // - If normal/guest: Show only normal users
+        // - If cheater: Show ALL users (normal + cheaters), cheaters can't hide via privacy
+        // - If normal/guest: Show only normal users with public profiles
         // ============================================
+
+        // Privacy filter: cheaters can't hide, normal users can
+        // is_shadow_banned = TRUE -> always shown (can't hide)
+        // is_shadow_banned = FALSE/NULL -> respects profile_visibility
+        const privacyFilter = `(
+            u.is_shadow_banned = TRUE 
+            OR u.profile_visibility = 'public' 
+            OR u.profile_visibility IS NULL
+        )`;
+
         const shadowBanFilter = isShadowBanned
-            ? '' // Cheaters see everyone
+            ? '' // Cheaters see everyone (including other cheaters)
             : 'AND (u.is_shadow_banned = FALSE OR u.is_shadow_banned IS NULL)'; // Normal users don't see cheaters
 
         const result = await query(`
@@ -55,7 +65,7 @@ export async function GET(req: NextRequest) {
             FROM users u
             INNER JOIN training_submissions ts ON u.id = ts.user_id
             LEFT JOIN applications a ON u.application_id = a.id
-            WHERE (u.profile_visibility = 'public' OR u.profile_visibility IS NULL)
+            WHERE ${privacyFilter}
               ${shadowBanFilter}
             GROUP BY u.id, u.email, u.profile_visibility, u.is_shadow_banned, a.name
             HAVING COUNT(CASE WHEN ts.verdict = 'Accepted' THEN 1 END) > 0

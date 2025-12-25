@@ -106,9 +106,9 @@ export async function POST(req: NextRequest) {
             const lastTime = new Date(lastSub.submitted_at).getTime();
             const now = Date.now();
 
-            // Global Rate Limit (5 seconds)
-            if (now - lastTime < 5000) {
-                const waitSeconds = Math.ceil((5000 - (now - lastTime)) / 1000);
+            // Global Rate Limit (3 seconds)
+            if (now - lastTime < 3000) {
+                const waitSeconds = Math.ceil((3000 - (now - lastTime)) / 1000);
                 return NextResponse.json(
                     { error: `Please wait ${waitSeconds}s before submitting again` },
                     { status: 429 }
@@ -286,8 +286,8 @@ export async function POST(req: NextRequest) {
                     }
                 }
 
-                // Check 2: Impossibly fast solve time
-                if (timeToSolve && timeToSolve < 20) {
+                // Check 2: Impossibly fast solve time (handles timeToSolve === 0 bypass)
+                if (typeof timeToSolve === 'number' && timeToSolve < 20) {
                     isSuspicious = true;
                     console.log(`⚠️ CHEAT DETECTION: User ${user.id} solved ${problemId} in only ${timeToSolve}s`);
                 }
