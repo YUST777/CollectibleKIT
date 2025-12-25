@@ -11,6 +11,8 @@ import Providers from '@/components/Providers';
 function RegisterContent() {
     const [step, setStep] = useState(1);
     const [email, setEmail] = useState('');
+    const [otp, setOtp] = useState('');
+    const [verificationToken, setVerificationToken] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -64,10 +66,23 @@ function RegisterContent() {
         try {
             const result = await checkEmail(trimmedEmail);
             if (result.exists && !result.hasAccount) {
-                setEmail(trimmedEmail);
-                setEmailInfo(result);
-                setError('');
-                setStep(2);
+                // Email valid, now send OTP
+                const otpRes = await fetch('/api/auth/send-verification-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: trimmedEmail })
+                });
+
+                const otpData = await otpRes.json();
+
+                if (otpRes.ok) {
+                    setEmail(trimmedEmail);
+                    setEmailInfo(result);
+                    setError('');
+                    setStep(2); // Go to OTP step
+                } else {
+                    setError(otpData.error || 'Failed to send verification code.');
+                }
             } else if (result.exists && result.hasAccount) {
                 setError('An account with this email already exists. Please sign in instead.');
             } else {
@@ -75,6 +90,33 @@ function RegisterContent() {
             }
         } catch (err: any) {
             setError(err.message || 'Something went wrong. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyOTP = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        if (!otp) return;
+
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                setVerificationToken(data.verificationToken);
+                setStep(3); // Go to Password step
+            } else {
+                setError(data.error || 'Invalid code');
+            }
+        } catch (err) {
+            setError('Verification failed');
         } finally {
             setLoading(false);
         }
@@ -91,14 +133,41 @@ function RegisterContent() {
 
         setLoading(true);
         try {
-            await register(email, password);
-            router.push('/dashboard');
-        } catch (err: any) {
-            if (err.message?.includes('already exists')) {
-                setError('An account with this email already exists. Please sign in.');
+            // Using a custom fetch here to include the token, or assume context is updated
+            // Since context `register` might not support token arg, we can modify contexts/AuthContext or just fetch directly here.
+            // Direct fetch is easier for this task.
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, verificationToken })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                // Manually login or redirect
+                // Ideally update context state, but router push will trigger reload/check
+                // We'll mimic context behavior or just redirect to login/dashboard
+                // Just redirecting for now, user might need to login or we assume auto-login if token returned
+                if (data.token) {
+                    // We could store it, but simple redirect is okay for now
+                    // Just use the context method if we can override implementation... 
+                    // Actually, calling the context `register` (if we edited it) is best. 
+                    // But context register sends {email, password}. 
+                    // I will implement a direct call here.
+                    localStorage.setItem('token', data.token); // Store token
+                    window.location.href = '/dashboard'; // Hard reload to pick up auth
+                } else {
+                    router.push('/login');
+                }
             } else {
-                setError(err.message || 'Registration failed. Please try again.');
+                if (data.error?.includes('already exists')) {
+                    setError('An account with this email already exists.');
+                } else {
+                    setError(data.error || 'Registration failed.');
+                }
             }
+        } catch (err: any) {
+            setError(err.message || 'Registration failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -131,11 +200,18 @@ function RegisterContent() {
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= 1 ? 'bg-[#d59928]/20 border border-[#d59928]' : 'bg-white/5 border border-white/20'}`}>
                             {step > 1 ? <CheckCircle2 size={16} /> : '1'}
                         </div>
+                        <span className="text-sm hidden sm:inline">Check</span>
+                    </div>
+                    <div className={`w-8 h-px ${step >= 2 ? 'bg-[#d59928]' : 'bg-white/20'}`}></div>
+                    <div className={`flex items-center gap-2 ${step >= 2 ? 'text-[#d59928]' : 'text-white/30'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= 2 ? 'bg-[#d59928]/20 border border-[#d59928]' : 'bg-white/5 border border-white/20'}`}>
+                            {step > 2 ? <CheckCircle2 size={16} /> : '2'}
+                        </div>
                         <span className="text-sm hidden sm:inline">Verify</span>
                     </div>
-                    <div className={`w-12 h-px ${step >= 2 ? 'bg-[#d59928]' : 'bg-white/20'}`}></div>
-                    <div className={`flex items-center gap-2 ${step >= 2 ? 'text-[#d59928]' : 'text-white/30'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= 2 ? 'bg-[#d59928]/20 border border-[#d59928]' : 'bg-white/5 border border-white/20'}`}>2</div>
+                    <div className={`w-8 h-px ${step >= 3 ? 'bg-[#d59928]' : 'bg-white/20'}`}></div>
+                    <div className={`flex items-center gap-2 ${step >= 3 ? 'text-[#d59928]' : 'text-white/30'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= 3 ? 'bg-[#d59928]/20 border border-[#d59928]' : 'bg-white/5 border border-white/20'}`}>3</div>
                         <span className="text-sm hidden sm:inline">Password</span>
                     </div>
                 </div>
@@ -172,7 +248,7 @@ function RegisterContent() {
                             </div>
 
                             <button type="submit" disabled={loading || !email.trim()} className="w-full py-3 px-4 bg-[#d59928] hover:bg-[#c08820] text-black font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#d59928]/20">
-                                {loading ? <><Loader2 className="animate-spin" size={20} />Verifying...</> : <>Verify Email<ArrowRight size={20} /></>}
+                                {loading ? <><Loader2 className="animate-spin" size={20} />Checking...</> : <>Next Step<ArrowRight size={20} /></>}
                             </button>
 
                             <div className="text-center pt-4 border-t border-white/10">
@@ -182,6 +258,33 @@ function RegisterContent() {
                     )}
 
                     {step === 2 && (
+                        <form onSubmit={handleVerifyOTP} className="space-y-6">
+                            <div className="text-center mb-4">
+                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#d59928]/10 text-[#d59928] mb-3"><Mail size={24} /></div>
+                                <h3 className="text-white font-bold text-lg">Verify your email</h3>
+                                <p className="text-white/60 text-sm mt-1">We sent a 6-digit code to <br /><span className="text-white">{email}</span></p>
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm flex items-start gap-2">
+                                    <XCircle size={18} className="flex-shrink-0 mt-0.5" /><span>{error}</span>
+                                </div>
+                            )}
+
+                            <div>
+                                <label htmlFor="otp" className="block text-sm font-medium text-white/80 mb-2">Verification Code</label>
+                                <input id="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="123456" className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white text-center text-2xl tracking-widest placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-[#d59928]/50 focus:border-[#d59928]/50 transition-all" required maxLength={6} pattern="\d{6}" autoComplete="one-time-code" />
+                            </div>
+
+                            <button type="submit" disabled={loading || otp.length !== 6} className="w-full py-3 px-4 bg-[#d59928] hover:bg-[#c08820] text-black font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#d59928]/20">
+                                {loading ? <><Loader2 className="animate-spin" size={20} />Verifying...</> : <>Verify Code<ArrowRight size={20} /></>}
+                            </button>
+
+                            <button type="button" onClick={handleGoBack} className="w-full py-2 text-white/40 hover:text-white text-sm transition-colors">← Change Email</button>
+                        </form>
+                    )}
+
+                    {step === 3 && (
                         <form onSubmit={handleRegister} className="space-y-6">
                             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-green-400 text-sm text-center flex items-center justify-center gap-2">
                                 <CheckCircle2 size={18} />Email verified! Create your password

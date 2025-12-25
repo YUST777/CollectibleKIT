@@ -30,3 +30,4 @@ server/applications.db
 *.sw?
 
 
+mail-server/docker-data

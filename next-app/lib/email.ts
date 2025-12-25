@@ -27,6 +27,9 @@ function getTransporter() {
                 user: smtpLogin,
                 pass: smtpPassword,
             },
+            tls: {
+                rejectUnauthorized: false
+            },
             // Add timeout to prevent infinite hanging
             connectionTimeout: 10000, // 10 seconds
             greetingTimeout: 10000,

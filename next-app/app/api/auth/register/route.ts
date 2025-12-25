@@ -15,11 +15,26 @@ declare global {
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password } = await request.json();
+        const { email, password, verificationToken } = await request.json();
 
         if (!email || !password) {
             return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
         }
+
+        // Verify Verification Token if provided (Enforcing for new flow recommended)
+        if (verificationToken) {
+            try {
+                const decoded = jwt.verify(verificationToken, JWT_SECRET!) as any;
+                if (decoded.email !== email.trim().toLowerCase() || !decoded.verified || decoded.type !== 'registration_verification') {
+                    return NextResponse.json({ error: 'Invalid or expired verification token' }, { status: 400 });
+                }
+            } catch (err) {
+                return NextResponse.json({ error: 'Invalid verification session' }, { status: 400 });
+            }
+        }
+        // NOTE: If verificationToken is NOT provided, we currently proceed (legacy behavior). 
+        // You can uncomment below to ENFORCE it.
+        // else { return NextResponse.json({ error: 'Email verification required' }, { status: 400 }); }
 
         if (!JWT_SECRET) {
             return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });

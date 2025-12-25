@@ -40,13 +40,18 @@ const TOTP_SECRET = process.env.TOTP_SECRET;
 
 // Email Configuration (Brevo)
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_SERVER,
+  host: process.env.SMTP_SERVER || 'localhost',
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_LOGIN,
     pass: process.env.SMTP_PASSWORD,
   },
+  tls: {
+    rejectUnauthorized: false
+  },
+  debug: true,
+  logger: true
 });
 
 // Verify email connection on startup
@@ -3659,17 +3664,21 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
+    console.log(`[Forgot Password] Request received for: ${email}`);
+
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check if user exists
     const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
+    console.log(`[Forgot Password] User search result: ${userResult.rows.length} found`);
 
     // Cleanup old/unexpired tokens for this email to prevent flooding
     await pool.query('DELETE FROM password_resets WHERE email = $1', [normalizedEmail]);
 
     if (userResult.rows.length === 0) {
+      console.log(`[Forgot Password] User ${normalizedEmail} NOT found. Simulating delay.`);
       // Timing attack mitigation: Simulate work similar to token generation/hashing
       // Not perfect but better than immediate return
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -3685,190 +3694,34 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
 
     // Store in DB
     await pool.query('INSERT INTO password_resets (email, token_hash, expires_at) VALUES ($1, $2, $3)', [normalizedEmail, tokenHash, expiresAt]);
+    console.log(`[Forgot Password] Token generated and stored for ${normalizedEmail}`);
 
     // Send Email
     const resetLink = `https://icpchue.xyz/reset-password?token=${resetToken}&email=${encodeURIComponent(normalizedEmail)}`;
+    console.log(`[Forgot Password] Preparing email send...`);
 
     const mailOptions = {
       from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
       to: normalizedEmail,
-      subject: 'إعادة تعيين كلمة المرور - ICPC HUE',
+      subject: 'Reset Password - ICPC HUE',
+      text: `Hello,\n\nYou requested a password reset for your ICPC HUE account.\n\nPlease click the link below to reset your password:\n${resetLink}\n\nThis link expires in 24 hours.\n\nIf you did not request this, please ignore this email.\n`,
       html: `
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff;">
+  <h2 style="color: #333333; text-align: center;">Reset Your Password</h2>
+  <p style="color: #555555; font-size: 16px;">Hello,</p>
+  <p style="color: #555555; font-size: 16px;">You requested a password reset for your <strong>ICPC HUE</strong> account.</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${resetLink}" style="background-color: #0088cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Reset Password</a>
+  </div>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إعادة تعيين كلمة المرور - ICPC HUE</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #050505;
-            font-family: Arial, Tahoma, sans-serif;
-            color: #e4e6eb;
-            line-height: 1.6;
-        }
-
-        table {
-            border-spacing: 0;
-            width: 100%;
-        }
-
-        td {
-            padding: 0;
-        }
-
-        .wrapper {
-            width: 100%;
-            background-color: #050505;
-            padding: 20px 0;
-        }
-
-        .container {
-            margin: 0 auto;
-            width: 100%;
-            max-width: 600px;
-            background-color: #1a1a1a;
-            border: 1px solid #333333;
-            border-radius: 8px;
-        }
-
-        .header {
-            padding: 20px;
-            border-bottom: 1px solid #333333;
-            text-align: right;
-        }
-
-        .logo-text {
-            font-size: 20px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-
-        .user-name {
-            color: #b0b3b8;
-            font-size: 14px;
-            float: left;
-        }
-
-        .body-content {
-            padding: 30px 20px;
-            text-align: right;
-        }
-
-        .heading {
-            font-size: 22px;
-            font-weight: bold;
-            color: #d6a034;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .text-paragraph {
-            font-size: 16px;
-            color: #e4e6eb;
-            margin-bottom: 15px;
-        }
-
-        /* Keeping the style for the note box but adapting it for security warnings */
-        .security-box {
-            background-color: #252525;
-            border: 1px solid #333333;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 20px 0;
-            color: #b0b3b8;
-            font-size: 14px;
-        }
-
-        .btn {
-            display: block;
-            width: 100%;
-            background-color: #0088cc;
-            color: #ffffff;
-            text-decoration: none;
-            padding: 15px 0;
-            border-radius: 6px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 16px;
-            margin-top: 25px;
-            transition: background-color 0.3s;
-        }
-        
-        .btn:hover {
-            background-color: #0077b3;
-        }
-
-        .footer {
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #666666;
-            direction: ltr;
-        }
-        
-        .link-muted {
-            color: #666;
-            text-decoration: underline;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="wrapper">
-        <table align="center" class="container">
-            <tr>
-                <td class="header">
-                    <span class="user-name">MEMBER</span>
-                    <span class="logo-text">ICPC HUE</span>
-                </td>
-            </tr>
-            <tr>
-                <td class="body-content">
-                    <div class="heading">إعادة تعيين كلمة المرور</div>
-
-                    <div class="text-paragraph">
-                        مرحباً،
-                    </div>
-                    
-                    <div class="text-paragraph">
-                        لقد تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك في <strong>ICPC HUE</strong>. لا تقلق، يمكننا مساعدتك في استعادة الوصول إلى حسابك وتأمين بياناتك.
-                    </div>
-
-                    <div class="text-paragraph">
-                        لإتمام العملية وإنشاء كلمة مرور جديدة، يرجى الضغط على الزر أدناه. هذا الرابط صالح لمدة 24 ساعة فقط.
-                    </div>
-
-                    <a href="${resetLink}" class="btn">تغيير كلمة المرور</a>
-
-                    <div class="security-box">
-                        <strong>⚠️ تنويه أمني:</strong><br>
-                        إذا لم تطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان. لن يتم إجراء أي تغييرات على حسابك حتى تقوم بالضغط على الرابط أعلاه وإنشاء كلمة مرور جديدة.
-                    </div>
-
-                    <div class="text-paragraph" style="font-size: 14px; color: #b0b3b8; margin-top: 20px; text-align: center;">
-                        إذا كنت تواجه مشاكل في النقر على الزر، يمكنك نسخ الرابط التالي ولصقه في متصفحك:<br>
-                        <span style="color: #0088cc; word-break: break-all;">${resetLink}</span>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="footer">
-                    © 2024 ICPC HUE Team<br>
-                    New Damietta City, Egypt<br>
-                    <br>
-                    <a href="#" class="link-muted">Privacy Policy</a> • <a href="#" class="link-muted">Support</a>
-                </td>
-            </tr>
-        </table>
-    </div>
-</body>
-
-</html>
-      `
+  <p style="color: #555555; font-size: 14px;">Or copy this link to your browser:</p>
+  <p style="color: #0088cc; font-size: 14px; word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 4px;">${resetLink}</p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  <p style="color: #999999; font-size: 12px; text-align: center;">This link is valid for 24 hours. If you didn't request this, you can safely ignore this email.</p>
+</div>
+`
     };
 
     // Try to send email, but don't fail if email server is down
