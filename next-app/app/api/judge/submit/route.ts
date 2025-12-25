@@ -257,6 +257,69 @@ export async function POST(req: NextRequest) {
         const compileError = results.find(r => r.compileError)?.compileError || null;
         const runtimeError = results.find(r => r.runtimeError)?.runtimeError || null;
 
+        // ============================================
+        // CHEATING DETECTION (Shadow Ban System)
+        // ============================================
+        if (finalVerdict === 'Accepted') {
+            try {
+                // Get user's last accepted submission for a DIFFERENT problem
+                const lastAcceptedResult = await query(
+                    `SELECT submitted_at, problem_id 
+                     FROM training_submissions 
+                     WHERE user_id = $1 AND verdict = 'Accepted' AND problem_id != $2
+                     ORDER BY submitted_at DESC 
+                     LIMIT 1`,
+                    [user.id, problemId]
+                );
+
+                let isSuspicious = false;
+
+                // Check 1: Time gap between problems
+                if (lastAcceptedResult.rows.length > 0) {
+                    const lastTime = new Date(lastAcceptedResult.rows[0].submitted_at).getTime();
+                    const now = Date.now();
+                    const gapSeconds = (now - lastTime) / 1000;
+
+                    if (gapSeconds < 45) {
+                        isSuspicious = true;
+                        console.log(`⚠️ CHEAT DETECTION: User ${user.id} solved ${problemId} only ${gapSeconds}s after previous problem`);
+                    }
+                }
+
+                // Check 2: Impossibly fast solve time
+                if (timeToSolve && timeToSolve < 20) {
+                    isSuspicious = true;
+                    console.log(`⚠️ CHEAT DETECTION: User ${user.id} solved ${problemId} in only ${timeToSolve}s`);
+                }
+
+                // If suspicious, increment flags and check for shadow ban threshold
+                if (isSuspicious) {
+                    const updateResult = await query(
+                        `UPDATE users 
+                         SET cheating_flags = COALESCE(cheating_flags, 0) + 1 
+                         WHERE id = $1 
+                         RETURNING cheating_flags`,
+                        [user.id]
+                    );
+
+                    const newFlagCount = updateResult.rows[0]?.cheating_flags || 0;
+                    console.log(`⚠️ CHEAT DETECTION: User ${user.id} now has ${newFlagCount} flags`);
+
+                    // Auto shadow ban after 3 flags
+                    if (newFlagCount >= 3) {
+                        await query(
+                            `UPDATE users SET is_shadow_banned = TRUE WHERE id = $1`,
+                            [user.id]
+                        );
+                        console.log(`🚫 SHADOW BAN: User ${user.id} has been shadow banned (${newFlagCount} flags)`);
+                    }
+                }
+            } catch (cheatDetectError) {
+                // Don't fail the submission if cheat detection fails
+                console.error('Cheat detection error:', cheatDetectError);
+            }
+        }
+
         // Save submission to database
         try {
             const insertResult = await query(
