@@ -81,7 +81,13 @@ export default function LeaderboardPage() {
                 setCfLeaderboard(data.leaderboard || []);
                 setDataFetched(prev => ({ ...prev, codeforces: true }));
             } else {
-                const res = await fetch('/api/leaderboard/sheets');
+                // Include auth token for shadow ban detection
+                const token = localStorage.getItem('authToken');
+                const headers: HeadersInit = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                const res = await fetch('/api/leaderboard/sheets', { headers });
                 const data = await res.json();
                 setSheetsLeaderboard(data.leaderboard || []);
                 setDataFetched(prev => ({ ...prev, sheets: true }));
