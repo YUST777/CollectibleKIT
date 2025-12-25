@@ -15,16 +15,11 @@ export async function POST(request: NextRequest) {
         // Verify user authentication
         const user = await verifyAuth(request);
         if (!user) {
-            console.log('User not authenticated');
             return NextResponse.json({ error: 'Unauthorized - please log in' }, { status: 401 });
         }
 
-        console.log('User authenticated:', user.id);
-
         const body = await clonedRequest.json();
         const { sheetId, problemId } = body;
-
-        console.log('Request body:', { sheetId, problemId });
 
         // Rate Limiting (In-Memory)
         const RATE_LIMIT_DURATION = 10 * 1000; // 10 seconds
@@ -80,7 +75,6 @@ export async function POST(request: NextRequest) {
         }
 
         const apiKey = process.env.GEMINI_API_KEY;
-        console.log('Gemini API Key present:', !!apiKey);
 
         if (!apiKey) {
             console.error('GEMINI_API_KEY is not set in environment variables');
@@ -103,8 +97,6 @@ Code to analyze:
 \`\`\`cpp
 ${code}
 \`\`\``;
-
-        console.log('Calling Gemini API...');
 
         // Using Gemini 2.5 Flash (stable, free model - tested and working)
         const response = await fetch(
@@ -132,8 +124,6 @@ ${code}
             }
         );
 
-        console.log('Gemini API response status:', response.status);
-
         if (!response.ok) {
             const errorData = await response.text();
             console.error('Gemini API error:', errorData);
@@ -144,7 +134,6 @@ ${code}
         }
 
         const data = await response.json();
-        console.log('Gemini API response received');
 
         // Extract the text from Gemini's response
         const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;

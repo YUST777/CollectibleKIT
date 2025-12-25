@@ -53,7 +53,6 @@ export async function sendEmail({ to, subject, text }: SendEmailOptions): Promis
     const HARD_TIMEOUT = 8000; // 8 seconds hard timeout
 
     try {
-        console.log(`📧 Attempting to send email to ${to}...`);
 
         // Wrap sendMail in a promise race with a timeout
         const sendPromise = mailer.sendMail({
@@ -69,7 +68,6 @@ export async function sendEmail({ to, subject, text }: SendEmailOptions): Promis
 
         await Promise.race([sendPromise, timeoutPromise]);
 
-        console.log(`✓ Email sent to ${to}: ${subject}`);
         return true;
     } catch (error) {
         console.error(`❌ Failed to send email to ${to}:`, error);

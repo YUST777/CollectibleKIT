@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
             if (codeforces_profile && codeforces_profile.trim() !== '') {
                 const username = extractUsername(codeforces_profile, 'codeforces');
                 if (username) {
-                    console.log(`Auto-scraping Codeforces for updated profile: ${username}`);
                     scrapedData = await scrapeCodeforces(username);
                     if (scrapedData) {
                         await query(

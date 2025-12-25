@@ -49,8 +49,6 @@ export async function POST(req: NextRequest) {
             [user.id, sanitizedSheetName, sanitizedProblemName, sanitizedFileName, file_content]
         );
 
-        console.log(`📝 Sheet submission: User ${user.id} submitted ${sanitizedFileName} for ${sanitizedSheetName}/${sanitizedProblemName}`);
-
         return NextResponse.json({
             success: true,
             message: 'Solution submitted successfully',
