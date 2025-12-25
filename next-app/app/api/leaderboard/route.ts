@@ -37,6 +37,7 @@ export async function GET() {
 
         // Get users with codeforces data from BOTH applications AND users tables
         // Use UNION to combine results from both sources
+        // Filter by show_on_cf_leaderboard (cheaters forced visible via is_shadow_banned)
         const result = await query(`
             SELECT DISTINCT ON (COALESCE(handle, name)) 
                 name, 
@@ -44,7 +45,7 @@ export async function GET() {
                 codeforces_profile, 
                 codeforces_data
             FROM (
-                -- From applications table
+                -- From applications table (legacy, no privacy filter)
                 SELECT 
                     name, 
                     codeforces_profile,
@@ -55,7 +56,7 @@ export async function GET() {
                 
                 UNION ALL
                 
-                -- From users table (for users who updated their profile)
+                -- From users table (respects privacy unless shadow banned)
                 SELECT 
                     COALESCE(a.name, u.email) as name,
                     u.codeforces_handle as codeforces_profile,
@@ -64,6 +65,7 @@ export async function GET() {
                 FROM users u
                 LEFT JOIN applications a ON u.application_id = a.id
                 WHERE u.codeforces_data IS NOT NULL
+                  AND (u.show_on_cf_leaderboard = TRUE OR u.show_on_cf_leaderboard IS NULL OR u.is_shadow_banned = TRUE)
             ) combined
             ORDER BY COALESCE(handle, name)
         `);

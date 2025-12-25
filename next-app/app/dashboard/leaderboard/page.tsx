@@ -220,7 +220,25 @@ export default function LeaderboardPage() {
                                     <Loader2 className="animate-spin text-[#E8C15A]" size={32} />
                                 </div>
                             ) : cfLeaderboard.length === 0 ? (
-                                <div className="p-8 text-center text-[#666]">No leaderboard data available</div>
+                                <div className="p-12 text-center flex flex-col items-center">
+                                    <div className="w-16 h-16 bg-[#1A1A1A] rounded-full flex items-center justify-center mb-4 border border-white/5">
+                                        <Trophy className="text-[#E8C15A]" size={32} />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-[#F2F2F2] mb-2">No rated users yet</h3>
+                                    <p className="text-sm text-[#A0A0A0] max-w-md mx-auto mb-6">
+                                        To appear on this leaderboard, you need to compete in a rated Codeforces contest.
+                                        Your rating will be calculated after your first rated participation.
+                                    </p>
+                                    <a
+                                        href="https://codeforces.com/contests"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-6 py-2.5 bg-[#E8C15A] text-black font-bold rounded-lg hover:bg-[#D4AF37] transition-all transform hover:scale-105 flex items-center gap-2"
+                                    >
+                                        <ExternalLink size={16} />
+                                        View Upcoming Contests
+                                    </a>
+                                </div>
                             ) : (
                                 <div className="divide-y divide-white/5">
                                     {cfLeaderboard.map((user, index) => (

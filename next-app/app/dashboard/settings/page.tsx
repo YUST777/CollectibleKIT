@@ -4,25 +4,49 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDisplayName } from '@/lib/utils';
-import { ChevronLeft, Copy, Check, Settings, User, Mail, Shield, Loader2, MessageCircle, Lock, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Copy, Check, Settings, User, Mail, Shield, Loader2, MessageCircle, Lock, CheckCircle, Trophy, Code, Globe } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, profile: authProfile } = useAuth();
     const profile = authProfile || { name: user?.email?.split('@')[0] || 'User' };
     const [copied, setCopied] = useState(false);
-    const [showOnLeaderboard, setShowOnLeaderboard] = useState(true);
-    const [savingPrivacy, setSavingPrivacy] = useState(false);
 
-    // ALWAYS use email prefix for profile URL (student_id in DB may have user typos)
+    // Privacy settings state
+    const [showOnCfLeaderboard, setShowOnCfLeaderboard] = useState(true);
+    const [showOnSheetsLeaderboard, setShowOnSheetsLeaderboard] = useState(true);
+    const [showPublicProfile, setShowPublicProfile] = useState(true);
+    const [loadingPrivacy, setLoadingPrivacy] = useState(true);
+    const [savingPrivacy, setSavingPrivacy] = useState<string | null>(null);
+
     const studentId = user?.email?.split('@')[0] || 'unknown';
     const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/profile/${studentId}` : '';
 
-    // Load current privacy setting on mount
+    // Load current privacy settings on mount
     useEffect(() => {
-        if (user?.profile_visibility) {
-            setShowOnLeaderboard(user.profile_visibility === 'public');
-        }
-    }, [user]);
+        const fetchPrivacy = async () => {
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) return;
+
+                const res = await fetch('/api/user/privacy', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setShowOnCfLeaderboard(data.showOnCfLeaderboard ?? true);
+                    setShowOnSheetsLeaderboard(data.showOnSheetsLeaderboard ?? true);
+                    setShowPublicProfile(data.showPublicProfile ?? true);
+                }
+            } catch (error) {
+                console.error('Error fetching privacy settings:', error);
+            } finally {
+                setLoadingPrivacy(false);
+            }
+        };
+
+        fetchPrivacy();
+    }, []);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(profileUrl);
@@ -30,9 +54,14 @@ export default function SettingsPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handlePrivacyChange = async (checked: boolean) => {
-        setShowOnLeaderboard(checked);
-        setSavingPrivacy(true);
+    const handlePrivacyChange = async (field: string, value: boolean) => {
+        setSavingPrivacy(field);
+
+        // Optimistic update
+        if (field === 'showOnCfLeaderboard') setShowOnCfLeaderboard(value);
+        if (field === 'showOnSheetsLeaderboard') setShowOnSheetsLeaderboard(value);
+        if (field === 'showPublicProfile') setShowPublicProfile(value);
+
         try {
             const token = localStorage.getItem('authToken');
             const res = await fetch('/api/user/privacy', {
@@ -41,21 +70,63 @@ export default function SettingsPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ visibility: checked ? 'public' : 'private' })
+                body: JSON.stringify({ [field]: value })
             });
 
             if (!res.ok) {
                 // Revert on error
-                setShowOnLeaderboard(!checked);
+                if (field === 'showOnCfLeaderboard') setShowOnCfLeaderboard(!value);
+                if (field === 'showOnSheetsLeaderboard') setShowOnSheetsLeaderboard(!value);
+                if (field === 'showPublicProfile') setShowPublicProfile(!value);
                 console.error('Failed to update privacy setting');
             }
         } catch (error) {
-            setShowOnLeaderboard(!checked);
+            // Revert on error
+            if (field === 'showOnCfLeaderboard') setShowOnCfLeaderboard(!value);
+            if (field === 'showOnSheetsLeaderboard') setShowOnSheetsLeaderboard(!value);
+            if (field === 'showPublicProfile') setShowPublicProfile(!value);
             console.error('Error updating privacy:', error);
         } finally {
-            setSavingPrivacy(false);
+            setSavingPrivacy(null);
         }
     };
+
+    const PrivacyToggle = ({
+        icon: Icon,
+        label,
+        description,
+        field,
+        value
+    }: {
+        icon: any;
+        label: string;
+        description: string;
+        field: string;
+        value: boolean;
+    }) => (
+        <div className="flex items-center justify-between py-3">
+            <div className="flex items-start gap-3">
+                <Icon size={18} className="text-[#E8C15A] mt-0.5" />
+                <div>
+                    <p className="text-sm text-[#F2F2F2]">{label}</p>
+                    <p className="text-xs text-[#666]">{description}</p>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                {savingPrivacy === field && <Loader2 size={16} className="animate-spin text-[#E8C15A]" />}
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={(e) => handlePrivacyChange(field, e.target.checked)}
+                        disabled={savingPrivacy !== null || loadingPrivacy}
+                        className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E8C15A] peer-disabled:opacity-50"></div>
+                </label>
+            </div>
+        </div>
+    );
 
     return (
         <>
@@ -81,37 +152,45 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
-                {/* Privacy Settings */}
+                {/* Privacy Settings - 3 Toggles */}
                 <div className="bg-[#121212] rounded-xl border border-white/5 p-5 md:p-6">
                     <h3 className="text-lg font-bold text-[#F2F2F2] mb-4 flex items-center gap-2"><Shield size={20} className="text-[#E8C15A]" />Privacy</h3>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-[#F2F2F2]">Show on leaderboard</p>
-                                <p className="text-xs text-[#666]">Display your name on the public leaderboard (both Codeforces & Sheets)</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {savingPrivacy && <Loader2 size={16} className="animate-spin text-[#E8C15A]" />}
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={showOnLeaderboard}
-                                        onChange={(e) => handlePrivacyChange(e.target.checked)}
-                                        disabled={savingPrivacy}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E8C15A] peer-disabled:opacity-50"></div>
-                                </label>
-                            </div>
+
+                    {loadingPrivacy ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 size={24} className="animate-spin text-[#E8C15A]" />
                         </div>
-                        <div className="p-3 bg-[#1A1A1A] rounded-lg border border-white/5">
-                            <p className="text-xs text-[#666] flex items-center gap-1.5">
-                                {showOnLeaderboard
-                                    ? <><CheckCircle size={12} className="text-green-500" /> Your profile is public. You appear on leaderboards and can be found by others.</>
-                                    : <><Lock size={12} className="text-[#888]" /> Your profile is private. You are hidden from leaderboards.</>
-                                }
-                            </p>
+                    ) : (
+                        <div className="divide-y divide-white/5">
+                            <PrivacyToggle
+                                icon={Trophy}
+                                label="Codeforces Leaderboard"
+                                description="Show on Codeforces rating leaderboard"
+                                field="showOnCfLeaderboard"
+                                value={showOnCfLeaderboard}
+                            />
+                            <PrivacyToggle
+                                icon={Code}
+                                label="Training Sheets Leaderboard"
+                                description="Show on training sheets leaderboard"
+                                field="showOnSheetsLeaderboard"
+                                value={showOnSheetsLeaderboard}
+                            />
+                            <PrivacyToggle
+                                icon={Globe}
+                                label="Public Profile"
+                                description="Allow others to view your profile page"
+                                field="showPublicProfile"
+                                value={showPublicProfile}
+                            />
                         </div>
+                    )}
+
+                    <div className="mt-4 p-3 bg-[#1A1A1A] rounded-lg border border-white/5">
+                        <p className="text-xs text-[#666] flex items-center gap-1.5">
+                            <Lock size={12} className="text-[#888]" />
+                            Privacy settings only work after you've been verified.
+                        </p>
                     </div>
                 </div>
 
@@ -144,3 +223,4 @@ export default function SettingsPage() {
         </>
     );
 }
+

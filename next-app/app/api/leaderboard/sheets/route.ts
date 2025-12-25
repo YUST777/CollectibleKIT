@@ -39,13 +39,13 @@ export async function GET(req: NextRequest) {
         // - If normal/guest: Show only normal users with public profiles
         // ============================================
 
-        // Privacy filter: cheaters can't hide, normal users can
+        // Privacy filter: cheaters can't hide, normal users can opt out
         // is_shadow_banned = TRUE -> always shown (can't hide)
-        // is_shadow_banned = FALSE/NULL -> respects profile_visibility
+        // otherwise respects show_on_sheets_leaderboard setting
         const privacyFilter = `(
             u.is_shadow_banned = TRUE 
-            OR u.profile_visibility = 'public' 
-            OR u.profile_visibility IS NULL
+            OR u.show_on_sheets_leaderboard = TRUE 
+            OR u.show_on_sheets_leaderboard IS NULL
         )`;
 
         const shadowBanFilter = isShadowBanned
