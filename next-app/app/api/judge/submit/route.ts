@@ -36,7 +36,26 @@ function compareOutputs(expected: string, actual: string): boolean {
         // 1. Direct string match (Case-Insensitive)
         if (tExp.toLowerCase() === tAct.toLowerCase()) continue;
 
-        // 2. Numeric comparison with Epsilon
+        // 2. BigInt comparison (Found logical error: precision loss for > 2^53)
+        try {
+            // Only attempt if they look like integers (BigInt throws on decimals)
+            // This prevents 1.0 == 1 handling here (falls through to float check which is correct for that)
+            const biExp = BigInt(tExp);
+            const biAct = BigInt(tAct);
+
+            // If both parse as BigInt successfully, compare them perfectly
+            if (biExp === biAct) continue;
+
+            // If they are valid distinct integers, they are different!
+            // Do NOT fall back to float, or we lose precision.
+            // Exception: If one is 1e20 (scientific), BigInt constructor throws, so we go to float.
+            return false;
+        } catch {
+            // Not valid integers (decimals, scientific notation, or garbage)
+            // Fallthrough to float comparison
+        }
+
+        // 3. Numeric comparison with Epsilon
         const fExp = parseFloat(tExp);
         const fAct = parseFloat(tAct);
 
