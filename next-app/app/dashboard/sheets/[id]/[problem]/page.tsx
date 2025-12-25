@@ -119,6 +119,7 @@ export default function ProblemPage() {
     const [result, setResult] = useState<SubmissionResult | null>(null);
     const [copiedExample, setCopiedExample] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<'description' | 'submissions' | 'analytics'>('description');
+    const [hasSubmitted, setHasSubmitted] = useState(false); // Track if user has submitted at least once
 
     // Analytics State
     const [stats, setStats] = useState<{
@@ -169,7 +170,7 @@ export default function ProblemPage() {
 
     // Vertical split panel state (Test Cases Panel)
     const [testPanelHeight, setTestPanelHeight] = useState(35); // percentage
-    const [isTestPanelVisible, setIsTestPanelVisible] = useState(true);
+    const [isTestPanelVisible, setIsTestPanelVisible] = useState(false); // Hidden until first submission
     const [isResizingVertical, setIsResizingVertical] = useState(false);
     const [testPanelTab, setTestPanelTab] = useState<'testcase' | 'result'>('testcase');
     const [selectedTestCase, setSelectedTestCase] = useState(0);
@@ -487,6 +488,7 @@ export default function ProblemPage() {
             });
         } finally {
             setSubmitting(false);
+            setHasSubmitted(true); // Mark that user has submitted at least once
         }
     };
 
@@ -1005,10 +1007,14 @@ export default function ProblemPage() {
                         {/* Top Actions */}
                         <div className="flex items-center gap-3">
                             <button
-                                onClick={() => setIsTestPanelVisible(!isTestPanelVisible)}
+                                onClick={() => hasSubmitted && setIsTestPanelVisible(!isTestPanelVisible)}
+                                disabled={!hasSubmitted}
+                                title={hasSubmitted ? 'Toggle test panel' : 'Submit your code first to see test results'}
                                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${isTestPanelVisible
                                     ? 'bg-white/10 text-white'
-                                    : 'text-[#666] hover:bg-white/5 hover:text-[#A0A0A0]'
+                                    : hasSubmitted
+                                        ? 'text-[#666] hover:bg-white/5 hover:text-[#A0A0A0]'
+                                        : 'text-[#444] cursor-not-allowed opacity-50'
                                     }`}
                             >
                                 <Terminal size={14} />
