@@ -215,6 +215,26 @@ export default function ProblemPage() {
             }
         };
 
+        // Check if user has existing submissions for this problem
+        const checkExistingSubmissions = async () => {
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) return;
+
+                const res = await fetch(`/api/submissions?sheetId=${sheetId}&problemId=${problemId}&limit=1`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.submissions && data.submissions.length > 0) {
+                        setHasSubmitted(true);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check submissions:', error);
+            }
+        };
+
         const savedCode = localStorage.getItem(`code-${sheetId}-${problemId}`);
         if (savedCode) {
             setCode(savedCode);
@@ -225,6 +245,7 @@ export default function ProblemPage() {
         setPasteEvents(0);
 
         fetchProblem();
+        checkExistingSubmissions();
     }, [sheetId, problemId, router]);
 
     // Fetch Stats
