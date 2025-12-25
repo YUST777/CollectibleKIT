@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronLeft, RefreshCw, Loader2, ExternalLink, Trophy, Code } from 'lucide-react';
+import { ChevronLeft, Loader2, ExternalLink, Trophy, Code } from 'lucide-react';
 
 // Dynamic import for Lottie to avoid SSR issues
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
@@ -138,17 +138,6 @@ export default function LeaderboardPage() {
                         <p className="text-[#A0A0A0] mt-1 ml-10">
                             Compare your progress with the community
                         </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-10 md:ml-0">
-                        <button
-                            onClick={fetchLeaderboard}
-                            disabled={loading}
-                            className="p-2 bg-[#1A1A1A] border border-white/10 rounded-lg text-[#F2F2F2] hover:bg-[#222] hover:text-[#E8C15A] transition-all"
-                            title="Refresh"
-                        >
-                            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-                        </button>
                     </div>
                 </div>
 
