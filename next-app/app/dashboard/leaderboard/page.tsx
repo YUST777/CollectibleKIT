@@ -58,7 +58,38 @@ export default function LeaderboardPage() {
     const [sheetsLeaderboard, setSheetsLeaderboard] = useState<SheetUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [dataFetched, setDataFetched] = useState({ codeforces: false, sheets: false });
-    const isVisible = user?.profile_visibility === 'public' || !user?.profile_visibility;
+
+    // Per-tab privacy state
+    const [showOnCfLeaderboard, setShowOnCfLeaderboard] = useState(true);
+    const [showOnSheetsLeaderboard, setShowOnSheetsLeaderboard] = useState(true);
+    const [savingPrivacy, setSavingPrivacy] = useState(false);
+
+    // Get current tab's visibility
+    const isVisible = activeTab === 'codeforces' ? showOnCfLeaderboard : showOnSheetsLeaderboard;
+
+    // Fetch privacy settings on mount
+    useEffect(() => {
+        const fetchPrivacy = async () => {
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) return;
+
+                const res = await fetch('/api/user/privacy', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setShowOnCfLeaderboard(data.showOnCfLeaderboard ?? true);
+                    setShowOnSheetsLeaderboard(data.showOnSheetsLeaderboard ?? true);
+                }
+            } catch (error) {
+                console.error('Error fetching privacy:', error);
+            }
+        };
+
+        fetchPrivacy();
+    }, []);
 
     useEffect(() => {
         // Only fetch if not already cached
@@ -96,6 +127,52 @@ export default function LeaderboardPage() {
             console.error('Failed to fetch leaderboard:', err);
         }
         setLoading(false);
+    };
+
+    const handlePrivacyToggle = async () => {
+        if (!user) return;
+        setSavingPrivacy(true);
+
+        const field = activeTab === 'codeforces' ? 'showOnCfLeaderboard' : 'showOnSheetsLeaderboard';
+        const currentValue = activeTab === 'codeforces' ? showOnCfLeaderboard : showOnSheetsLeaderboard;
+        const newValue = !currentValue;
+
+        // Optimistic update
+        if (activeTab === 'codeforces') {
+            setShowOnCfLeaderboard(newValue);
+        } else {
+            setShowOnSheetsLeaderboard(newValue);
+        }
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const res = await fetch('/api/user/privacy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ [field]: newValue })
+            });
+
+            if (!res.ok) {
+                // Revert on error
+                if (activeTab === 'codeforces') {
+                    setShowOnCfLeaderboard(currentValue);
+                } else {
+                    setShowOnSheetsLeaderboard(currentValue);
+                }
+            }
+        } catch (error) {
+            // Revert on error
+            if (activeTab === 'codeforces') {
+                setShowOnCfLeaderboard(currentValue);
+            } else {
+                setShowOnSheetsLeaderboard(currentValue);
+            }
+        } finally {
+            setSavingPrivacy(false);
+        }
     };
 
     const getRatingColor = (rating: number) => {
@@ -142,20 +219,31 @@ export default function LeaderboardPage() {
                     </div>
 
                     <div className="flex items-center gap-2 ml-10 md:ml-0">
-                        {/* Privacy Control */}
-                        <Link
-                            href="/dashboard/settings"
-                            className={`p-2 rounded-lg border transition-all flex items-center gap-2 ${isVisible
-                                ? 'bg-[#1A1A1A] border-white/10 text-green-400 hover:bg-[#222]'
-                                : 'bg-[#1A1A1A] border-white/10 text-[#666] hover:text-[#A0A0A0] hover:bg-[#222]'
-                                }`}
-                            title={isVisible ? "You are visible on the leaderboard" : "You are hidden from the leaderboard"}
-                        >
-                            {isVisible ? <Eye size={20} /> : <EyeOff size={20} />}
-                            <span className="text-sm font-medium hidden sm:inline">
-                                {isVisible ? 'Visible' : 'Hidden'}
-                            </span>
-                        </Link>
+                        {/* Privacy Control - Toggles visibility for current tab */}
+                        {user && (
+                            <button
+                                onClick={handlePrivacyToggle}
+                                disabled={savingPrivacy}
+                                className={`p-2 rounded-lg border transition-all flex items-center gap-2 ${isVisible
+                                    ? 'bg-[#1A1A1A] border-white/10 text-green-400 hover:bg-[#222]'
+                                    : 'bg-[#1A1A1A] border-white/10 text-[#666] hover:text-[#A0A0A0] hover:bg-[#222]'
+                                    } ${savingPrivacy ? 'opacity-50' : ''}`}
+                                title={isVisible
+                                    ? `You are visible on the ${activeTab === 'codeforces' ? 'Codeforces' : 'Sheets'} leaderboard`
+                                    : `You are hidden from the ${activeTab === 'codeforces' ? 'Codeforces' : 'Sheets'} leaderboard`}
+                            >
+                                {savingPrivacy ? (
+                                    <Loader2 size={20} className="animate-spin" />
+                                ) : isVisible ? (
+                                    <Eye size={20} />
+                                ) : (
+                                    <EyeOff size={20} />
+                                )}
+                                <span className="text-sm font-medium hidden sm:inline">
+                                    {isVisible ? 'Visible' : 'Hidden'}
+                                </span>
+                            </button>
+                        )}
 
                         <button
                             onClick={fetchLeaderboard}
@@ -270,6 +358,28 @@ export default function LeaderboardPage() {
                                     ))}
                                 </div>
                             )}
+                            {/* CF Ranking Info Box */}
+                            <div className="p-4 bg-[#0A0A0A] border-t border-white/5">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-[#1A1A1A] rounded-lg">
+                                        <Trophy className="text-[#E8C15A]" size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-[#A0A0A0]">
+                                            <span className="text-[#F2F2F2] font-medium">How to get ranked?</span>{' '}
+                                            Compete in any rated Codeforces contest. Your rating will be calculated after your first participation.
+                                        </p>
+                                        <a
+                                            href="https://codeforces.com/contests"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[#E8C15A] text-sm hover:underline inline-flex items-center gap-1 mt-1"
+                                        >
+                                            View Upcoming Contests <ExternalLink size={12} />
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </>
                     ) : (
                         <>
