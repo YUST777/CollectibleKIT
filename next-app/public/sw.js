@@ -1,5 +1,5 @@
 // ICPC HUE Service Worker - PWA Support
-const CACHE_NAME = 'icpchue-v4';
+const CACHE_NAME = 'icpchue-v5';
 const urlsToCache = [
   '/',
   '/dashboard',
