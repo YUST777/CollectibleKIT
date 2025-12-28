@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Standalone output for Docker deployment
+  output: 'standalone',
+
   // Enable Cache Components (new in Next.js 16)
   // Enable Cache Components (new in Next.js 16)
   cacheComponents: false,

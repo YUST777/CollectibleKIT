@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
         // Get user data
         const userResult = await query(
-            'SELECT id, email, is_verified, last_login_at, created_at, application_id, telegram_username, role, profile_visibility, codeforces_data, codeforces_handle FROM users WHERE id = $1',
+            'SELECT id, email, is_verified, last_login_at, created_at, application_id, telegram_username, role, profile_visibility, codeforces_data, codeforces_handle, profile_picture FROM users WHERE id = $1',
             [userId]
         );
 
@@ -190,7 +190,8 @@ export async function GET(request: NextRequest) {
                 lastLogin: user.last_login_at,
                 createdAt: user.created_at,
                 role: user.role || 'trainee',
-                profile_visibility: user.profile_visibility || 'public'
+                profile_visibility: user.profile_visibility || 'public',
+                profile_picture: user.profile_picture || null
             },
             profile: {
                 ...profile,

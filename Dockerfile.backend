@@ -1,0 +1,33 @@
+# Backend Dockerfile for Express server
+# Using Node.js with glibc instead of Alpine for better Sharp compatibility
+FROM node:20-slim
+
+# Install dependencies for sharp
+RUN apt-get update && apt-get install -y \
+    libvips-dev \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package files
+COPY server/package.json server/package-lock.json* ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy server source code
+COPY server ./
+
+# Create directory for profile pictures
+RUN mkdir -p /app/pfps && chmod 755 /app/pfps
+
+# Set environment
+ENV NODE_ENV=production
+ENV PORT=3001
+
+EXPOSE 3001
+
+CMD ["node", "index.js"]

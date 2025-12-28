@@ -14,6 +14,9 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import multer from 'multer';
+import sharp from 'sharp';
+import fs from 'fs';
 
 const { Pool } = pg;
 
@@ -326,6 +329,55 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '10mb' }));
+
+// ============================================
+// PROFILE PICTURE UPLOAD CONFIGURATION
+// ============================================
+const pfpsPath = path.join(__dirname, '..', 'pfps');
+// Ensure pfps directory exists
+if (!fs.existsSync(pfpsPath)) {
+  fs.mkdirSync(pfpsPath, { recursive: true });
+  console.log('📁 Created pfps directory:', pfpsPath);
+}
+
+// Serve profile pictures with caching
+app.use('/pfps', express.static(pfpsPath, {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    res.setHeader('Content-Type', 'image/webp');
+    res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+  }
+}));
+
+// Multer configuration for profile picture uploads
+const pfpStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, pfpsPath);
+  },
+  filename: (req, file, cb) => {
+    // Use UUID for secure, unique filenames
+    const uuid = crypto.randomUUID();
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${uuid}${ext}`);
+  }
+});
+
+const pfpUpload = multer({
+  storage: pfpStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, and WebP images are allowed'), false);
+    }
+  }
+});
 
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
@@ -3899,9 +3951,9 @@ app.get('/api/auth/me', standardLimiter, authenticateToken, async (req, res) => 
     const userId = id;
     console.log(`[DEBUG] /api/auth/me - req.user:`, req.user, 'userId:', userId);
 
-    // Get user data (including telegram_username and role from users table)
+    // Get user data (including telegram_username, role, and profile_picture from users table)
     const userResult = await pool.query(
-      'SELECT id, email, is_verified, last_login_at, created_at, application_id, telegram_username, role FROM users WHERE id = $1',
+      'SELECT id, email, is_verified, last_login_at, created_at, application_id, telegram_username, role, profile_picture FROM users WHERE id = $1',
       [userId]
     );
 
@@ -3950,7 +4002,8 @@ app.get('/api/auth/me', standardLimiter, authenticateToken, async (req, res) => 
         isVerified: user.is_verified,
         lastLogin: user.last_login_at,
         createdAt: user.created_at,
-        role: user.role || 'trainee'
+        role: user.role || 'trainee',
+        profile_picture: user.profile_picture || null
       },
       profile
     });
@@ -3968,7 +4021,7 @@ app.get('/api/profile/:studentId', standardLimiter, async (req, res) => {
 
     // Find user by email prefix (e.g., 8241043 from 8241043@horus.edu.eg)
     const userResult = await pool.query(
-      `SELECT u.id, u.role, u.profile_visibility, u.created_at, u.application_id
+      `SELECT u.id, u.role, u.profile_visibility, u.created_at, u.application_id, u.profile_picture
        FROM users u
        WHERE u.email LIKE $1`,
       [studentId + '@%']
@@ -4029,6 +4082,7 @@ app.get('/api/profile/:studentId', standardLimiter, async (req, res) => {
         applicationType: application.application_type,
         role: user.role || 'trainee',
         joinedAt: user.created_at || application.submitted_at,
+        profile_picture: user.profile_picture || null,
         codeforces: {
           profile: application.codeforces_profile,
           rating: codeforcesData?.rating || null,
@@ -4068,6 +4122,150 @@ app.post('/api/user/privacy', standardLimiter, authenticateToken, async (req, re
     res.json({ success: true, visibility });
   } catch (error) {
     console.error('Error updating privacy:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ============================================
+// PROFILE PICTURE UPLOAD ENDPOINTS
+// ============================================
+
+// POST /api/user/upload-pfp - Upload profile picture
+app.post('/api/user/upload-pfp', standardLimiter, authenticateToken, pfpUpload.single('image'), async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const uploadedFile = req.file;
+    const originalPath = uploadedFile.path;
+    const originalExt = path.extname(uploadedFile.filename).toLowerCase();
+
+    // Get the user's current profile picture to delete later
+    const currentPfpResult = await pool.query(
+      'SELECT profile_picture FROM users WHERE id = $1',
+      [userId]
+    );
+    const oldPfp = currentPfpResult.rows[0]?.profile_picture;
+
+    let finalFilename;
+
+    // If already WebP, just rename/use as-is
+    if (originalExt === '.webp') {
+      finalFilename = uploadedFile.filename;
+    } else {
+      // Convert PNG/JPG to WebP
+      const uuid = path.basename(uploadedFile.filename, originalExt);
+      finalFilename = `${uuid}.webp`;
+      const webpPath = path.join(pfpsPath, finalFilename);
+
+      try {
+        await sharp(originalPath)
+          .webp({ quality: 85 })
+          .resize(512, 512, { fit: 'cover', position: 'center' })
+          .toFile(webpPath);
+
+        // Delete the original PNG/JPG file
+        fs.unlink(originalPath, (err) => {
+          if (err) console.error('Error deleting original file:', err);
+        });
+
+        console.log(`✅ Converted ${uploadedFile.filename} to ${finalFilename}`);
+      } catch (sharpError) {
+        console.error('Sharp conversion error:', sharpError);
+        // Clean up the uploaded file
+        fs.unlink(originalPath, () => { });
+        return res.status(500).json({ error: 'Failed to process image' });
+      }
+    }
+
+    // Update database with new profile picture filename
+    await pool.query(
+      'UPDATE users SET profile_picture = $1 WHERE id = $2',
+      [finalFilename, userId]
+    );
+
+    // Delete old profile picture if exists
+    if (oldPfp && oldPfp !== finalFilename) {
+      const oldPath = path.join(pfpsPath, oldPfp);
+      fs.unlink(oldPath, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.error('Error deleting old profile picture:', err);
+        }
+      });
+    }
+
+    console.log(`📸 User ${userId} uploaded profile picture: ${finalFilename}`);
+
+    res.json({
+      success: true,
+      message: 'Profile picture uploaded successfully',
+      profile_picture: finalFilename,
+      url: `/pfps/${finalFilename}`
+    });
+
+  } catch (error) {
+    console.error('Error uploading profile picture:', error);
+    // Clean up uploaded file on error
+    if (req.file) {
+      fs.unlink(req.file.path, () => { });
+    }
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Handle multer errors
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+    }
+    return res.status(400).json({ error: error.message });
+  }
+  if (error.message === 'Only PNG, JPG, and WebP images are allowed') {
+    return res.status(400).json({ error: error.message });
+  }
+  next(error);
+});
+
+// DELETE /api/user/delete-pfp - Delete profile picture
+app.delete('/api/user/delete-pfp', standardLimiter, authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+
+    // Get current profile picture
+    const result = await pool.query(
+      'SELECT profile_picture FROM users WHERE id = $1',
+      [userId]
+    );
+
+    const currentPfp = result.rows[0]?.profile_picture;
+
+    if (!currentPfp) {
+      return res.status(404).json({ error: 'No profile picture to delete' });
+    }
+
+    // Delete file from disk
+    const filePath = path.join(pfpsPath, currentPfp);
+    fs.unlink(filePath, (err) => {
+      if (err && err.code !== 'ENOENT') {
+        console.error('Error deleting profile picture file:', err);
+      }
+    });
+
+    // Update database
+    await pool.query(
+      'UPDATE users SET profile_picture = NULL WHERE id = $1',
+      [userId]
+    );
+
+    console.log(`🗑️ User ${userId} deleted profile picture: ${currentPfp}`);
+
+    res.json({ success: true, message: 'Profile picture deleted' });
+  } catch (error) {
+    console.error('Error deleting profile picture:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

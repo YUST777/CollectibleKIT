@@ -12,6 +12,7 @@ interface User {
     is_public?: boolean;
     role?: string;
     profile_visibility?: 'public' | 'private';
+    profile_picture?: string | null;
 }
 
 interface Profile {

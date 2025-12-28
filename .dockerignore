@@ -1,7 +1,50 @@
-node_modules
-dist
-Dockerfile
-.dockerignore
-npm-debug.log
-
+# Git
 .git
+.gitignore
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+.next
+next-app/.next
+dist
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment files (will be mounted separately)
+.env
+.env.*
+!.env.docker.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+*.test.*
+*.spec.*
+__tests__

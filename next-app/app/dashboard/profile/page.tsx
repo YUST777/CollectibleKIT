@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDisplayName } from '@/lib/utils';
-import { ChevronLeft, Pencil, Send, Check, ChevronDown, ExternalLink, Hexagon, BookOpen, Shield, Award, CalendarClock, Trash2 } from 'lucide-react';
+import { ChevronLeft, Pencil, Send, Check, ChevronDown, ExternalLink, Hexagon, BookOpen, Shield, Camera, Loader2, Trash2 } from 'lucide-react';
 import AchievementsWidget from '@/components/AchievementsWidget';
 
 export default function ProfilePage() {
@@ -17,7 +17,9 @@ export default function ProfilePage() {
     const [saved, setSaved] = useState(false);
     const [isUserInfoOpen, setUserInfoOpen] = useState(false);
     const [approvalProgress, setApprovalProgress] = useState(0);
-    const [imageError, setImageError] = useState(false);
+    const [uploadingPfp, setUploadingPfp] = useState(false);
+    const [pfpError, setPfpError] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const openEditModal = (field: string, currentValue: string) => { setEditField(field); setInputValue(currentValue || ''); setShowEditModal(true); };
 
@@ -109,9 +111,98 @@ export default function ProfilePage() {
         } catch (err) { console.error('Delete failed:', err); }
     };
 
+    // Profile picture upload handler
+    const handlePfpUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Client-side validation
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            setPfpError('File too large. Maximum size is 5MB.');
+            setTimeout(() => setPfpError(''), 5000); // Auto-clear after 5s
+            return;
+        }
+
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            setPfpError('Only PNG, JPG, and WebP images are allowed.');
+            setTimeout(() => setPfpError(''), 5000); // Auto-clear after 5s
+            return;
+        }
+
+        setPfpError('');
+        setUploadingPfp(true);
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const res = await fetch('/api/user/upload-pfp', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setPfpError(data.error || 'Failed to upload image');
+                setTimeout(() => setPfpError(''), 5000); // Auto-clear after 5s
+            } else {
+                await refreshProfile();
+            }
+        } catch (err) {
+            console.error('Upload failed:', err);
+            setPfpError('Failed to upload image');
+            setTimeout(() => setPfpError(''), 5000); // Auto-clear after 5s
+        } finally {
+            setUploadingPfp(false);
+            // Reset file input
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    // Delete profile picture handler
+    const handleDeletePfp = async () => {
+        if (!window.confirm('Are you sure you want to delete your profile picture?')) return;
+
+        setUploadingPfp(true);
+        setPfpError('');
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const res = await fetch('/api/user/delete-pfp', {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                await refreshProfile();
+            } else {
+                setPfpError(data.error || 'Failed to delete profile picture');
+                setTimeout(() => setPfpError(''), 5000); // Auto-clear after 5s
+            }
+        } catch (err) {
+            console.error('Delete pfp failed:', err);
+            setPfpError('Failed to delete profile picture');
+            setTimeout(() => setPfpError(''), 5000); // Auto-clear after 5s
+        } finally {
+            setUploadingPfp(false);
+        }
+    };
+
     const cfData = profile.codeforces_data || {};
     const rating = cfData.rating || 'N/A';
     const rank = cfData.rank || 'Unrated';
+
+    // Profile picture URL - use uploaded picture or fallback to initial
+    const profilePicture = user?.profile_picture ? `/pfps/${user.profile_picture}` : null;
 
     return (
         <>
@@ -146,7 +237,6 @@ export default function ProfilePage() {
                     {/* Top Row: Identity + Status */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Left: Identity Card */}
-                        {/* Left: Identity Card */}
                         <div className="bg-[#121212] rounded-2xl border border-white/5 relative overflow-hidden h-full flex flex-col group hover:border-white/10 transition-colors">
                             {/* Decorative Cover */}
                             <div className="h-32 bg-gradient-to-r from-[#E8C15A]/20 via-[#B89830]/10 to-transparent relative">
@@ -161,22 +251,62 @@ export default function ProfilePage() {
 
                             {/* Main Content */}
                             <div className="px-6 pb-6 flex-1 flex flex-col items-center -mt-12 relative z-10">
-                                {/* Avatar */}
-                                <div className="w-24 h-24 rounded-2xl bg-[#121212] p-1.5 shadow-2xl relative group-hover:scale-105 transition-transform duration-500 ease-out">
+                                {/* Avatar with Upload Button */}
+                                <div className="w-24 h-24 rounded-2xl bg-[#121212] p-1.5 shadow-2xl relative group/avatar">
                                     <div className="w-full h-full rounded-xl bg-gradient-to-br from-[#E8C15A] to-[#B89830] flex items-center justify-center text-3xl font-bold text-black overflow-hidden relative">
-                                        {profile.telegram_username && !imageError ? (
+                                        {profilePicture ? (
                                             <img
-                                                src={`https://unavatar.io/telegram/${profile.telegram_username}`}
+                                                src={profilePicture}
                                                 alt={profile.name}
                                                 className="w-full h-full object-cover"
-                                                onError={() => setImageError(true)}
                                             />
-                                        ) : null}
-                                        <span className={`${profile.telegram_username && !imageError ? 'hidden' : ''} absolute inset-0 flex items-center justify-center`}>
-                                            {profile.name?.charAt(0).toUpperCase() || 'U'}
-                                        </span>
+                                        ) : (
+                                            <span className="absolute inset-0 flex items-center justify-center">
+                                                {profile.name?.charAt(0).toUpperCase() || 'U'}
+                                            </span>
+                                        )}
+
+                                        {/* Hover overlay with options */}
+                                        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-1 opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                                            {uploadingPfp ? (
+                                                <Loader2 size={24} className="text-white animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="flex items-center gap-1 text-white hover:text-[#E8C15A] transition-colors"
+                                                    >
+                                                        <Camera size={16} />
+                                                        <span className="text-[10px] font-medium">Change</span>
+                                                    </button>
+                                                    {profilePicture && (
+                                                        <button
+                                                            onClick={handleDeletePfp}
+                                                            className="flex items-center gap-1 text-white/70 hover:text-red-400 transition-colors"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                            <span className="text-[10px]">Remove</span>
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
+
+                                {/* Hidden file input */}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                                    onChange={handlePfpUpload}
+                                    className="hidden"
+                                />
+
+                                {/* Error message */}
+                                {pfpError && (
+                                    <p className="text-red-400 text-xs mt-2">{pfpError}</p>
+                                )}
 
                                 {/* Identity Info */}
                                 <div className="mt-4 text-center space-y-1 w-full">
