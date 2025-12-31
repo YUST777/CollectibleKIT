@@ -141,6 +141,25 @@ async function calculateUserRecap(userId, user) {
             achievements.push({ id: 'sheet1', title: 'Sheet 1 Champion', image: '/images/achievements/sheet1acheavment.webp' });
         }
 
+        // Instructor Achievement (based on role)
+        // Need to check how role is stored. Usually u.role
+        // The query needs to select u.role.
+        if (user.role === 'instructor' || user.role === 'owner') {
+            achievements.push({ id: 'instructor', title: 'Instructor', image: '/images/achievements/instructor.webp' });
+        }
+
+        // 500+ Points Achievement (Codeforces Rating)
+        // Need to check a.codeforces_data which is JSON
+        if (user.codeforces_data) {
+            try {
+                const cfData = typeof user.codeforces_data === 'string' ? JSON.parse(user.codeforces_data) : user.codeforces_data;
+                const rating = cfData.rating || cfData.maxRating || 0;
+                if (rating >= 500) {
+                    achievements.push({ id: '500pts', title: '500+ Rating', image: '/images/achievements/500pts.webp' });
+                }
+            } catch (e) { }
+        }
+
         return {
             student_id: user.student_id,
             username: displayName,
@@ -166,9 +185,12 @@ async function calculateUserRecap(userId, user) {
 async function main() {
     console.log('🚀 Starting Recap 2025 population...\n');
 
-    // Get all users with applications
+    // Get all users with application data
+    // We need u.role (from users table?) or a.role?
+    // Let's check schema. Usually role is on users.
+    // Also need codeforces_data from applications table?
     const usersRes = await query(`
-        SELECT u.id, u.created_at, u.email, a.name, a.student_id
+        SELECT u.id, u.created_at, u.email, u.role, a.name, a.student_id, a.codeforces_data
         FROM users u 
         JOIN applications a ON u.application_id = a.id 
         WHERE a.student_id IS NOT NULL

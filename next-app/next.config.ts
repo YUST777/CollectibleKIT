@@ -35,9 +35,17 @@ const nextConfig: NextConfig = {
     // Turbopack is default in Next.js 16
   },
 
-  // Environment variables exposed to browser
   env: {
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: '/2025/:path*',
+        destination: '/Dec/2025/:path*',
+      },
+    ];
   },
 };
 
