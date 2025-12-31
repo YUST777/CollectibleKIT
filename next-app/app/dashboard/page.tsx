@@ -14,7 +14,8 @@ import {
     Zap,
     Calendar,
     MoreHorizontal,
-    Hand
+    Hand,
+    Sparkles
 } from 'lucide-react';
 
 function StatCard({ icon: Icon, title, value, subtext, color = "text-[#E8C15A]" }: any) {
@@ -328,6 +329,17 @@ export default function DashboardHome() {
                                         </div>
                                     </div>
                                 </div>
+                                <Link href={`/2025/${profile?.student_id || 'user'}`} className="block mb-4 group">
+                                    <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-[#E8C15A]/10 to-transparent border border-[#E8C15A]/20 hover:border-[#E8C15A]/50 transition-all">
+                                        <div className="p-2 bg-[#E8C15A]/20 rounded-md text-[#E8C15A]">
+                                            <Sparkles size={18} />
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-bold text-white group-hover:text-[#E8C15A] transition-colors">See Your 2025 Recap</div>
+                                            <div className="text-[10px] text-[#A0A0A0]">Check out your coding journey!</div>
+                                        </div>
+                                    </div>
+                                </Link>
                             </div>
                             <Link href="/dashboard/sheets/sheet-1">
                                 <button className="w-full py-2.5 bg-[#E8C15A] hover:bg-[#D4AF37] text-black font-bold text-sm rounded-lg transition-colors">
