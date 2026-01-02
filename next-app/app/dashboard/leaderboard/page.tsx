@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChevronLeft, Loader2, ExternalLink, Trophy, Code } from 'lucide-react';
 
+import { addCacheBust } from '@/lib/cache-version';
+
 // Dynamic import for Lottie to avoid SSR issues
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
@@ -75,7 +77,7 @@ export default function LeaderboardPage() {
         setLoading(true);
         try {
             if (activeTab === 'codeforces') {
-                const res = await fetch('/api/leaderboard');
+                const res = await fetch(addCacheBust('/api/leaderboard'));
                 const data = await res.json();
                 setCfLeaderboard(data.leaderboard || []);
                 setDataFetched(prev => ({ ...prev, codeforces: true }));
@@ -86,7 +88,7 @@ export default function LeaderboardPage() {
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
-                const res = await fetch('/api/leaderboard/sheets', { headers });
+                const res = await fetch(addCacheBust('/api/leaderboard/sheets'), { headers });
                 const data = await res.json();
                 setSheetsLeaderboard(data.leaderboard || []);
                 setDataFetched(prev => ({ ...prev, sheets: true }));

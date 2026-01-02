@@ -13,6 +13,7 @@ interface User {
     role?: string;
     profile_visibility?: 'public' | 'private';
     profile_picture?: string | null;
+    created_at?: string;
 }
 
 interface Profile {
@@ -114,13 +115,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (storedToken) {
                 setToken(storedToken);
                 try {
+                    // Add timeout to prevent infinite loading
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
                     const response = await fetch(`/api/auth/me?_v=${CACHE_VERSION}`, {
                         headers: {
                             Authorization: `Bearer ${storedToken}`,
                             'Cache-Control': 'no-cache, no-store, must-revalidate',
                             'Pragma': 'no-cache'
                         },
+                        signal: controller.signal
                     });
+
+                    clearTimeout(timeoutId);
 
                     if (response.ok) {
                         const data = await response.json();
@@ -136,6 +144,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     }
                 } catch (error) {
                     console.error('[AuthContext] Network error verifying token:', error);
+                    // On network error or timeout, we might want to keep the token but maybe stop loading?
+                    // For now, we proceed to setLoading(false) so the app renders
                 }
             }
 
@@ -190,10 +200,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, [logout]);
 
     const login = async (email: string, password: string) => {
+        // Sanitize inputs for mobile compatibility
+        const sanitizedEmail = email.trim().toLowerCase();
+        // We generally shouldn't trim passwords, but for mobile login forms, trailing scpace is a common error.
+        // However, if a user actually HAS a space, this would break it. 
+        // Let's safe-guard email only for now, as that's the primary "User not found" key.
+
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ email: sanitizedEmail, password }),
         });
 
         const data = await response.json();
@@ -213,10 +229,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     const register = async (email: string, password: string) => {
+        const sanitizedEmail = email.trim().toLowerCase();
+
         const response = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ email: sanitizedEmail, password }),
         });
 
         const data = await response.json();

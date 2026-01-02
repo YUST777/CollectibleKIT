@@ -30,7 +30,8 @@ export async function GET(req: NextRequest, props: any) {
                 preferred_language,
                 top_tags,
                 difficulty_solved,
-                achievements
+                achievements,
+                time_spent_minutes
             FROM recap_2025 
             WHERE student_id = $1
             LIMIT 1
@@ -57,7 +58,8 @@ export async function GET(req: NextRequest, props: any) {
             preferredLanguage: recap.preferred_language,
             topTags: recap.top_tags || [],
             difficultySolved: recap.difficulty_solved || { easy: 0, medium: 0, hard: 0 },
-            achievements: recap.achievements || []
+            achievements: recap.achievements || [],
+            timeSpentMinutes: recap.time_spent_minutes || 0
         });
 
     } catch (error: any) {

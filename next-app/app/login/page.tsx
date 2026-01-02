@@ -170,6 +170,13 @@ export default function Login() {
                             </Link>
                         </p>
                     </div>
+
+                    {/* Help Link */}
+                    <div className="text-center mt-4">
+                        <Link href="/sessions/tutorial/1" className="text-white/40 hover:text-[#d59928] text-sm transition-colors inline-flex items-center gap-2 group">
+                            <span>Don&apos;t know how to login?</span>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Back to Home */}

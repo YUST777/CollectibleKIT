@@ -1,5 +1,5 @@
 // This forces browsers to fetch fresh data instead of using cached responses
-export const CACHE_VERSION = '1.3';
+export const CACHE_VERSION = '1.5';
 
 // Use this in API fetch calls to bust cache
 export function getCacheBustParam(): string {

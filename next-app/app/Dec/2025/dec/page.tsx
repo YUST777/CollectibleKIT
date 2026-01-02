@@ -117,15 +117,15 @@ export default function DecemberReportPage() {
                     </p>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <Link href="/dashboard/sessions/1" className="bg-white/5 p-3 rounded-lg border border-white/10 hover:border-[#E8C15A]/50 hover:bg-white/10 transition-all group">
+                        <Link href="/dashboard/sessions/programming1/1" className="bg-white/5 p-3 rounded-lg border border-white/10 hover:border-[#E8C15A]/50 hover:bg-white/10 transition-all group">
                             <div className="text-[#E8C15A] text-xs font-bold mb-1 group-hover:text-[#FFF] flex items-center gap-1">Session 1 <PlayCircle size={10} /></div>
                             <div className="text-white/60 text-[10px]">Data Types & I/O</div>
                         </Link>
-                        <Link href="/dashboard/sessions/2" className="bg-white/5 p-3 rounded-lg border border-white/10 hover:border-[#E8C15A]/50 hover:bg-white/10 transition-all group">
+                        <Link href="/dashboard/sessions/programming1/2" className="bg-white/5 p-3 rounded-lg border border-white/10 hover:border-[#E8C15A]/50 hover:bg-white/10 transition-all group">
                             <div className="text-[#E8C15A] text-xs font-bold mb-1 group-hover:text-[#FFF] flex items-center gap-1">Session 2 <PlayCircle size={10} /></div>
                             <div className="text-white/60 text-[10px]">Control Structures</div>
                         </Link>
-                        <Link href="/dashboard/sessions/4" className="bg-white/5 p-3 rounded-lg border border-white/10 hover:border-[#E8C15A]/50 hover:bg-white/10 transition-all group">
+                        <Link href="/dashboard/sessions/programming1/4" className="bg-white/5 p-3 rounded-lg border border-white/10 hover:border-[#E8C15A]/50 hover:bg-white/10 transition-all group">
                             <div className="text-[#E8C15A] text-xs font-bold mb-1 group-hover:text-[#FFF] flex items-center gap-1">Session 4 <PlayCircle size={10} /></div>
                             <div className="text-white/60 text-[10px]">Complexity Analysis</div>
                         </Link>

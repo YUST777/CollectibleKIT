@@ -200,7 +200,14 @@ export default function SettingsPage() {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Email</span><span className="text-sm text-[#F2F2F2]">{user?.email || 'Not available'}</span></div>
                         <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Name</span><span className="text-sm text-[#F2F2F2]">{getDisplayName(profile.name) || 'Not set'}</span></div>
-                        <div className="flex items-center justify-between"><span className="text-sm text-[#A0A0A0]">Member since</span><span className="text-sm text-[#F2F2F2]">December 2024</span></div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-[#A0A0A0]">Member since</span>
+                            <span className="text-sm text-[#F2F2F2]">
+                                {user?.created_at
+                                    ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                                    : 'December 2024'}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -223,4 +230,3 @@ export default function SettingsPage() {
         </>
     );
 }
-

@@ -1,16 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Play, FileText, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, ArrowRight, Folder } from 'lucide-react';
 import Providers from '@/components/Providers';
+import { camps } from '@/lib/sessionData';
 
 function SessionLibraryContent() {
-    const sessions = [
-        { id: 1, number: '01', title: 'Data Types & I/O', desc: 'Fundamentals of C++ Input/Output streams, arithmetic operators, and understanding basic data types and their limits.' },
-        { id: 3, number: '03', title: 'if/else & switch case', desc: 'Master conditional statements, logical operators, and control flow patterns.' },
-        { id: 4, number: '04', title: 'Revision + 3 Problem Solving', desc: 'Review key concepts and solve 3 challenging problems to reinforce your understanding.' },
-    ];
-
     return (
         <div className="min-h-screen bg-black text-white font-sans p-4 sm:p-8">
             <div className="max-w-7xl mx-auto">
@@ -26,52 +22,55 @@ function SessionLibraryContent() {
                 </header>
 
                 {/* Hero Section */}
-                <div className="mb-16 text-center max-w-3xl mx-auto">
+                <div className="mb-12 md:mb-16 text-center max-w-3xl mx-auto">
                     <h1 className="text-4xl sm:text-6xl font-black mb-6 tracking-tight">
-                        Session <span className="text-[#d59928]">Library</span>
+                        Training <span className="text-[#d59928]">Sessions</span>
                     </h1>
-
                 </div>
 
-                {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                    {sessions.map((session) => (
-                        <Link key={session.id} href={`/sessions/${session.id}`} className="group relative bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden hover:border-[#d59928]/50 transition-all duration-300 hover:-translate-y-1 block">
-                            <div className="aspect-video relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] to-[#050505] flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
-                                    <Play className="w-12 h-12 text-white/20 group-hover:text-[#d59928] transition-colors" />
-                                </div>
-                                <div className="absolute top-4 left-4">
-                                    <span className="px-3 py-1 bg-[#d59928] text-black font-bold text-xs rounded-full uppercase tracking-wider">Session {session.number}</span>
+                {/* Folder View */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+                    {camps.filter(camp => camp.publicVisible !== false).map((group) => (
+                        <Link
+                            key={group.slug}
+                            href={`/sessions/${group.slug}`}
+                            className="group relative bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden hover:border-[#d59928]/50 transition-all duration-300 hover:-translate-y-1 text-left w-full block"
+                        >
+                            <div className="aspect-video relative overflow-hidden bg-[#1a1a1a]">
+                                {group.image && (
+                                    <Image
+                                        src={group.image}
+                                        alt={group.title}
+                                        fill
+                                        className="object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none"
+                                    />
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a]/50 to-[#050505]/50 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                                    <Folder className="w-12 h-12 text-white/20 group-hover:text-[#d59928] transition-colors" />
                                 </div>
                             </div>
+
                             <div className="p-6">
-                                <h3 className="text-2xl font-bold mb-3 group-hover:text-[#d59928] transition-colors">{session.title}</h3>
-                                <p className="text-white/60 text-sm mb-6 line-clamp-2">{session.desc}</p>
+                                <h3 className="text-2xl font-bold mb-3 text-white group-hover:text-[#d59928] transition-colors">
+                                    {group.title}
+                                </h3>
+                                <p className="text-white/60 text-sm mb-6 line-clamp-2 min-h-[40px]">
+                                    {group.description}
+                                </p>
+
                                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
                                     <div className="flex gap-4 text-xs text-white/40 font-mono">
-                                        <span className="flex items-center gap-1.5"><Play className="w-3 h-3" /> Video</span>
-                                        <span className="flex items-center gap-1.5"><FileText className="w-3 h-3" /> PDF/Notes</span>
+                                        <span className="flex items-center gap-1.5">
+                                            {group.sessions.length} Session{group.sessions.length !== 1 ? 's' : ''}
+                                        </span>
                                     </div>
                                     <span className="flex items-center gap-2 text-sm text-[#d59928] font-medium group-hover:translate-x-1 transition-transform">
-                                        Start Learning <ArrowRight className="w-4 h-4" />
+                                        Open Folder <ArrowRight className="w-4 h-4" />
                                     </span>
                                 </div>
                             </div>
                         </Link>
                     ))}
-
-                    {/* Coming Soon Card */}
-                    <div className="relative bg-[#050505] border border-white/5 rounded-2xl overflow-hidden opacity-50 cursor-not-allowed">
-                        <div className="aspect-video relative bg-black/50 flex items-center justify-center">
-                            <span className="text-white/20 font-bold uppercase tracking-widest">Coming Soon</span>
-                        </div>
-                        <div className="p-6">
-                            <div className="h-6 w-3/4 bg-white/5 rounded mb-4"></div>
-                            <div className="h-4 w-full bg-white/5 rounded mb-2"></div>
-                            <div className="h-4 w-1/2 bg-white/5 rounded"></div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

@@ -415,32 +415,49 @@ export default function ProblemPage() {
     }, [isResizing]);
 
     // Vertical resize handlers (for test case panel)
-    const handleVerticalMouseDown = () => {
+    const handleVerticalResizeStart = (e: any) => {
+        // Prevent default to stop scrolling/selection on mobile
+        if (e.cancelable) e.preventDefault();
         setIsResizingVertical(true);
     };
 
     useEffect(() => {
-        const handleVerticalMouseMove = (e: MouseEvent) => {
+        const handleVerticalMove = (e: MouseEvent | TouchEvent) => {
             if (!isResizingVertical || !editorContainerRef.current) return;
+
+            let clientY;
+            if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent) {
+                clientY = e.touches[0].clientY;
+            } else {
+                clientY = (e as MouseEvent).clientY;
+            }
+
             const containerRect = editorContainerRef.current.getBoundingClientRect();
-            const newHeight = ((containerRect.bottom - e.clientY) / containerRect.height) * 100;
-            if (newHeight >= 15 && newHeight <= 60) {
+            // Calculate height from bottom
+            const newHeight = ((containerRect.bottom - clientY) / containerRect.height) * 100;
+
+            // Limit range (15% to 85% for better mobile usability)
+            if (newHeight >= 15 && newHeight <= 85) {
                 setTestPanelHeight(newHeight);
             }
         };
 
-        const handleVerticalMouseUp = () => {
+        const handleVerticalEnd = () => {
             setIsResizingVertical(false);
         };
 
         if (isResizingVertical) {
-            document.addEventListener('mousemove', handleVerticalMouseMove);
-            document.addEventListener('mouseup', handleVerticalMouseUp);
+            document.addEventListener('mousemove', handleVerticalMove);
+            document.addEventListener('mouseup', handleVerticalEnd);
+            document.addEventListener('touchmove', handleVerticalMove, { passive: false });
+            document.addEventListener('touchend', handleVerticalEnd);
         }
 
         return () => {
-            document.removeEventListener('mousemove', handleVerticalMouseMove);
-            document.removeEventListener('mouseup', handleVerticalMouseUp);
+            document.removeEventListener('mousemove', handleVerticalMove);
+            document.removeEventListener('mouseup', handleVerticalEnd);
+            document.removeEventListener('touchmove', handleVerticalMove);
+            document.removeEventListener('touchend', handleVerticalEnd);
         };
     }, [isResizingVertical]);
 
@@ -1108,8 +1125,9 @@ export default function ProblemPage() {
                         <>
                             {/* Vertical Resizer Bar */}
                             <div
-                                className="h-1.5 bg-[#1a1a1a] hover:bg-[#E8C15A]/50 cursor-row-resize transition-colors relative group shrink-0 border-y border-white/5"
-                                onMouseDown={handleVerticalMouseDown}
+                                className="h-1.5 bg-[#1a1a1a] hover:bg-[#E8C15A]/50 cursor-row-resize transition-colors relative group shrink-0 border-y border-white/5 active:bg-[#E8C15A]/50 touch-none"
+                                onMouseDown={handleVerticalResizeStart}
+                                onTouchStart={handleVerticalResizeStart}
                             >
                                 <div className="absolute inset-x-0 -top-1 -bottom-1" />
                                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-1 bg-white/20 rounded-full group-hover:bg-[#E8C15A]/50 transition-colors" />

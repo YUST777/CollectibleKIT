@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { AuthProvider } from '@/contexts/AuthContext';
+import ClientVersionManager from '@/components/ClientVersionManager';
 import "./globals.css";
 import Providers from "@/components/Providers";
 import InstallBanner from "@/components/InstallBanner";
@@ -118,7 +120,10 @@ export default function RootLayout({
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           />
-          {children}
+          <AuthProvider>
+            <ClientVersionManager />
+            {children}
+          </AuthProvider>
         </Providers>
       </body>
     </html>

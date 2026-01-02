@@ -119,7 +119,7 @@ if (process.env.NODE_ENV === 'production') {
     // Redirect WWW to Non-WWW (Canonical Domain)
     if (isWww) {
       const newHost = host.slice(4); // Remove 'www.'
-      return res.redirect(301, `https://${newHost}${req.url}`);
+      return res.redirect(308, `https://${newHost}${req.url}`);
     }
 
     // Redirect HTTP to HTTPS
@@ -3411,13 +3411,18 @@ Allow: /videos/
 
 // Health check endpoint (no auth required)
 // Root route for simple health check
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'ICPC HUE Server is running' });
-});
+app.get('/api/health', (req, res) => res.status(200).send('OK'));
 
-app.get('/api/health', (req, res) => {
-  console.log('[HEALTH] Health check from', req.headers['x-forwarded-for'] || req.ip);
-  res.json({ status: 'ok', timestamp: new Date(), version: '1.5.0' });
+// DEBUG: Global Request Logger (Safe after parsing)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/auth')) {
+    console.log(`[GLOBAL LOG] ${req.method} ${req.path}`);
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    try {
+      console.log('Body Preview:', req.body ? JSON.stringify(req.body).substring(0, 100) : 'undefined');
+    } catch (e) { console.log('Body Error:', e.message); }
+  }
+  next();
 });
 
 // Get client IP endpoint (for maintenance bypass check)
@@ -3644,15 +3649,17 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('[DEBUG] Login Request:', { email, passwordLength: password ? password.length : 0 });
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
     // Find user by email
+    const normalizedEmail = email.trim().toLowerCase();
     const userResult = await pool.query(
       'SELECT id, email, password_hash, application_id FROM users WHERE email = $1',
-      [email.toLowerCase()]
+      [normalizedEmail]
     );
 
     if (userResult.rows.length === 0) {
@@ -3973,6 +3980,7 @@ app.get('/api/auth/me', standardLimiter, authenticateToken, async (req, res) => 
 
       if (appResult.rows.length > 0) {
         profile = appResult.rows[0];
+        console.log('[DEBUG] /api/auth/me profile:', { id: profile.id, name: profile.name, student_id: profile.student_id });
         // Parse codeforces_data if it's a string
         if (profile.codeforces_data && typeof profile.codeforces_data === 'string') {
           try {
@@ -4605,6 +4613,102 @@ app.delete('/api/sheets/submission/:id', authenticateToken, async (req, res) => 
   }
 });
 
+// View Counter APIs
+// POST /api/views - Record a view (idempotent per user)
+app.post('/api/views', standardLimiter, authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const { entityType, entityId } = req.body;
+
+    if (!entityType || !entityId) {
+      return res.status(400).json({ error: 'Missing entityType or entityId' });
+    }
+
+    const sEntityType = sanitizeInput(entityType);
+    const sEntityId = sanitizeInput(entityId); // ID can be string like 'pro1-camp'
+
+    // 1. Try to log the view (Unique constraint prevents duplicates)
+    try {
+      const logResult = await pool.query(
+        'INSERT INTO view_logs (user_id, entity_type, entity_id) VALUES ($1, $2, $3) RETURNING id',
+        [userId, sEntityType, sEntityId]
+      );
+
+      // If we got here, it's a new view
+      const viewResult = await pool.query(
+        `INSERT INTO page_views (entity_type, entity_id, views_count)
+         VALUES ($1, $2, 1)
+         ON CONFLICT (entity_type, entity_id)
+         DO UPDATE SET views_count = page_views.views_count + 1
+         RETURNING views_count`,
+        [sEntityType, sEntityId]
+      );
+
+      return res.json({ views: parseInt(viewResult.rows[0].views_count) });
+
+    } catch (err) {
+      // 23505 = Unique violation (User already viewed)
+      if (err.code === '23505') {
+        // Just return current count
+        const currentResult = await pool.query(
+          'SELECT views_count FROM page_views WHERE entity_type = $1 AND entity_id = $2',
+          [sEntityType, sEntityId]
+        );
+        const count = currentResult.rows.length > 0 ? parseInt(currentResult.rows[0].views_count) : 0;
+        return res.json({ views: count });
+      } else {
+        throw err;
+      }
+    }
+
+  } catch (error) {
+    console.error('Error recording view:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/views - Get view counts
+// Usage: ?type=session&id=1 (Single) OR ?type=news (Batch for all news)
+app.get('/api/views', standardLimiter, async (req, res) => {
+  try {
+    const { type, id } = req.query;
+
+    if (!type) {
+      return res.status(400).json({ error: 'Missing type query param' });
+    }
+
+    const sType = sanitizeInput(type);
+
+    if (id) {
+      // Single Fetch
+      const sId = sanitizeInput(id);
+      const result = await pool.query(
+        'SELECT views_count FROM page_views WHERE entity_type = $1 AND entity_id = $2',
+        [sType, sId]
+      );
+      const count = result.rows.length > 0 ? parseInt(result.rows[0].views_count) : 0;
+      return res.json({ views: count });
+    } else {
+      // Batch Fetch (e.g. for News list)
+      // Returns { "pro1-camp": 120, "sheet-1": 50 }
+      const result = await pool.query(
+        'SELECT entity_id, views_count FROM page_views WHERE entity_type = $1',
+        [sType]
+      );
+
+      const viewsMap = {};
+      result.rows.forEach(row => {
+        viewsMap[row.entity_id] = parseInt(row.views_count);
+      });
+      return res.json({ views: viewsMap });
+    }
+
+  } catch (error) {
+    console.error('Error fetching views:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Statistics API endpoint - Website Analytics
 app.get('/api/admin/statistics/website', validateAdminToken, basicAuth, async (req, res) => {
   try {
@@ -4905,6 +5009,83 @@ app.use(express.static(distPath, {
     }
   }
 }));
+
+// News Reactions API
+app.get('/api/news/reactions', standardLimiter, authenticateToken, async (req, res) => {
+  try {
+    const { newsId } = req.query;
+    if (!newsId) return res.status(400).json({ error: 'newsId is required' });
+
+    const userId = req.user.id || req.user.userId;
+
+    // Get reaction counts
+    const countsResult = await pool.query(
+      `SELECT reaction_type, COUNT(*) as count 
+             FROM news_reactions 
+             WHERE news_id = $1 
+             GROUP BY reaction_type`,
+      [newsId]
+    );
+
+    // Get user's reactions
+    const userReactionsResult = await pool.query(
+      `SELECT reaction_type 
+             FROM news_reactions 
+             WHERE news_id = $1 AND user_id = $2`,
+      [newsId, userId]
+    );
+
+    const counts = { like: 0, heart: 0, fire: 0 };
+    countsResult.rows.forEach(row => {
+      counts[row.reaction_type] = parseInt(row.count);
+    });
+
+    const userReactions = userReactionsResult.rows.map(row => row.reaction_type);
+
+    res.json({ counts, userReactions });
+  } catch (error) {
+    console.error('Error fetching reactions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/news/reactions', apiLimiter, authenticateToken, async (req, res) => {
+  try {
+    const { newsId, reactionType } = req.body;
+    if (!newsId || !reactionType) return res.status(400).json({ error: 'Missing required fields' });
+
+    if (!['like', 'heart', 'fire'].includes(reactionType)) {
+      return res.status(400).json({ error: 'Invalid reaction type' });
+    }
+
+    const userId = req.user.id || req.user.userId;
+
+    // Toggle logic
+    const existing = await pool.query(
+      'SELECT id FROM news_reactions WHERE news_id = $1 AND user_id = $2 AND reaction_type = $3',
+      [newsId, userId, reactionType]
+    );
+
+    if (existing.rows.length > 0) {
+      // Remove
+      await pool.query(
+        'DELETE FROM news_reactions WHERE news_id = $1 AND user_id = $2 AND reaction_type = $3',
+        [newsId, userId, reactionType]
+      );
+      res.json({ action: 'removed', reactionType });
+    } else {
+      // Add
+      await pool.query(
+        'INSERT INTO news_reactions (news_id, user_id, reaction_type) VALUES ($1, $2, $3)',
+        [newsId, userId, reactionType]
+      );
+      res.json({ action: 'added', reactionType });
+    }
+  } catch (error) {
+    console.error('Error toggling reaction:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // SPA Catch-all route - must be LAST, after all API routes
 // This sends index.html for any route that doesn't match an API endpoint

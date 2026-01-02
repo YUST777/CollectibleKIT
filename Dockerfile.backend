@@ -6,9 +6,13 @@ FROM node:20-slim
 RUN apt-get update && apt-get install -y \
     libvips-dev \
     python3 \
+    python3-pip \
     make \
     g++ \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip3 install pillow --break-system-packages
 
 WORKDIR /app
 

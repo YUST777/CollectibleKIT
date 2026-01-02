@@ -2,7 +2,7 @@
   "name": "ICPC HUE",
   "short_name": "ICPC HUE",
   "description": "First ICPC Community in Hours University - Competitive Programming Training",
-  "start_url": "/dashboard",
+  "start_url": "/dashboard?v=1.6",
   "display": "standalone",
   "background_color": "#0B0B0C",
   "theme_color": "#E8C15A",

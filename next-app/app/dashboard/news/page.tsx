@@ -2,41 +2,53 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeft, Radio, Calendar, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Radio, Calendar, ArrowRight, ThumbsUp, Heart, Flame } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useState } from 'react';
 
 const newsItems = [
+    {
+        id: 'pro1-camp',
+        type: 'Camp',
+        title: 'Programming 1 Camp is Live',
+        date: 'Jan 1, 2026',
+        body: 'Join our intensive Programming 1 Camp! Sessions are live now. Click here to check out Session 6 resources and recordings.',
+        image: '/images/lessons/pro1/pro1camp.webp',
+        featured: true, // Assuming big/featured
+        link: '/dashboard/sessions/programming1/1'
+    },
     {
         id: 'recap-2025',
         type: 'Recap',
         title: 'Your 2025 Wrapped is Here!',
-        date: 'Dec 2025',
+        date: 'Dec 29, 2025',
         body: 'The year is over, but the stats remain! Check out your personal coding journey, total problems solved, and achievements unlocked in 2025.',
-        image: '/images/achievements/WELCOME.webp',
+        image: '/News/2025recap.webp',
         featured: true,
-        link: '/dashboard'
+        link: '/dashboard' // Placeholder, will be dynamic
     },
     {
         id: 'dec-report',
         type: 'Community',
         title: 'December 2025 Report',
-        date: 'Dec 2025',
+        date: 'Dec 28, 2025',
         body: 'See how our community grew in our first month! 300+ students, 160+ live attendees, and 5+ hours of content delivered.',
-        image: '/images/achievements/WELCOME.webp', // Placeholder since wide card needs image
+        image: '/News/decreport.webp',
         featured: true,
-        link: '/2025/dec' // This is static, so it works.
+        link: '/2025/dec'
     },
     {
-        id: 1,
+        id: 'sheet-1-launch',
         type: 'Training',
         title: 'Sheet 1 Has Arrived!',
-        date: 'Jan 2025',
+        date: 'Dec 24, 2025',
         body: 'Sheet 1 - Say Hello With C++ is now live! Master the basics with 26 new problems. Go solve it now and climb the leaderboard!',
         image: '/images/sheet/sheet1.webp',
-        featured: false, // Demoted to normal
+        featured: true, // Now Featured as requested
         link: '/dashboard/sheets/sheet-1'
     },
     {
-        id: 2,
+        id: 'welcome-announce',
         type: 'Announcement',
         title: 'Welcome to ICPC HUE!',
         date: 'Jan 2025',
@@ -49,7 +61,7 @@ function getTypeColor(type: string) {
     switch (type.toLowerCase()) {
         case 'training': return 'bg-[#E8C15A]/10 text-[#E8C15A] border-[#E8C15A]/30';
         case 'announcement': return 'bg-green-500/10 text-green-400 border-green-500/30';
-        case 'feature': return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+        case 'camp': return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
         case 'recap': return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
         case 'community': return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
         default: return 'bg-white/10 text-white border-white/30';
@@ -57,8 +69,109 @@ function getTypeColor(type: string) {
 }
 
 export default function NewsPage() {
-    const featuredNewsItems = newsItems.filter(n => n.featured);
-    const otherNews = newsItems.filter(n => !n.featured);
+    const { profile, user } = useAuth();
+
+    // Get student ID (prefer profile, fallback to email user)
+    const studentId = profile?.student_id || user?.email?.split('@')[0];
+
+    // Create dynamic news items
+    const dynamicNewsItems = newsItems.map(item => {
+        if (item.id === 'recap-2025') {
+            return {
+                ...item,
+                link: studentId ? `/2025/${studentId}` : '/login'
+            };
+        }
+        return item;
+    });
+
+    const featuredNewsItems = dynamicNewsItems.filter(n => n.featured);
+    const otherNews = dynamicNewsItems.filter(n => !n.featured);
+
+    // Reactions state
+    const [reactions, setReactions] = useState<Record<string, { counts: { like: number; heart: number; fire: number }; userReactions: string[] }>>({});
+
+    useEffect(() => {
+
+        // Fetch reactions for all news items
+        const fetchAllReactions = async () => {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+
+            try {
+                const reactionsData: Record<string, any> = {};
+                for (const item of newsItems) {
+                    const res = await fetch(`/api/news/reactions?newsId=${item.id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        reactionsData[item.id] = data;
+                    }
+                }
+                setReactions(reactionsData);
+            } catch (error) {
+                console.error('Error fetching reactions:', error);
+            }
+        };
+        fetchAllReactions();
+    }, []);
+
+    const handleReaction = async (newsId: string, reactionType: 'like' | 'heart' | 'fire') => {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+
+        // Optimistic update
+        setReactions(prev => {
+            const current = prev[newsId] || { counts: { like: 0, heart: 0, fire: 0 }, userReactions: [] };
+            const hasReacted = current.userReactions.includes(reactionType);
+
+            return {
+                ...prev,
+                [newsId]: {
+                    counts: {
+                        ...current.counts,
+                        [reactionType]: hasReacted ? current.counts[reactionType] - 1 : current.counts[reactionType] + 1
+                    },
+                    userReactions: hasReacted
+                        ? current.userReactions.filter(r => r !== reactionType)
+                        : [...current.userReactions, reactionType]
+                }
+            };
+        });
+
+        try {
+            await fetch('/api/news/reactions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ newsId, reactionType })
+            });
+        } catch (error) {
+            console.error('Error toggling reaction:', error);
+            // Revert optimistic update on error
+            setReactions(prev => {
+                const current = prev[newsId];
+                const hasReacted = !current.userReactions.includes(reactionType);
+                return {
+                    ...prev,
+                    [newsId]: {
+                        counts: {
+                            ...current.counts,
+                            [reactionType]: hasReacted ? current.counts[reactionType] - 1 : current.counts[reactionType] + 1
+                        },
+                        userReactions: hasReacted
+                            ? current.userReactions.filter(r => r !== reactionType)
+                            : [...current.userReactions, reactionType]
+                    }
+                };
+            });
+        }
+    };
+
+
 
     return (
         <>
@@ -121,6 +234,32 @@ export default function NewsPage() {
                                             <span>Read More</span>
                                             <ArrowRight size={16} />
                                         </div>
+
+                                        {/* Reactions */}
+                                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                                            {(['like', 'heart', 'fire'] as const).map((type) => {
+                                                const Icon = type === 'like' ? ThumbsUp : type === 'heart' ? Heart : Flame;
+                                                const count = reactions[featuredNews.id]?.counts[type] || 0;
+                                                const isActive = reactions[featuredNews.id]?.userReactions.includes(type) || false;
+
+                                                return (
+                                                    <button
+                                                        key={type}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handleReaction(featuredNews.id, type);
+                                                        }}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${isActive
+                                                            ? 'bg-[#E8C15A]/20 text-[#E8C15A] border border-[#E8C15A]/40 scale-105'
+                                                            : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80 hover:scale-105'
+                                                            }`}
+                                                    >
+                                                        <Icon size={14} className={isActive ? 'fill-current' : ''} />
+                                                        {count > 0 && <span>{count}</span>}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -150,9 +289,32 @@ export default function NewsPage() {
                             <h3 className="text-lg font-bold text-white mb-2 group-hover:text-[#E8C15A] transition-colors">
                                 {news.title}
                             </h3>
-                            <p className="text-sm text-[#777] leading-relaxed">
+                            <p className="text-sm text-[#777] leading-relaxed mb-4">
                                 {news.body}
                             </p>
+
+                            {/* Reactions */}
+                            <div className="flex items-center gap-2 pt-3 border-t border-white/5">
+                                {(['like', 'heart', 'fire'] as const).map((type) => {
+                                    const Icon = type === 'like' ? ThumbsUp : type === 'heart' ? Heart : Flame;
+                                    const count = reactions[news.id]?.counts[type] || 0;
+                                    const isActive = reactions[news.id]?.userReactions.includes(type) || false;
+
+                                    return (
+                                        <button
+                                            key={type}
+                                            onClick={() => handleReaction(news.id, type)}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${isActive
+                                                ? 'bg-[#E8C15A]/20 text-[#E8C15A] border border-[#E8C15A]/40 scale-105'
+                                                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80 hover:scale-105'
+                                                }`}
+                                        >
+                                            <Icon size={12} className={isActive ? 'fill-current' : ''} />
+                                            {count > 0 && <span>{count}</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ))}
                 </div>

@@ -66,37 +66,63 @@ export default function PublicRecapPage() {
         </div>
     );
 
-    // Slide 1: Intro
+    // Slide 1: Intro (Welcome)
     const IntroSlide = () => (
-        <div className="absolute inset-0 flex flex-col">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1510] via-[#0d0d0d] to-[#0a1015]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_#E8C15A20_0%,_transparent_50%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_#3B82F620_0%,_transparent_50%)]" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black overflow-hidden intro-slide">
+            {/* Dynamic background effects - Gold Theme */}
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,_#E8C15A25_0%,_transparent_50%)]" />
+            <div className="absolute bottom-0 right-0 w-3/4 h-3/4 bg-[radial-gradient(circle_at_100%_100%,_#D4AF3715_0%,_transparent_50%)]" />
+            <div className="absolute -left-20 top-1/3 w-64 h-64 bg-[#E8C15A]/5 rounded-full blur-[100px]" />
 
-            <div className="relative z-10 h-full">
-                <Header />
+            {/* Header - Z-30 to be clickable above nav */}
+            <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-30">
+                <Link href="/" className="text-white/80 hover:text-white transition-colors">
+                    <ChevronLeft className="w-6 h-6" />
+                </Link>
+                <div className="flex items-center gap-2">
+                    <Image src="/icpchue-logo.webp" alt="ICPC HUE" width={20} height={20} className="w-5 h-5 object-contain" />
+                    <span className="text-[#E8C15A] font-bold text-sm tracking-wider">REWIND</span>
+                </div>
+            </div>
 
-                {/* Top text */}
-                <div className="px-4 md:px-6 pt-4 md:pt-8">
-                    <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-4 md:mb-6">
-                        Hi <span className="text-[#E8C15A]">{data.username}</span>,
+            <div className="relative z-10 w-full px-8 flex flex-col h-full justify-center text-center">
+                {/* 2025 Logic */}
+                <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                >
+                    <h1 className="text-[100px] md:text-[140px] font-black text-transparent bg-clip-text bg-gradient-to-b from-[#E8C15A] to-[#B89830] leading-none tracking-tighter drop-shadow-[0_0_25px_rgba(232,193,90,0.3)]">
+                        2025
                     </h1>
-                    <p className="text-base md:text-xl lg:text-2xl leading-relaxed">
-                        <span className="text-white/75">It's been </span>
-                        <span className="text-white font-bold">{data.daysActive} days</span>
-                        <span className="text-white/75"> since you</span>
-                        <br />
-                        <span className="text-white/75">joined ICPC HUE.</span>
-                    </p>
-                </div>
+                </motion.div>
 
-                {/* Avatar - positioned at 60% from top */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-[60%] -translate-y-1/2 flex flex-col items-center">
-                    <div className="w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-full bg-gradient-to-br from-[#E8C15A] to-[#B89830] flex items-center justify-center text-2xl md:text-4xl lg:text-5xl font-bold text-black shadow-[0_10px_30px_rgba(232,193,90,0.3)]">
-                        {data.username[0].toUpperCase()}
-                    </div>
-                    <div className="mt-2 md:mt-3 text-[#E8C15A] text-base md:text-xl font-bold tracking-wider">ICPC HUE</div>
-                </div>
+                <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 0.8 }}
+                >
+                    <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-6">
+                        ICPC HUE<br />
+                        <span className="text-[#E8C15A] font-serif italic font-light">Rewind</span>
+                    </h2>
+
+                    <div className="w-16 h-1 bg-gradient-to-r from-transparent via-[#E8C15A] to-transparent mx-auto mb-8 rounded-full opacity-50" />
+
+                    <p className="text-lg md:text-xl font-medium text-white/60 max-w-md mx-auto leading-relaxed">
+                        Your coding journey,<br />
+                        <span className="text-white">celebrated.</span>
+                    </p>
+                </motion.div>
+
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.5, duration: 1 }}
+                    className="absolute bottom-24 left-0 right-0 text-white/40 text-xs md:text-sm animate-pulse tracking-widest uppercase"
+                >
+                    Tap to start
+                </motion.div>
             </div>
         </div>
     );
@@ -204,35 +230,61 @@ export default function PublicRecapPage() {
         </div>
     );
 
-    // Slide 4: Streak
-    const StreakSlide = () => (
-        <div className="absolute inset-0 flex flex-col bg-gradient-to-br from-[#0a0a0a] via-[#0d0d0d] to-[#0a0808]">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_#E8C15A15_0%,_transparent_50%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_#D4AF3715_0%,_transparent_50%)]" />
-            <div className="relative z-10 flex flex-col h-full">
-                <Header />
-                <div className="flex-1 flex flex-col justify-center px-4 md:px-6 pb-16 md:pb-20">
-                    <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-widest mb-1 md:mb-2">Your Longest Coding Streak</p>
-                    <div className="flex items-baseline gap-2 mb-4 md:mb-6">
-                        <span className="text-5xl md:text-7xl lg:text-8xl font-black text-white">{data.maxStreak}</span>
-                        <span className="text-lg md:text-2xl text-white/60">day{data.maxStreak !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 md:gap-3">
-                        {[
-                            { label: 'Challenges', value: data.totalSolved },
-                            { label: 'Streak', value: data.maxStreak },
-                            { label: 'Days', value: data.daysActive }
-                        ].map((item, i) => (
-                            <div key={i} className="text-center bg-white/5 rounded-lg p-2 md:p-3 border border-white/10">
-                                <div className="text-[10px] md:text-xs text-white/50 mb-0.5">{item.label}</div>
-                                <div className="text-base md:text-xl font-bold text-white">{item.value}</div>
+    // Slide 4: Stats Recap (Time Spent & Streak)
+    const StreakSlide = () => {
+        const hours = Math.floor((data.timeSpentMinutes || 0) / 60);
+        const minutes = (data.timeSpentMinutes || 0) % 60;
+
+        return (
+            <div className="absolute inset-0 flex flex-col bg-[#050505]">
+                {/* Background Gradients */}
+                <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_50%_50%,_#E8C15A08_0%,_transparent_60%)] pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col h-full">
+                    <Header />
+
+                    <div className="flex-1 flex flex-col justify-center px-4 md:px-6 gap-6 md:gap-10 pb-10">
+                        {/* Time Spent Section */}
+                        <div className="flex flex-col">
+                            <p className="text-[#888] text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase mb-1 md:mb-2 pl-1">
+                                Time spent on ICPC HUE
+                            </p>
+                            <h2 className="text-5xl md:text-7xl leading-[0.9] font-black text-[#E8C15A] tracking-tighter drop-shadow-sm">
+                                {hours}h {minutes}m
+                            </h2>
+                        </div>
+
+                        {/* Longest Streak Section */}
+                        <div className="flex flex-col">
+                            <p className="text-[#888] text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase mb-2 md:mb-3 pl-1">
+                                Your longest coding streak
+                            </p>
+                            <div className="flex items-baseline gap-2 pl-1">
+                                <span className="text-4xl md:text-6xl font-bold text-white leading-none tracking-tighter">{data.maxStreak}</span>
+                                <span className="text-lg md:text-2xl text-[#666] font-medium">active days</span>
                             </div>
-                        ))}
+                        </div>
+
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-3 gap-3 mt-2">
+                            <div className="bg-white/5 border border-white/5 rounded-xl p-3 md:p-4 flex flex-col items-center justify-center text-center">
+                                <span className="text-[#888] text-[10px] uppercase tracking-wider font-semibold mb-0.5">Challenges</span>
+                                <span className="text-xl md:text-2xl font-bold text-white">{data.totalSolved}</span>
+                            </div>
+                            <div className="bg-white/5 border border-white/5 rounded-xl p-3 md:p-4 flex flex-col items-center justify-center text-center">
+                                <span className="text-[#888] text-[10px] uppercase tracking-wider font-semibold mb-0.5">Streak</span>
+                                <span className="text-xl md:text-2xl font-bold text-white">{data.maxStreak}</span>
+                            </div>
+                            <div className="bg-white/5 border border-white/5 rounded-xl p-3 md:p-4 flex flex-col items-center justify-center text-center">
+                                <span className="text-[#888] text-[10px] uppercase tracking-wider font-semibold mb-0.5">Days</span>
+                                <span className="text-xl md:text-2xl font-bold text-white">{data.daysActive}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // Slide 5: Summary
     const SummarySlide = () => (

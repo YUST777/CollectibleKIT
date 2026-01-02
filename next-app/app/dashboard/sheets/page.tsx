@@ -14,6 +14,8 @@ interface Sheet {
     totalProblems: number;
 }
 
+import { addCacheBust } from '@/lib/cache-version';
+
 export default function SheetsPage() {
     const router = useRouter();
     const { user, loading: authLoading } = useAuth();
@@ -24,7 +26,7 @@ export default function SheetsPage() {
     useEffect(() => {
         const fetchSheets = async () => {
             try {
-                const res = await fetch('/api/training-sheets');
+                const res = await fetch(addCacheBust('/api/training-sheets'));
                 if (res.ok) {
                     const data = await res.json();
                     setSheets(data.sheets || []);

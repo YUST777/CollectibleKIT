@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, Share2, Facebook, Linkedin, Instagram, Send, User, X, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,7 +27,7 @@ export default function Navbar() {
         <header className="fixed top-0 left-0 right-0 z-50 w-full px-4 pt-4 md:px-6 md:pt-6">
             <div className="mx-auto max-w-7xl">
                 <div className="relative backdrop-blur-xl bg-black/40 border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
+                    <div className="flex items-center justify-between px-4 py-2 md:px-6 md:py-2.5">
                         {/* Logo */}
                         <Link href="/" className="flex items-center shrink-0 opacity-90 hover:opacity-100 transition-opacity">
                             <Image
@@ -49,14 +50,14 @@ export default function Navbar() {
                                     className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                                     title={language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
                                 >
-                                    <Globe size={20} />
+                                    <Globe size={20} strokeWidth={2} />
                                 </button>
 
                                 <button
                                     onClick={() => setSocialOpen(true)}
                                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                                 >
-                                    <Share2 size={18} />
+                                    <Share2 size={18} strokeWidth={2} />
                                     <span>{t.phone}</span>
                                 </button>
 
@@ -125,7 +126,7 @@ export default function Navbar() {
                                     onClick={() => { setSocialOpen(true); setOpen(false); }}
                                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors font-medium"
                                 >
-                                    <Share2 size={18} />
+                                    <Share2 size={18} strokeWidth={2} />
                                     <span>Social Media</span>
                                 </button>
                             </div>
@@ -135,54 +136,59 @@ export default function Navbar() {
             </div>
 
             {/* Social Media Drawer */}
-            {socialOpen && (
-                <div className="fixed inset-0 z-[60]">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSocialOpen(false)} />
-                    <div className="absolute right-0 top-0 h-full w-80 bg-[#121212] border-l border-white/10 shadow-2xl p-6 flex flex-col animate-slide-in">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-xl font-bold text-white">Connect With Us</h3>
-                            <button onClick={() => setSocialOpen(false)} className="p-2 text-white/50 hover:text-white transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
+            <AnimatePresence>
+                {socialOpen && (
+                    <motion.div
+                        className="fixed inset-0 z-[60]"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSocialOpen(false)} />
+                        <motion.div
+                            className="absolute right-0 top-0 h-full w-80 bg-[#121212] border-l border-white/10 shadow-2xl p-6 flex flex-col"
+                            initial={{ x: "100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        >
+                            <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-xl font-bold text-white">Connect With Us</h3>
+                                <button onClick={() => setSocialOpen(false)} className="p-2 text-white/50 hover:text-white transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
 
-                        <div className="space-y-4 flex-1">
-                            {socialLinks.map((social) => {
-                                const Icon = social.icon;
-                                return (
-                                    <a
-                                        key={social.name}
-                                        href={social.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all group"
-                                    >
-                                        <div className="p-2.5 rounded-lg bg-[#E8C15A]/10 text-[#E8C15A] group-hover:scale-110 transition-transform">
-                                            <Icon size={20} />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-white">{social.name}</h4>
-                                            <p className="text-xs text-white/50">Follow on {social.name}</p>
-                                        </div>
-                                    </a>
-                                );
-                            })}
-                        </div>
+                            <div className="space-y-4 flex-1">
+                                {socialLinks.map((social) => {
+                                    const Icon = social.icon;
+                                    return (
+                                        <a
+                                            key={social.name}
+                                            href={social.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all group"
+                                        >
+                                            <div className="p-2.5 rounded-lg bg-[#E8C15A]/10 text-[#E8C15A] group-hover:scale-110 transition-transform">
+                                                <Icon size={20} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-white">{social.name}</h4>
+                                                <p className="text-xs text-white/50">Follow on {social.name}</p>
+                                            </div>
+                                        </a>
+                                    );
+                                })}
+                            </div>
 
-                        <p className="text-center text-xs text-white/30 mt-8">
-                            © 2024 ICPC HUE Community
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            <style jsx global>{`
-                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-                .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
-                
-                @keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
-                .animate-slide-in { animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-            `}</style>
+                            <p className="text-center text-xs text-white/30 mt-8">
+                                © 2026 ICPC HUE. All rights reserved. | Dev tg @yousefmsm1
+                            </p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </header>
     );
 }

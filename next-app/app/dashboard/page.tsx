@@ -19,6 +19,8 @@ import {
     Globe
 } from 'lucide-react';
 
+import { addCacheBust } from '@/lib/cache-version';
+
 function StatCard({ icon: Icon, title, value, subtext, color = "text-[#E8C15A]" }: any) {
     // Map text colors to background colors with opacity
     const bgColorMap: Record<string, string> = {
@@ -156,7 +158,7 @@ export default function DashboardHome() {
 
             try {
                 // Fetch raw submissions
-                const res = await fetch('/api/sheets/my-submissions', {
+                const res = await fetch(addCacheBust('/api/sheets/my-submissions'), {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 

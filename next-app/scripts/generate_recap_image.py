@@ -1,9 +1,34 @@
-
 import sys
 import json
 import math
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
 import os
+import arabic_reshaper
+from bidi.algorithm import get_display
+
+def process_text(text):
+    if not text: return text
+    try:
+        reshaped_text = arabic_reshaper.reshape(text)
+        bidi_text = get_display(reshaped_text)
+        return bidi_text
+    except:
+        return text
+
+def safe_get(data, key, default):
+    val = data.get(key)
+    return val if val is not None else default
+
+def is_arabic(text):
+    if not text: return False
+    for char in text:
+        # Check standard and presentation forms buckets
+        # Basic Arabic: 0600-06FF, Supplement: 0750-077F, ExtA: 08A0-08FF
+        # Presentation A: FB50-FDFF, Presentation B: FE70-FEFF
+        code = ord(char)
+        if (0x0600 <= code <= 0x06FF) or (0xFB50 <= code <= 0xFDFF) or (0xFE70 <= code <= 0xFEFF):
+            return True
+    return False
 
 def create_gradient_vertical(width, height, start_color, end_color):
     base = Image.new('RGB', (width, height), start_color)
@@ -85,6 +110,21 @@ def main():
     font_small = get_font(FONT_PATH, 18)
     font_mini = get_font(FONT_BOLD_PATH, 14)
 
+    # Arabic Fallback Fonts
+    ARABIC_FONT_PATH = "/usr/share/fonts/noto/NotoSansArabic-Regular.ttf"
+    ARABIC_FONT_BOLD_PATH = "/usr/share/fonts/noto/NotoSansArabic-Bold.ttf"
+    
+    def get_arabic_font(size, bold=False):
+        path = ARABIC_FONT_BOLD_PATH if bold else ARABIC_FONT_PATH
+        if os.path.exists(path):
+            return ImageFont.truetype(path, size)
+        return get_font(FONT_BOLD_PATH if bold else FONT_PATH, size)
+
+    font_arabic_h1 = get_arabic_font(48, bold=True)
+    font_arabic_display = get_arabic_font(72, bold=True)
+    font_arabic_number = get_arabic_font(55, bold=True)
+    font_arabic_body = get_arabic_font(24, bold=False)
+
     # Base Canvas
     im = create_gradient_vertical(W, H, BG_TOP, BG_BOTTOM)
     draw = ImageDraw.Draw(im, 'RGBA')
@@ -108,11 +148,13 @@ def main():
     draw.text((310, logo_y + 12), "REWIND 2025", font=get_font(FONT_PATH, 28), fill=GOLD_PRIMARY)
 
     # Greeting Section
-    username = data.get('username', 'User')
+    username = safe_get(data, 'username', 'User')
     draw.text((50, 160), "Hi", font=font_h1, fill=GRAY_LIGHT)
-    draw.text((120, 160), username + ",", font=font_h1, fill=WHITE)
+    u_text = process_text(username)
+    u_font = font_arabic_h1 if is_arabic(username) else font_h1
+    draw.text((120, 160), u_text + ",", font=u_font, fill=WHITE)
     
-    days = data.get('daysActive', 0)
+    days = safe_get(data, 'daysActive', 0)
     
     # Draw a highlight box for days
     # "You've been coding for X days"
@@ -137,26 +179,18 @@ def main():
     stats_data = [
         {
             "label": "TOTAL SOLVED",
-            "value": str(data.get('totalSolved', 0)),
+            "value": str(safe_get(data, 'totalSolved', 0)),
             "sub": "Problems",
             "icon_color": GOLD_PRIMARY
         },
         {
             "label": "MAX STREAK",
-            "value": str(data.get('maxStreak', 0)),
+            "value": str(safe_get(data, 'maxStreak', 0)),
             "sub": "Day Streak",
             "icon_color": (100, 200, 255) # Blue-ish
         },
         {
             "label": "GLOBAL RANK",
-            "value": f"Top {data.get('rankPercentile', 100)}%", # This seems to be the percentile rank (e.g. 94th percentile)
-            # User said website shows "94% above all users".
-            # If data.get('rankPercentile') returns 6, then it means Top 6%.
-            # If it returns 94, it means better than 94%.
-            # Let's check populate script.
-            # Script: `percentile = Math.ceil((myRank / totalUsers) * 100);` 
-            # If I am rank 1 of 100, percentile is 1%. That means Top 1%.
-            # So `rankPercentile` is indeed "Top X%".
             # If user sees "Top 6%" in image and "94% above" in website, they are consistent.
             # But user is confused. I will change label to "Better Than" and calculation to `100 - percentile`.
             "value": f"Better than {100 - data.get('rankPercentile', 100)}%",
@@ -166,8 +200,8 @@ def main():
     ]
     
     # 4th stat: Top Skill
-    top_tags = data.get('topTags', [])
-    skill_val = top_tags[0]['tag'].title() if top_tags and len(top_tags) > 0 else "General"
+    top_tags = safe_get(data, 'topTags', [])
+    skill_val = process_text(top_tags[0]['tag'].title()) if top_tags and len(top_tags) > 0 else "General"
     stats_data.append({
         "label": "TOP SKILL",
         "value": skill_val,
@@ -193,6 +227,11 @@ def main():
         if len(val_str) > 8: used_font = font_h2
         if len(val_str) > 12: used_font = font_body
         
+        if is_arabic(val_str):
+             if used_font == font_number: used_font = font_arabic_number
+             elif used_font == font_h2: used_font = get_arabic_font(36, bold=True)
+             else: used_font = font_arabic_body
+        
         draw.text((cx + 25, cy + 55), val_str, font=used_font, fill=WHITE)
         
         # Sub label - Use Bold/Medium for better readability
@@ -216,11 +255,13 @@ def main():
     draw.text((margin + 30, prob_y + 30), "MOST ATTEMPTED PROBLEM", font=font_mini, fill=GRAY_DIM)
     
     # Problem Name
-    prob_name = data.get('topProblem', 'N/A')
-    draw.text((margin + 30, prob_y + 60), prob_name, font=font_display, fill=WHITE)
+    prob_name = safe_get(data, 'topProblem', 'N/A')
+    p_text = process_text(prob_name)
+    p_font = font_arabic_display if is_arabic(prob_name) else font_display
+    draw.text((margin + 30, prob_y + 60), p_text, font=p_font, fill=WHITE)
     
     # Attempts bubble - Make it smaller
-    attempts = data.get('topProblemAttempts', 0)
+    attempts = safe_get(data, 'topProblemAttempts', 0)
     att_text = f"{attempts} Attempts"
     
     # Draw rounded pill for attempts
@@ -240,7 +281,7 @@ def main():
     ach_y = prob_y + prob_h + 50
     draw.text((margin, ach_y), "ACHIEVEMENTS UNLOCKED", font=font_small, fill=GRAY_DIM)
     
-    achievements = data.get('achievements', [])
+    achievements = safe_get(data, 'achievements', [])
     
     # Layout achievements in a row
     ach_start_y = ach_y + 40
