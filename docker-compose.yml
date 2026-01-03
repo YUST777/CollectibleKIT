@@ -48,6 +48,8 @@ services:
       - icpchue-network
     restart: always
     logging: *default-logging
+    volumes:
+      - ./pfps:/app/pfps
 
   # ===========================================
   # BACKEND (Express)

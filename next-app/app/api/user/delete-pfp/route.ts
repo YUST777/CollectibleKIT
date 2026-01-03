@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
 
-const PFPS_DIR = '/home/ubuntu/icpchue/pfps';
+const PFPS_DIR = '/app/pfps';
 
 export async function DELETE(request: NextRequest) {
     try {

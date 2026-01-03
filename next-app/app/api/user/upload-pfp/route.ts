@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-const PFPS_DIR = '/home/ubuntu/icpchue/pfps';
+const PFPS_DIR = '/app/pfps';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 

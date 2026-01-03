@@ -34,11 +34,15 @@ export function middleware(request: NextRequest) {
 
     // --- 2. Bot Blocking ---
     const userAgent = request.headers.get('user-agent')?.toLowerCase() || '';
-    // Common tools/bots to block (Extend this list as needed)
-    const blockedAgents = ['python-requests', 'libwww-perl', 'scrapy', 'curl', 'wget'];
 
-    // Allow basic curl/wget only if strictly needed for testing (Removed for strict security)
-    if (blockedAgents.some(agent => userAgent.includes(agent))) {
+    // Allow legitimate search engine bots
+    const allowedBots = ['googlebot', 'bingbot', 'applebot', 'yandexbot', 'duckduckbot', 'baiduspider', 'facebookexternalhit', 'twitterbot', 'linkedinbot', 'slackbot'];
+    const isLegitimateBot = allowedBots.some(bot => userAgent.includes(bot));
+
+    // Block malicious scrapers (but not legitimate bots)
+    const blockedAgents = ['python-requests', 'libwww-perl', 'scrapy'];
+
+    if (!isLegitimateBot && blockedAgents.some(agent => userAgent.includes(agent))) {
         return new NextResponse('Access Denied: Suspicious User Agent', { status: 403 });
     }
 
