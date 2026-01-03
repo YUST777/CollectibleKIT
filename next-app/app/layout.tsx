@@ -82,12 +82,22 @@ export const metadata: Metadata = {
   },
 };
 
-const jsonLd = {
+// Multiple JSON-LD schemas for rich snippets
+const jsonLdOrganization = {
   '@context': 'https://schema.org',
-  '@type': 'Organization',
+  '@type': 'EducationalOrganization',
+  '@id': 'https://icpchue.xyz/#organization',
   name: 'ICPC HUE',
+  alternateName: 'ICPC Horus University Egypt',
   url: 'https://icpchue.xyz',
-  logo: 'https://icpchue.xyz/icpchue-logo.webp',
+  logo: {
+    '@type': 'ImageObject',
+    url: 'https://icpchue.xyz/icpchue-logo.webp',
+    width: 512,
+    height: 512,
+  },
+  image: 'https://icpchue.xyz/images/ui/metadata.webp',
+  description: 'First ICPC community at Horus University, Egypt. Training competitive programmers for ACM-ICPC contests.',
   sameAs: [
     'https://www.facebook.com/ICPC.HUE',
     'https://www.linkedin.com/company/icpc-hue'
@@ -95,9 +105,74 @@ const jsonLd = {
   contactPoint: {
     '@type': 'ContactPoint',
     email: 'icpchue@hours.edu',
-    contactType: 'customer support'
+    contactType: 'customer support',
+    availableLanguage: ['English', 'Arabic']
+  },
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'Damietta',
+    addressCountry: 'EG'
   }
 };
+
+const jsonLdWebsite = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': 'https://icpchue.xyz/#website',
+  name: 'ICPC HUE',
+  url: 'https://icpchue.xyz',
+  publisher: { '@id': 'https://icpchue.xyz/#organization' },
+  inLanguage: ['en', 'ar'],
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: 'https://icpchue.xyz/sessions?q={search_term_string}'
+    },
+    'query-input': 'required name=search_term_string'
+  }
+};
+
+const jsonLdCourse = {
+  '@context': 'https://schema.org',
+  '@type': 'Course',
+  name: 'Competitive Programming Training',
+  description: 'Comprehensive training program for ACM-ICPC covering algorithms, data structures, and problem-solving techniques.',
+  provider: { '@id': 'https://icpchue.xyz/#organization' },
+  educationalLevel: 'Beginner to Advanced',
+  teaches: ['C++', 'Algorithms', 'Data Structures', 'Problem Solving', 'Competitive Programming'],
+  availableLanguage: ['en', 'ar'],
+  isAccessibleForFree: true,
+  hasCourseInstance: {
+    '@type': 'CourseInstance',
+    courseMode: 'online',
+    instructor: {
+      '@type': 'Person',
+      name: 'ICPC HUE Team'
+    }
+  }
+};
+
+const jsonLdBreadcrumb = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: 'https://icpchue.xyz'
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Sessions',
+      item: 'https://icpchue.xyz/sessions'
+    }
+  ]
+};
+
+const allJsonLd = [jsonLdOrganization, jsonLdWebsite, jsonLdCourse, jsonLdBreadcrumb];
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -116,10 +191,13 @@ export default function RootLayout({
       <body className="antialiased bg-black text-white" suppressHydrationWarning>
         <Providers>
           <InstallBanner />
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-          />
+          {allJsonLd.map((schema, index) => (
+            <script
+              key={index}
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+            />
+          ))}
           <AuthProvider>
             <ClientVersionManager />
             {children}
