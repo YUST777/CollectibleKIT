@@ -58,6 +58,26 @@ export async function POST(request: NextRequest) {
         const sanitizedId = sanitizeInput(id);
         const sanitizedLevel = sanitizeInput(studentLevel || '');
 
+        // STRICT VALIDATION
+        // 1. National ID: Must be exactly 14 digits
+        if (!/^\d{14}$/.test(nationalId)) {
+            return NextResponse.json({ error: 'National ID must be exactly 14 digits' }, { status: 400 });
+        }
+
+        // 2. Phone Number: Must be 11 digits (Egyptian Mobile)
+        if (!/^\d{11}$/.test(telephone)) {
+            return NextResponse.json({ error: 'Phone number must be exactly 11 digits' }, { status: 400 });
+        }
+
+        // 3. Application Type: Allowlist
+        const ALLOWED_TYPES = ['trainee', 'mentor', 'media'];
+        const finalAppType = ALLOWED_TYPES.includes(applicationType) ? applicationType : 'trainee';
+
+        // 4. Student Level: Should be numeric if present
+        if (studentLevel && isNaN(Number(studentLevel))) {
+            return NextResponse.json({ error: 'Student level must be a number' }, { status: 400 });
+        }
+
 
         // Insert into database
         const result = await query(
@@ -68,7 +88,7 @@ export async function POST(request: NextRequest) {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING id`,
             [
-                applicationType || 'trainee',
+                finalAppType,
                 sanitizedName,
                 sanitizedFaculty,
                 sanitizedId,

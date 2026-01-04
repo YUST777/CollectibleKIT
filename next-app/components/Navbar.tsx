@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, Share2, Facebook, Linkedin, Instagram, Send, User, X, Globe } from 'lucide-react';
+import { Menu, Share2, Facebook, Linkedin, Instagram, Send, User, X, Globe, Twitter, Music } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { translations } from '@/lib/translations';
@@ -20,6 +20,8 @@ export default function Navbar() {
         { name: 'Facebook', url: 'https://www.facebook.com/icpchue/', icon: Facebook },
         { name: 'LinkedIn', url: 'https://www.linkedin.com/in/icpchue/', icon: Linkedin },
         { name: 'Instagram', url: 'https://www.instagram.com/icpchue/', icon: Instagram },
+        { name: 'X (Twitter)', url: 'https://x.com/ICPCHUE', icon: Twitter },
+        { name: 'TikTok', url: 'https://www.tiktok.com/@icpchue', icon: Music },
         { name: 'Telegram', url: 'https://t.me/ICPCHUE', icon: Send },
     ];
 

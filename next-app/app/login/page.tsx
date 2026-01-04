@@ -20,9 +20,10 @@ export default function Login() {
     const router = useRouter();
 
     // Only redirect if already authenticated AND auth is done loading
+    // Only redirect if already authenticated AND auth is done loading
     useEffect(() => {
-        if (!authLoading && isAuthenticated && !hasRedirectedRef.current) {
-            hasRedirectedRef.current = true;
+        if (!authLoading && isAuthenticated) {
+            // Use replace to prevent back-button loops
             router.replace('/dashboard');
         }
     }, [isAuthenticated, authLoading, router]);

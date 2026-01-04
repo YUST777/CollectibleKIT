@@ -105,7 +105,11 @@ const jsonLdOrganization = {
   description: 'First ICPC community at Horus University, Egypt. Training competitive programmers for ACM-ICPC contests.',
   sameAs: [
     'https://www.facebook.com/ICPC.HUE',
-    'https://www.linkedin.com/company/icpc-hue'
+    'https://www.linkedin.com/company/icpc-hue',
+    'https://www.instagram.com/icpchue',
+    'https://x.com/ICPCHUE',
+    'https://www.tiktok.com/@icpchue',
+    'https://t.me/ICPCHUE'
   ],
   contactPoint: {
     '@type': 'ContactPoint',
