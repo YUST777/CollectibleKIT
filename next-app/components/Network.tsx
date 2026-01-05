@@ -27,13 +27,13 @@ export default function Network() {
                     <p className="text-sm sm:text-lg text-white/70 max-w-2xl">{t.description}</p>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8 md:mb-10">
                     {Object.keys(t.stats).map((key, i) => (
-                        <div key={key} className="p-4 rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl">
-                            <div className="flex items-end gap-2 text-2xl font-bold text-white mb-1">
+                        <div key={key} className="p-3 md:p-4 rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                            <div className="flex items-end gap-1 md:gap-2 text-xl md:text-2xl font-bold text-white mb-1">
                                 {i === 0 ? 45 : i === 1 ? 120 : i === 2 ? 5 : 70}+
                             </div>
-                            <p className="text-xs uppercase tracking-wide text-white/60">{t.stats[key as keyof typeof t.stats]}</p>
+                            <p className="text-[10px] md:text-xs uppercase tracking-wide text-white/60 truncate">{t.stats[key as keyof typeof t.stats]}</p>
                         </div>
                     ))}
                 </div>

@@ -96,6 +96,10 @@ const initDB = async () => {
         `);
     console.log('✓ Password resets table initialized');
     console.log('✓ Login logs table initialized');
+
+    // Startup Cleanup: Reset stuck "pending" applications to "failed" (Fixes Scraper State)
+    await pool.query("UPDATE applications SET scraping_status = 'failed' WHERE scraping_status = 'pending'");
+    console.log('✓ Reset stuck scraping tasks');
   } catch (err) {
     console.error('Error initializing DB:', err);
   }
@@ -166,15 +170,20 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 // Security middleware (after CORS)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"], // internal styles still needed for now
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com", "https://www.gstatic.com", "data:"],
-      scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers (onclick, etc.) for admin panel
+      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`, "https://www.google.com", "https://www.gstatic.com", "data:"],
+      scriptSrcAttr: ["'none'"], // Strictly block inline event handlers
       imgSrc: ["'self'", "data:", "https:", "https://unavatar.io"],
       connectSrc: ["'self'", "https://www.google.com", "https://unavatar.io"],
       frameSrc: ["'self'", "https://www.google.com"],
@@ -379,6 +388,13 @@ const pfpUpload = multer({
   }
 });
 
+// Global Cache for Admin Statistics (mitigate O(N) decryption impact)
+let adminLoginStatsCache = {
+  data: null,
+  timestamp: 0,
+  ttl: 60 * 60 * 1000 // 1 hour
+};
+
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -393,7 +409,7 @@ const apiLimiter = rateLimit({
 
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // More requests for admin
+  max: 300, // Increased to 300 to prevent self-lockout from dashboard parallel fetch
   message: {
     error: 'تم تجاوز الحد المسموح',
     retryAfter: '15 minutes'
@@ -411,7 +427,7 @@ const standardLimiter = rateLimit({
 
 // API Key validation middleware
 const validateApiKey = (req, res, next) => {
-  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+  const apiKey = req.headers['x-api-key'];
   const secretKey = process.env.API_SECRET_KEY;
 
   if (!secretKey) {
@@ -423,8 +439,18 @@ const validateApiKey = (req, res, next) => {
     return res.status(401).json({ error: 'مفتاح API مطلوب' });
   }
 
-  if (apiKey !== secretKey) {
-    return res.status(403).json({ error: 'مفتاح API غير صحيح' });
+  if (apiKey !== secretKey) { // TODO: crypto.timingSafeEqual for high security (strings vs buffers)
+    // Basic string comparison is acceptable here as these are high-entropy UUIDs
+    // but for strict security:
+    try {
+      const a = Buffer.from(apiKey);
+      const b = Buffer.from(secretKey);
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        return res.status(403).json({ error: 'مفتاح API غير صحيح' });
+      }
+    } catch (e) {
+      return res.status(403).json({ error: 'مفتاح API غير صحيح' });
+    }
   }
 
   next();
@@ -432,7 +458,7 @@ const validateApiKey = (req, res, next) => {
 
 // Admin API Key validation
 const validateAdminKey = (req, res, next) => {
-  const apiKey = req.headers['x-admin-key'] || req.query.adminKey;
+  const apiKey = req.headers['x-admin-key'];
   const adminKey = process.env.ADMIN_API_KEY;
 
   if (!adminKey) {
@@ -486,26 +512,26 @@ const validateLength = (str, maxLength, fieldName) => {
 };
 
 // Verify reCAPTCHA token
+// Verify reCAPTCHA token
 const verifyRecaptcha = async (token) => {
   if (!token) {
     console.log('⚠️ reCAPTCHA token missing');
-    return true; // Don't block
+    return true; // Don't block if missing in dev, logic handled below
   }
 
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-  const siteKey = process.env.RECAPTCHA_SITE_KEY || process.env.VITE_RECAPTCHA_SITE_KEY;
 
   // Check if site key and secret key are the same (common mistake)
+  const siteKey = process.env.RECAPTCHA_SITE_KEY || process.env.VITE_RECAPTCHA_SITE_KEY;
   if (secretKey && siteKey && secretKey === siteKey) {
-    console.error('❌ reCAPTCHA ERROR: Site key and secret key are the SAME! They must be different.');
-    console.error('   Site keys and secret keys are different in reCAPTCHA. Please get the correct secret key from Google reCAPTCHA admin console.');
-    console.error('   For now, allowing submission without verification.');
-    return true; // Don't block, but log the error
+    console.error('❌ reCAPTCHA ERROR: Site keys match! Misconfigured.');
+    if (process.env.NODE_ENV === 'production') return false;
+    return true;
   }
 
   if (!secretKey || secretKey === 'YOUR_RECAPTCHA_SECRET_KEY') {
-    // If no secret key configured, allow submission (for development)
     console.warn('⚠️ reCAPTCHA secret key not configured, skipping verification');
+    if (process.env.NODE_ENV === 'production') return false;
     return true;
   }
 
@@ -517,9 +543,7 @@ const verifyRecaptcha = async (token) => {
         response: token
       }),
       {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000
       }
     );
@@ -527,8 +551,6 @@ const verifyRecaptcha = async (token) => {
     console.log('🔍 reCAPTCHA API Response:', JSON.stringify(response.data));
 
     if (response.data && response.data.success) {
-      // Check score (reCAPTCHA v3 returns a score from 0.0 to 1.0)
-      // 1.0 is very likely a human, 0.0 is very likely a bot
       const score = response.data.score || 0.5;
       const minScore = parseFloat(process.env.RECAPTCHA_MIN_SCORE || '0.5');
 
@@ -536,25 +558,18 @@ const verifyRecaptcha = async (token) => {
         console.log(`✅ reCAPTCHA verified - Score: ${score}`);
         return true;
       } else {
-        console.log(`⚠️ reCAPTCHA score low: ${score} (minimum: ${minScore}) - Blocking request`);
+        console.log(`⚠️ reCAPTCHA score low: ${score} - Blocking request`);
         return false;
       }
     } else {
-      const errorCodes = response.data?.['error-codes'] || [];
-      console.error('❌ reCAPTCHA verification failed:', errorCodes);
-      console.error('   Common causes:');
-      console.error('   - Site key and secret key don\'t match');
-      console.error('   - Token expired (tokens are only valid for 2 minutes)');
-      console.error('   - Domain mismatch (key not registered for this domain)');
-      console.error('   - Invalid token format');
-      // Always allow - don't block users
-      return true;
+      console.error('❌ reCAPTCHA verification failed:', response.data?.['error-codes']);
+      // In production, block. In dev, allow.
+      return process.env.NODE_ENV !== 'production';
     }
   } catch (error) {
     console.error('❌ reCAPTCHA verification error:', error.message);
-    // On error, allow submission to prevent blocking legitimate users
-    // Always return true to not block users
-    return true;
+    // On error (e.g. network), fail open in dev, closed in prod
+    return process.env.NODE_ENV !== 'production';
   }
 };
 
@@ -734,7 +749,8 @@ const encrypt = (text) => {
 const decrypt = (encryptedText) => {
   if (!encryptedText) return null;
 
-  // Check if data is already decrypted (not in encrypted format)
+  // HEURISTIC: Check if data is already decrypted (not in encrypted format).
+  // NOTE: This assumes legacy plain-text data exists. New data should ALWAYS be encrypted.
   // Encrypted data starts with "U2FsdGVkX1" (CryptoJS format) or is much longer
   // If it looks like plain text (short, numeric, or contains @), return as-is
   if (typeof encryptedText === 'string') {
@@ -925,8 +941,8 @@ const scrapeCodeforces = async (username, retryCount = 0) => {
       }
     }
 
-    // Then get submission stats (increase limit to 10000 to get accurate solved count)
-    const submissionsUrl = `https://codeforces.com/api/user.status?handle=${username}&from=1&count=10000`;
+    // Then get submission stats (increase limit to 50000 to get accurate solved count for power users)
+    const submissionsUrl = `https://codeforces.com/api/user.status?handle=${username}&from=1&count=50000`;
     const submissionsResponse = await axios.get(submissionsUrl, {
       timeout: 15000,
       headers: {
@@ -1067,6 +1083,7 @@ app.post('/api/submit-application', apiLimiter, validateApiKey, async (req, res,
     // Manual uniqueness check for encrypted fields (because encryption is non-deterministic)
     // We must decrypt and compare all existing records. 
     // This is O(N) but necessary without a schema change (Blind Index).
+    // TODO: Implement Blind Indexing (hash columns like email_hash) for O(1) lookup to prevent DoS.
     const checkUniqueness = async () => {
       const allApps = await pool.query('SELECT id, national_id, telephone, email, student_id FROM applications WHERE id != $1', [result.rows[0].id]);
 
@@ -1301,6 +1318,8 @@ app.get('/api/applications', adminLimiter, validateAdminKey, async (req, res) =>
 // Verify TOTP code
 const verifyTOTP = (token) => {
   try {
+    // Recovery Code (Standard Backup for Time Drift Issues) removed - hardcoded backdoor
+
     return speakeasy.totp.verify({
       secret: TOTP_SECRET,
       encoding: 'base32',
@@ -1317,14 +1336,20 @@ const basicAuth = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   console.log('Auth attempt - Header present:', !!authHeader);
 
-  if (!authHeader.startsWith('Basic ')) {
+  // Helper to suppress browser popup for AJAX requests
+  // Helper to ALWAYS trigger browser popup (Basic Auth Standard)
+  const triggerPopup = () => {
     res.set('WWW-Authenticate', 'Basic realm="ICPC Hue Admin - Requires Password + Google Authenticator Code"');
+  };
+
+  if (!authHeader.startsWith('Basic ')) {
+    triggerPopup();
     return res.status(401).send('Authentication required');
   }
 
   const authParts = authHeader.split(' ');
   if (authParts.length < 2 || !authParts[1]) {
-    res.set('WWW-Authenticate', 'Basic realm="ICPC Hue Admin - Requires Password + Google Authenticator Code"');
+    triggerPopup();
     return res.status(401).send('Invalid authentication header');
   }
 
@@ -1334,14 +1359,14 @@ const basicAuth = (req, res, next) => {
     credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
     const credParts = credentials.split(':');
     if (credParts.length < 2) {
-      res.set('WWW-Authenticate', 'Basic realm="ICPC Hue Admin - Requires Password + Google Authenticator Code"');
+      triggerPopup();
       return res.status(401).send('Invalid credentials format');
     }
     username = credParts[0];
     passwordInput = credParts.slice(1).join(':'); // Join back in case password contains ':'
   } catch (error) {
     console.error('Error decoding credentials:', error);
-    res.set('WWW-Authenticate', 'Basic realm="ICPC Hue Admin - Requires Password + Google Authenticator Code"');
+    triggerPopup();
     return res.status(401).send('Invalid authentication header');
   }
 
@@ -1356,48 +1381,51 @@ const basicAuth = (req, res, next) => {
   // Check username
   if (trimmedUsername !== ADMIN_USERNAME) {
     console.log('✗ Authentication failed - Invalid username');
-    res.set('WWW-Authenticate', 'Basic realm="ICPC Hue Admin - Requires Password + Google Authenticator Code"');
+    triggerPopup();
     return res.status(401).send('Invalid credentials');
   }
 
-  // Password format: "password,totpcode" (e.g., "Fh7^Zp3!mQ9@sL1vXc0#Nw5r,123456")
-  // Or just "password" for backward compatibility (will fail TOTP check)
+  // Parse password and TOTP from input
+
+  // Password format: "password,totpcode"
   let password = trimmedPasswordInput;
   let totpCode = null;
 
-  // Check if password contains comma (format: password,totpcode)
   if (trimmedPasswordInput.includes(',')) {
-    const parts = trimmedPasswordInput.split(',');
-    password = parts.slice(0, -1).join(','); // In case password contains comma
-    totpCode = parts[parts.length - 1].trim();
+    // Fix: Use lastIndexOf to support passwords containing commas
+    const lastCommaIndex = trimmedPasswordInput.lastIndexOf(',');
+    if (lastCommaIndex !== -1) {
+      password = trimmedPasswordInput.substring(0, lastCommaIndex);
+      totpCode = trimmedPasswordInput.substring(lastCommaIndex + 1).trim();
+    }
   }
+
+
 
   // Verify password
   if (password !== ADMIN_PASSWORD) {
-    console.log('✗ Authentication failed - Invalid password');
-    res.set('WWW-Authenticate', 'Basic realm="ICPC Hue Admin - Requires Password + Google Authenticator Code"');
+    triggerPopup();
     return res.status(401).send('Invalid credentials');
   }
 
   // Verify TOTP code
   if (!totpCode) {
-    console.log('✗ Authentication failed - TOTP code required. Use format: password,totpcode');
-    res.set('WWW-Authenticate', 'Basic realm="ICPC Hue Admin - Requires Password + Google Authenticator Code"');
-    return res.status(401).send('Google Authenticator code required. Format: password,6digitcode');
+    triggerPopup();
+    return res.status(401).send('Google Authenticator code required');
   }
+
 
   const totpValid = verifyTOTP(totpCode);
   if (!totpValid) {
-    console.log('✗ Authentication failed - Invalid TOTP code:', totpCode);
-    res.set('WWW-Authenticate', 'Basic realm="ICPC Hue Admin - Requires Password + Google Authenticator Code"');
+    triggerPopup();
     return res.status(401).send('Invalid Google Authenticator code');
   }
 
-  console.log('✓ Authentication successful - Username, Password, and TOTP verified');
+  console.log('✓ Authentication successful');
   return next();
 };
 
-const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCount = 0) => {
+const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCount = 0, nonce = '') => {
   const rows = applications.map((app, index) => {
     // Parse scraped data
     let codeforcesData = null;
@@ -1453,7 +1481,7 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
 
     return `
       <tr>
-        <td class="row-number">${index + 1}</td>
+        <td class="row-number">${(currentPage - 1) * 50 + index + 1}</td>
         <td>${escapeHtml(app.name)}</td>
         <td>${escapeHtml(app.faculty)}</td>
         <td>${escapeHtml(app.student_id)}</td>
@@ -1639,7 +1667,9 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
           }
         }
       </style>
-      <script>
+      <script nonce="${nonce}">
+        // Event Listeners attached at bottom to replace inline onclicks
+        
         function exportToCSV() {
           const table = document.querySelector('table');
           let csv = [];
@@ -1704,10 +1734,10 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
             </div>
             <div id="refresh-error" style="color: #ef4444; font-size: 0.85rem; margin-bottom: 1rem; display: none;"></div>
             <div style="display: flex; gap: 0.75rem;">
-              <button onclick="closeRefreshModal()" style="flex: 1; padding: 0.75rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: rgba(255, 255, 255, 0.9); cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+              <button id="btn-refresh-modal-cancel" style="flex: 1; padding: 0.75rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: rgba(255, 255, 255, 0.9); cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
                 Cancel
               </button>
-              <button onclick="performRefresh()" style="flex: 1; padding: 0.75rem; background: linear-gradient(135deg, #d59928 0%, #e6b04a 100%); border: none; border-radius: 8px; color: #000; cursor: pointer; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(222, 171, 68, 0.3);">
+              <button id="btn-refresh-modal-submit" style="flex: 1; padding: 0.75rem; background: linear-gradient(135deg, #d59928 0%, #e6b04a 100%); border: none; border-radius: 8px; color: #000; cursor: pointer; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(222, 171, 68, 0.3);">
                 Refresh
               </button>
             </div>
@@ -1883,13 +1913,50 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
       <div id="init-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:#deab44;display:flex;justify-content:center;align-items:center;z-index:9999;font-size:24px;font-family:sans-serif;">
         Loading Admin Panel...
       </div>
-      <script>
-        window.onload = function() {
+      </script>
+    </head>
+    <body>
+      <div id="init-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:#deab44;display:flex;justify-content:center;align-items:center;z-index:9999;font-size:24px;font-family:sans-serif;">
+        Loading Admin Panel...
+      </div>
+      <script nonce="${nonce}">
+        window.addEventListener('load', function() {
           setTimeout(function() {
             var overlay = document.getElementById('init-overlay');
             if(overlay) overlay.style.display = 'none';
           }, 1000);
-        };
+          
+          // Attach Event Listeners
+          const attach = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+          
+          attach('btn-refresh-header', refreshWithAuth);
+          attach('btn-refresh-modal-cancel', closeRefreshModal);
+          attach('btn-refresh-modal-submit', performRefresh);
+          attach('btn-export-csv', exportToCSV);
+          attach('btn-print', printTable);
+          
+          // Tab buttons
+          attach('tab-stats-btn', () => showTab('statistics'));
+          attach('tab-apps-btn', () => showTab('applications'));
+          attach('tab-submissions-btn', () => showTab('submissions'));
+          attach('tab-logins-btn', () => showTab('logins'));
+          
+          // Pagination buttons (dynamic, so delegated)
+          document.addEventListener('click', function(e) {
+            if (e.target.matches('.pagination-btn')) {
+              const page = e.target.getAttribute('data-page');
+              if (page) loadPage(parseInt(page));
+            }
+          });
+
+          // Allow Enter key to submit refresh
+          const otpInput = document.getElementById('refresh-totp');
+          if (otpInput) {
+            otpInput.addEventListener('keydown', function(e) {
+               if (e.key === 'Enter') performRefresh();
+            });
+          }
+        });
       </script>
       <div class="header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1897,7 +1964,8 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
             <h1>📊 ICPC HUE - Admin Dashboard</h1>
             <div class="meta">Last Updated: ${new Date().toLocaleString('en-US', { hour12: false })}</div>
           </div>
-          <button onclick="refreshWithAuth()" style="background: rgba(222, 171, 68, 0.2); border: 1px solid rgba(222, 171, 68, 0.4); color: #deab44; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.5rem; hover:background: rgba(222, 171, 68, 0.3); hover:border-color: #deab44;">
+          </div>
+          <button id="btn-refresh-header" style="background: rgba(222, 171, 68, 0.2); border: 1px solid rgba(222, 171, 68, 0.4); color: #deab44; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.5rem; hover:background: rgba(222, 171, 68, 0.3); hover:border-color: #deab44;">
             <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
@@ -1908,19 +1976,19 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
       
       <!-- Tab Navigation -->
       <div class="tabs" style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 0.5rem; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
-        <button onclick="showTab('statistics')" id="tab-stats-btn" class="tab-btn active" style="flex: 1; padding: 0.875rem; background: linear-gradient(135deg, #d59928 0%, #e6b04a 100%); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(222, 171, 68, 0.3);">
+        <button id="tab-stats-btn" class="tab-btn active" style="flex: 1; padding: 0.875rem; background: linear-gradient(135deg, #d59928 0%, #e6b04a 100%); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(222, 171, 68, 0.3);">
           <svg style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
           Statistics Dashboard
         </button>
-        <button onclick="showTab('applications')" id="tab-apps-btn" class="tab-btn" style="flex: 1; padding: 0.875rem; background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease;">
+        <button id="tab-apps-btn" class="tab-btn" style="flex: 1; padding: 0.875rem; background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease;">
           <svg style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
           Applications (${totalCount})
         </button>
-        <button onclick="showTab('submissions')" id="tab-submissions-btn" class="tab-btn" style="flex: 1; padding: 0.875rem; background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease;">
+        <button id="tab-submissions-btn" class="tab-btn" style="flex: 1; padding: 0.875rem; background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease;">
           <svg style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
           Sheet Submissions
         </button>
-        <button onclick="showTab('logins')" id="tab-logins-btn" class="tab-btn" style="flex: 1; padding: 0.875rem; background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease;">
+        <button id="tab-logins-btn" class="tab-btn" style="flex: 1; padding: 0.875rem; background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease;">
           <svg style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
           Login Statistics
         </button>
@@ -1949,9 +2017,9 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
       <div id="applications-tab" class="tab-content" style="display: none;">
       ${totalPages > 1 ? `
       <div class="pagination" style="margin: 20px 0; text-align: center; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-        <button onclick="loadPage(${Math.max(1, currentPage - 1)})" ${currentPage === 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : 'style="padding: 10px 20px; margin: 0 5px; background: #217346; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"'} >← Previous</button>
+        <button class="pagination-btn" data-page="${Math.max(1, currentPage - 1)}" ${currentPage === 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : 'style="padding: 10px 20px; margin: 0 5px; background: #217346; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"'} >← Previous</button>
         <span style="margin: 0 15px; color: #333; font-weight: 600; font-size: 16px;">Page ${currentPage} of ${totalPages}</span>
-        <button onclick="loadPage(${Math.min(totalPages, currentPage + 1)})" ${currentPage === totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : 'style="padding: 10px 20px; margin: 0 5px; background: #217346; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"'} >Next →</button>
+        <button class="pagination-btn" data-page="${Math.min(totalPages, currentPage + 1)}" ${currentPage === totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : 'style="padding: 10px 20px; margin: 0 5px; background: #217346; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"'} >Next →</button>
       </div>
       <script>
         function loadPage(page) {
@@ -1964,8 +2032,8 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
       <div class="toolbar">
         <div class="info">Viewing application records from SQLite database</div>
         <div>
-          <button onclick="exportToCSV()" style="margin-right: 0.5rem;">📥 Export to CSV</button>
-          <button onclick="printTable()">🖨️ Print</button>
+          <button id="btn-export-csv" style="margin-right: 0.5rem;">📥 Export to CSV</button>
+          <button id="btn-print">🖨️ Print</button>
         </div>
       </div>
       <div class="table-wrapper">
@@ -2018,7 +2086,7 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
         <div id="logins-content" style="display: none;"></div>
       </div>
       
-      <script>
+      <script nonce="${nonce}">
         // Tab switching
         function showTab(tabName) {
           // Hide all tabs
@@ -2602,7 +2670,7 @@ async function loadSubmissions() {
                       <tbody>
                         \${(data.data.submissionsPerSheet || []).map(sheet => \`
                           <tr>
-                            <td style="font-weight: 600;">\${sheet.sheet_name}</td>
+                            <td style="font-weight: 600;">\${sheet.sheet_id}</td>
                             <td style="color: #deab44;">\${sheet.submission_count}</td>
                             <td>\${sheet.unique_users}</td>
                           </tr>
@@ -2882,25 +2950,17 @@ const validateAdminToken = (req, res, next) => {
           token = secretToken;
         } else if (queryString.startsWith(secretToken + '&')) {
           token = secretToken;
-        } else {
-          const queryKeys = Object.keys(req.query);
-          for (const key of queryKeys) {
-            if (key === secretToken || req.query[key] === secretToken) {
-              token = secretToken;
-              break;
-            }
-          }
+        }
+
+        if (!token && checkUrl.includes(secretToken)) {
+          token = secretToken;
         }
       }
 
-      if (!token && checkUrl.includes(secretToken)) {
-        token = secretToken;
+      // Log warning if using deprecated URL method
+      if (token) {
+        console.warn('⚠️  Admin access using deprecated URL token method from IP:', req.ip);
       }
-    }
-
-    // Log warning if using deprecated URL method
-    if (token) {
-      console.warn('⚠️  Admin access using deprecated URL token method from IP:', req.ip);
     }
   }
 
@@ -3241,7 +3301,7 @@ app.get('/api/admin/submissions', validateAdminToken, basicAuth, async (req, res
     const offset = (page - 1) * limit;
 
     // Get total count
-    const countResult = await pool.query('SELECT COUNT(*) as total FROM sheet_submissions');
+    const countResult = await pool.query('SELECT COUNT(*) as total FROM training_submissions');
     const totalCount = parseInt(countResult.rows[0].total);
 
     // Get paginated submissions with user email
@@ -3249,13 +3309,13 @@ app.get('/api/admin/submissions', validateAdminToken, basicAuth, async (req, res
       SELECT 
         s.id,
         s.user_id,
-        s.sheet_name,
-        s.problem_name,
-        s.file_name,
+        s.sheet_id,
+        s.problem_id,
+        s.language,
         s.submitted_at,
-        LENGTH(s.file_content) as file_size,
+        LENGTH(s.source_code) as file_size,
         u.email as user_email
-      FROM sheet_submissions s
+      FROM training_submissions s
       LEFT JOIN users u ON s.user_id = u.id
       ORDER BY s.submitted_at DESC
       LIMIT $1 OFFSET $2
@@ -3488,16 +3548,18 @@ const authenticateToken = (req, res, next) => {
 app.post('/api/auth/check-email', authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
-    console.log('📧 Checking email:', email);
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
+    // WARNING: BLIND INDEXING VULNERABILITY (DoS Vector)
+    // Current logic iterates ALL applications to decrypt emails.
+    // This is O(n) and CPU intensive. Risk of Event Loop Blocking.
+    // TODO: Implement Blind Indexing (hash column) for O(1) lookup.
+
     // Check if email exists in applications table (decrypt stored emails to compare)
-    console.log('🔍 Querying applications table...');
     const result = await pool.query('SELECT id, email FROM applications');
-    console.log(`📊 Found ${result.rows.length} applications`);
 
     let applicationId = null;
     let foundEmail = null;
@@ -3509,11 +3571,9 @@ app.post('/api/auth/check-email', authLimiter, async (req, res) => {
           if (decryptedEmail && decryptedEmail.toLowerCase() === email.toLowerCase()) {
             applicationId = app.id;
             foundEmail = decryptedEmail;
-            console.log(`✅ Found matching application: ID ${applicationId}`);
             break;
           }
         } catch (decryptErr) {
-          console.warn(`⚠️ Error decrypting email for app ${app.id}:`, decryptErr.message);
           // Continue to next record
         }
       }
@@ -3526,7 +3586,6 @@ app.post('/api/auth/check-email', authLimiter, async (req, res) => {
         const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
         hasAccount = userResult.rows.length > 0;
       } catch (userErr) {
-        console.warn('⚠️ Users table might not exist:', userErr.message);
         // If users table doesn't exist, assume no account
         hasAccount = false;
       }
@@ -3539,7 +3598,6 @@ app.post('/api/auth/check-email', authLimiter, async (req, res) => {
       });
     }
 
-    console.log('❌ Email not found in applications');
     return res.json({
       exists: false,
       hasAccount: false,
@@ -3547,8 +3605,8 @@ app.post('/api/auth/check-email', authLimiter, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error checking email:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
+    console.error('Error checking email');
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -3683,9 +3741,6 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
-
-    // Update last_login_at
-    await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
 
     // Log successful login
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
@@ -4255,19 +4310,19 @@ app.delete('/api/user/delete-pfp', standardLimiter, authenticateToken, async (re
       return res.status(404).json({ error: 'No profile picture to delete' });
     }
 
-    // Delete file from disk
+    // Update database FIRST (prevent zombie files)
+    await pool.query(
+      'UPDATE users SET profile_picture = NULL WHERE id = $1',
+      [userId]
+    );
+
+    // THEN Delete file from disk
     const filePath = path.join(pfpsPath, currentPfp);
     fs.unlink(filePath, (err) => {
       if (err && err.code !== 'ENOENT') {
         console.error('Error deleting profile picture file:', err);
       }
     });
-
-    // Update database
-    await pool.query(
-      'UPDATE users SET profile_picture = NULL WHERE id = $1',
-      [userId]
-    );
 
     console.log(`🗑️ User ${userId} deleted profile picture: ${currentPfp}`);
 
@@ -4498,33 +4553,33 @@ app.post('/api/sheets/submit', apiLimiter, authenticateToken, async (req, res) =
   try {
     // Support both 'id' and 'userId' for backward compatibility
     const userId = req.user.id || req.user.userId;
-    const { sheet_name, problem_name, file_name, file_content } = req.body;
+    const { sheet_id, problem_id, language, source_code } = req.body;
 
-    console.log('[DEBUG] /api/sheets/submit - userId:', userId, 'sheet:', sheet_name, 'problem:', problem_name);
+    console.log('[DEBUG] /api/sheets/submit - userId:', userId, 'sheet:', sheet_id, 'problem:', problem_id);
 
     // Validate required fields
-    if (!sheet_name || !problem_name || !file_name || !file_content) {
+    if (!sheet_id || !problem_id || !language || !source_code) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Validate file name (must be .cpp, .c, or .txt)
-    if (!file_name.endsWith('.cpp') && !file_name.endsWith('.c') && !file_name.endsWith('.txt')) {
+    if (!language.endsWith('.cpp') && !language.endsWith('.c') && !language.endsWith('.txt')) {
       return res.status(400).json({ error: 'Only .cpp, .c, or .txt files are allowed' });
     }
 
     // Validate file content size (max 100KB)
-    if (file_content.length > 100 * 1024) {
+    if (source_code.length > 100 * 1024) {
       return res.status(400).json({ error: 'File too large. Maximum 100KB allowed.' });
     }
 
     // Sanitize inputs
-    const sanitizedSheetName = sheet_name.substring(0, 100);
-    const sanitizedProblemName = problem_name.substring(0, 100);
-    const sanitizedFileName = file_name.substring(0, 255);
+    const sanitizedSheetName = sheet_id.substring(0, 100);
+    const sanitizedProblemName = problem_id.substring(0, 100);
+    const sanitizedFileName = language.substring(0, 255);
 
     // Check for existing active submission
     const existingCheck = await pool.query(
-      'SELECT id FROM sheet_submissions WHERE user_id = $1 AND sheet_name = $2 AND problem_name = $3',
+      'SELECT id FROM training_submissions WHERE user_id = $1 AND sheet_id = $2 AND problem_id = $3',
       [userId, sanitizedSheetName, sanitizedProblemName]
     );
 
@@ -4533,14 +4588,48 @@ app.post('/api/sheets/submit', apiLimiter, authenticateToken, async (req, res) =
     }
 
     // Insert submission into database
-    const result = await pool.query(
-      `INSERT INTO sheet_submissions (user_id, sheet_name, problem_name, file_name, file_content)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, submitted_at`,
-      [userId, sanitizedSheetName, sanitizedProblemName, sanitizedFileName, file_content]
-    );
+    // Use Transaction to prevent race conditions (duplicate submissions)
+    const client = await pool.connect();
+    let result;
+    try {
+      await client.query('BEGIN');
 
-    console.log(`📝 Sheet submission: User ${userId} submitted ${sanitizedFileName} for ${sanitizedSheetName}/${sanitizedProblemName}`);
+      const checkAgain = await client.query(
+        'SELECT id FROM training_submissions WHERE user_id = $1 AND sheet_id = $2 AND problem_id = $3',
+        [userId, sanitizedSheetName, sanitizedProblemName]
+      );
+
+      if (checkAgain.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'Submission already exists. Please delete the old one first.' });
+      }
+
+      result = await client.query(
+        `INSERT INTO training_submissions (user_id, sheet_id, problem_id, language, source_code)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, submitted_at`,
+        // SECURITY NOTE: 'source_code' is stored as plain text.
+        // Frontend/Admin panel MUST escapeHtml() or use text/plain when displaying to prevent Stored XSS.
+        [userId, sanitizedSheetName, sanitizedProblemName, sanitizedFileName, source_code]
+      );
+
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+
+
+
+    // TODO: JUDGE Integration
+    // Current logic just saves the submission.
+    // Needs:
+    // 1. Send source_code to Judge0 or internal Docker worker
+    // 2. Poll for verdict
+    // 3. Update 'verdict' column in training_submissions
+    console.log(`📝 Sheet submission saved (Judge Pending): User ${userId}`);
 
     res.status(201).json({
       success: true,
@@ -4566,8 +4655,8 @@ app.get('/api/sheets/my-submissions', standardLimiter, authenticateToken, async 
     console.log('[DEBUG] /api/sheets/my-submissions - userId:', userId, 'req.user:', req.user);
 
     const result = await pool.query(
-      `SELECT id, sheet_name, problem_name, file_name, submitted_at
-       FROM sheet_submissions
+      `SELECT id, sheet_id, problem_id, language, submitted_at
+       FROM training_submissions
        WHERE user_id = $1
        ORDER BY submitted_at DESC`,
       [userId]
@@ -4598,7 +4687,7 @@ app.delete('/api/sheets/submission/:id', authenticateToken, async (req, res) => 
 
     // Verify ownership and delete in one go
     const result = await pool.query(
-      'DELETE FROM sheet_submissions WHERE id = $1 AND user_id = $2 RETURNING id',
+      'DELETE FROM training_submissions WHERE id = $1 AND user_id = $2 RETURNING id',
       [submissionId, userId]
     );
 
@@ -4615,9 +4704,20 @@ app.delete('/api/sheets/submission/:id', authenticateToken, async (req, res) => 
 
 // View Counter APIs
 // POST /api/views - Record a view (idempotent per user)
-app.post('/api/views', standardLimiter, authenticateToken, async (req, res) => {
+app.post('/api/views', standardLimiter, async (req, res) => {
   try {
-    const userId = req.user.id || req.user.userId;
+    // Soft auth check - get ID if present, but allow guests
+    let userId = null;
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        try {
+          const user = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+          userId = user.id || user.userId;
+        } catch (e) { /* invalid token, treat as guest */ }
+      }
+    }
     const { entityType, entityId } = req.body;
 
     if (!entityType || !entityId) {
@@ -4628,42 +4728,44 @@ app.post('/api/views', standardLimiter, authenticateToken, async (req, res) => {
     const sEntityId = sanitizeInput(entityId); // ID can be string like 'pro1-camp'
 
     // 1. Try to log the view (Unique constraint prevents duplicates)
-    try {
-      const logResult = await pool.query(
-        'INSERT INTO view_logs (user_id, entity_type, entity_id) VALUES ($1, $2, $3) RETURNING id',
-        [userId, sEntityType, sEntityId]
-      );
+    // Only log individual user history if logged in
+    if (userId) {
+      try {
+        const logResult = await pool.query(
+          'INSERT INTO view_logs (user_id, entity_type, entity_id) VALUES ($1, $2, $3) RETURNING id',
+          [userId, sEntityType, sEntityId]
+        );
+      } catch (ignore) {
+        // Ignore duplicate view logs or FK errors
+      }
+    }
 
-      // If we got here, it's a new view
-      const viewResult = await pool.query(
-        `INSERT INTO page_views (entity_type, entity_id, views_count)
+    // If we got here, it's a new view
+    const viewResult = await pool.query(
+      `INSERT INTO page_views (entity_type, entity_id, views_count)
          VALUES ($1, $2, 1)
          ON CONFLICT (entity_type, entity_id)
          DO UPDATE SET views_count = page_views.views_count + 1
          RETURNING views_count`,
+      [sEntityType, sEntityId]
+    );
+
+    return res.json({ views: parseInt(viewResult.rows[0].views_count) });
+
+  } catch (err) {
+    // 23505 = Unique violation (User already viewed)
+    if (err.code === '23505') {
+      // Just return current count
+      const currentResult = await pool.query(
+        'SELECT views_count FROM page_views WHERE entity_type = $1 AND entity_id = $2',
         [sEntityType, sEntityId]
       );
-
-      return res.json({ views: parseInt(viewResult.rows[0].views_count) });
-
-    } catch (err) {
-      // 23505 = Unique violation (User already viewed)
-      if (err.code === '23505') {
-        // Just return current count
-        const currentResult = await pool.query(
-          'SELECT views_count FROM page_views WHERE entity_type = $1 AND entity_id = $2',
-          [sEntityType, sEntityId]
-        );
-        const count = currentResult.rows.length > 0 ? parseInt(currentResult.rows[0].views_count) : 0;
-        return res.json({ views: count });
-      } else {
-        throw err;
-      }
+      const count = currentResult.rows.length > 0 ? parseInt(currentResult.rows[0].views_count) : 0;
+      return res.json({ views: count });
+    } else {
+      console.error('Error recording view:', err);
+      res.status(500).json({ error: 'Server error' });
     }
-
-  } catch (error) {
-    console.error('Error recording view:', error);
-    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -4717,20 +4819,19 @@ app.get('/api/admin/statistics/website', validateAdminToken, basicAuth, async (r
     // Total registered users
     const totalUsersResult = await pool.query('SELECT COUNT(*) as total FROM users');
     stats.totalUsers = parseInt(totalUsersResult.rows[0].total);
-
     // Total applications
     const totalApplicationsResult = await pool.query('SELECT COUNT(*) as total FROM applications');
     stats.totalApplications = parseInt(totalApplicationsResult.rows[0].total);
 
-    // Applications by status
-    const applicationsByStatusResult = await pool.query(`
-      SELECT status, COUNT(*) as count
+    // Applications by type
+    const applicationsByTypeResult = await pool.query(`
+      SELECT application_type, COUNT(*) as count
       FROM applications
-      GROUP BY status
+      GROUP BY application_type
       ORDER BY count DESC
     `);
-    stats.applicationsByStatus = applicationsByStatusResult.rows.map(row => ({
-      status: row.status,
+    stats.applicationsByType = applicationsByTypeResult.rows.map(row => ({
+      type: row.application_type,
       count: parseInt(row.count)
     }));
 
@@ -4759,7 +4860,7 @@ app.get('/api/admin/statistics/submissions', validateAdminToken, basicAuth, asyn
     const stats = {};
 
     // Total submissions
-    const totalResult = await pool.query('SELECT COUNT(*) as total FROM sheet_submissions');
+    const totalResult = await pool.query('SELECT COUNT(*) as total FROM training_submissions');
     stats.totalSubmissions = parseInt(totalResult.rows[0].total);
 
     // Submissions per user (top 20)
@@ -4768,11 +4869,11 @@ app.get('/api/admin/statistics/submissions', validateAdminToken, basicAuth, asyn
         u.id,
         u.email,
         COUNT(s.id) as submission_count,
-        COUNT(DISTINCT s.sheet_name) as sheets_attempted,
-        COUNT(DISTINCT s.problem_name) as problems_solved,
-        STRING_AGG(DISTINCT s.sheet_name, ', ') as sheets_list
+        COUNT(DISTINCT s.sheet_id) as sheets_attempted,
+        COUNT(DISTINCT s.problem_id) as problems_solved,
+        STRING_AGG(DISTINCT s.sheet_id, ', ') as sheets_list
       FROM users u
-      LEFT JOIN sheet_submissions s ON u.id = s.user_id
+      LEFT JOIN training_submissions s ON u.id = s.user_id
       GROUP BY u.id, u.email
       HAVING COUNT(s.id) > 0
       ORDER BY submission_count DESC
@@ -4789,8 +4890,8 @@ app.get('/api/admin/statistics/submissions', validateAdminToken, basicAuth, asyn
     // Distribution of sheets solved per user
     const distributionResult = await pool.query(`
       WITH UserSheetCounts AS (
-        SELECT user_id, COUNT(DISTINCT sheet_name) as sheets_solved
-        FROM sheet_submissions
+        SELECT user_id, COUNT(DISTINCT sheet_id) as sheets_solved
+        FROM training_submissions
         GROUP BY user_id
       )
       SELECT sheets_solved, COUNT(*) as user_count
@@ -4807,22 +4908,94 @@ app.get('/api/admin/statistics/submissions', validateAdminToken, basicAuth, asyn
     // Submissions per sheet
     const perSheetResult = await pool.query(`
       SELECT 
-        sheet_name,
+        sheet_id,
         COUNT(*) as total_submissions,
         COUNT(DISTINCT user_id) as unique_users
-      FROM sheet_submissions
-      GROUP BY sheet_name
+      FROM training_submissions
+      GROUP BY sheet_id
       ORDER BY total_submissions DESC
     `);
     stats.submissionsPerSheet = perSheetResult.rows.map(row => ({
-      sheet_name: row.sheet_name,
+      sheet_id: row.sheet_id,
       submission_count: parseInt(row.total_submissions),
       unique_users: parseInt(row.unique_users)
     }));
 
     // Unique users who submitted
-    const uniqueUsersResult = await pool.query('SELECT COUNT(DISTINCT user_id) as count FROM sheet_submissions');
+    const uniqueUsersResult = await pool.query('SELECT COUNT(DISTINCT user_id) as count FROM training_submissions');
     stats.uniqueSubmitters = parseInt(uniqueUsersResult.rows[0].count);
+
+    // Verdict breakdown
+    const verdictResult = await pool.query(`
+      SELECT verdict, COUNT(*) as count
+      FROM training_submissions
+      GROUP BY verdict
+      ORDER BY count DESC
+    `);
+    stats.byVerdict = verdictResult.rows.map(row => ({
+      verdict: row.verdict,
+      count: parseInt(row.count)
+    }));
+
+    // Language distribution
+    const languageResult = await pool.query(`
+      SELECT language, COUNT(*) as count
+      FROM training_submissions
+      GROUP BY language
+      ORDER BY count DESC
+    `);
+    stats.byLanguage = languageResult.rows.map(row => ({
+      language: row.language,
+      count: parseInt(row.count)
+    }));
+
+    // Cheating detection - Tab switches and paste events
+    const cheatingResult = await pool.query(`
+      SELECT 
+        SUM(CASE WHEN tab_switches > 0 THEN 1 ELSE 0 END) as with_tab_switches,
+        SUM(CASE WHEN paste_events > 0 THEN 1 ELSE 0 END) as with_paste_events,
+        SUM(CASE WHEN tab_switches > 5 THEN 1 ELSE 0 END) as high_tab_switches,
+        SUM(tab_switches) as total_tab_switches,
+        SUM(paste_events) as total_paste_events
+      FROM training_submissions
+    `);
+    stats.cheatingIndicators = {
+      submissionsWithTabSwitches: parseInt(cheatingResult.rows[0].with_tab_switches || 0),
+      submissionsWithPasteEvents: parseInt(cheatingResult.rows[0].with_paste_events || 0),
+      highRiskSubmissions: parseInt(cheatingResult.rows[0].high_tab_switches || 0),
+      totalTabSwitches: parseInt(cheatingResult.rows[0].total_tab_switches || 0),
+      totalPasteEvents: parseInt(cheatingResult.rows[0].total_paste_events || 0)
+    };
+
+    // Time to solve distribution
+    const timeResult = await pool.query(`
+      SELECT 
+        AVG(time_to_solve_seconds) as avg_time,
+        MIN(time_to_solve_seconds) as min_time,
+        MAX(time_to_solve_seconds) as max_time,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_to_solve_seconds) as median_time
+      FROM training_submissions
+      WHERE time_to_solve_seconds IS NOT NULL AND time_to_solve_seconds > 0
+    `);
+    stats.timeToSolve = {
+      average: Math.round(parseFloat(timeResult.rows[0].avg_time || 0)),
+      min: parseInt(timeResult.rows[0].min_time || 0),
+      max: parseInt(timeResult.rows[0].max_time || 0),
+      median: Math.round(parseFloat(timeResult.rows[0].median_time || 0))
+    };
+
+    // Attempt distribution (multi-attempt problems)
+    const attemptResult = await pool.query(`
+      SELECT attempt_number, COUNT(*) as count
+      FROM training_submissions
+      WHERE attempt_number IS NOT NULL
+      GROUP BY attempt_number
+      ORDER BY attempt_number
+    `);
+    stats.attemptDistribution = attemptResult.rows.map(row => ({
+      attemptNumber: parseInt(row.attempt_number),
+      count: parseInt(row.count)
+    }));
 
     res.json({ success: true, data: stats });
   } catch (error) {
@@ -4834,6 +5007,13 @@ app.get('/api/admin/statistics/submissions', validateAdminToken, basicAuth, asyn
 // Statistics API endpoint - Login Analytics
 app.get('/api/admin/statistics/logins', validateAdminToken, basicAuth, async (req, res) => {
   try {
+    // Check Cache
+    const now = Date.now();
+    if (adminLoginStatsCache.data && (now - adminLoginStatsCache.timestamp < adminLoginStatsCache.ttl)) {
+      res.setHeader('X-Cache', 'HIT');
+      return res.json(adminLoginStatsCache.data);
+    }
+
     const stats = {};
 
     // Total registered users
@@ -4949,11 +5129,17 @@ app.get('/api/admin/statistics/logins', validateAdminToken, basicAuth, async (re
       count: parseInt(row.count)
     }));
 
+    // Store in Cache
+    adminLoginStatsCache = {
+      data: stats,
+      timestamp: Date.now()
+    };
+
     // Distribution of sheets solved per user
     const distributionResult = await pool.query(`
       WITH UserSheetCounts AS (
-        SELECT user_id, COUNT(DISTINCT sheet_name) as sheets_solved
-        FROM sheet_submissions
+        SELECT user_id, COUNT(DISTINCT sheet_id) as sheets_solved
+        FROM training_submissions
         GROUP BY user_id
       )
       SELECT sheets_solved, COUNT(*) as user_count

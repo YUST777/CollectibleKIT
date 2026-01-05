@@ -1,196 +1,270 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, Share2, Facebook, Linkedin, Instagram, Send, User, X, Globe, Twitter, Music } from 'lucide-react';
+import {
+    Menu, Share2, Facebook, Linkedin, Instagram,
+    Send, User, X, Twitter, Music, ArrowUpRight,
+    ChevronRight, Languages
+} from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { translations } from '@/lib/translations';
 
+const socialLinks = [
+    { name: 'Facebook', url: 'https://www.facebook.com/icpchue/', icon: Facebook, color: '#1877F2' },
+    { name: 'LinkedIn', url: 'https://www.linkedin.com/in/icpchue/', icon: Linkedin, color: '#0A66C2' },
+    { name: 'Instagram', url: 'https://www.instagram.com/icpchue/', icon: Instagram, color: '#E4405F' },
+    { name: 'X (Twitter)', url: 'https://x.com/ICPCHUE', icon: Twitter, color: '#FFFFFF' },
+    { name: 'TikTok', url: 'https://www.tiktok.com/@icpchue', icon: Music, color: '#00F2EA' },
+    { name: 'Telegram', url: 'https://t.me/ICPCHUE', icon: Send, color: '#26A5E4' },
+];
+
+/**
+ * NAVBAR COMPONENT
+ */
 export default function Navbar() {
     const [open, setOpen] = useState(false);
     const [socialOpen, setSocialOpen] = useState(false);
+
     const { language, toggleLanguage } = useLanguage();
     const { isAuthenticated } = useAuth();
+
+    const isAr = language === 'ar';
     const t = translations[language].nav;
 
-    const socialLinks = [
-        { name: 'Facebook', url: 'https://www.facebook.com/icpchue/', icon: Facebook },
-        { name: 'LinkedIn', url: 'https://www.linkedin.com/in/icpchue/', icon: Linkedin },
-        { name: 'Instagram', url: 'https://www.instagram.com/icpchue/', icon: Instagram },
-        { name: 'X (Twitter)', url: 'https://x.com/ICPCHUE', icon: Twitter },
-        { name: 'TikTok', url: 'https://www.tiktok.com/@icpchue', icon: Music },
-        { name: 'Telegram', url: 'https://t.me/ICPCHUE', icon: Send },
-    ];
+    useEffect(() => {
+        if (socialOpen) document.body.style.overflow = 'hidden';
+        else document.body.style.overflow = 'unset';
+    }, [socialOpen]);
+
+    // Handle Login Click - if user is not authenticated, redirect to login page is handled by Link wrapper or router
+    // But here we just use Link component for navigation.
+
+    const iconProps = {
+        size: 20,
+        strokeWidth: 1.5,
+        className: "transition-all duration-300"
+    };
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 w-full px-4 pt-4 md:px-6 md:pt-6">
+        <header className="fixed top-0 left-0 right-0 z-50 w-full px-4 pt-4 md:px-6 md:pt-6 font-sans antialiased">
             <div className="mx-auto max-w-7xl">
-                <div className="relative backdrop-blur-xl bg-black/40 border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-2 md:px-6 md:py-2.5">
-                        {/* Logo */}
-                        <Link href="/" className="flex items-center shrink-0 opacity-90 hover:opacity-100 transition-opacity">
-                            <Image
-                                src="/images/ui/navlogo.webp"
-                                alt="ICPC HUE Logo"
-                                width={180}
-                                height={60}
-                                className="h-8 w-auto md:h-10 object-contain"
-                                priority
-                            />
+                <div className={`relative backdrop-blur-3xl bg-black/40 border border-white/10 rounded-[24px] shadow-2xl transition-all duration-500 ${open ? 'rounded-b-none' : ''}`}>
+                    <div className="flex items-center justify-between px-5 py-3 md:px-8 md:py-4">
+
+                        {/* Logo Section */}
+                        <Link href="/" className="flex items-center gap-4 shrink-0 group cursor-pointer">
+                            <div className="relative w-10 h-10 drop-shadow-sm flex items-center justify-center">
+                                <Image
+                                    src="/icons/icon-512.png"
+                                    alt="ICPC HUE Logo"
+                                    width={40}
+                                    height={40}
+                                    className="object-contain" // Preserves aspect ratio
+                                    style={{ filter: 'drop-shadow(0 0 8px rgba(232, 193, 90, 0.3))' }}
+                                />
+                            </div>
+                            <div className="flex flex-col justify-center h-10">
+                                <span className="text-white font-black text-xl leading-none tracking-tight group-hover:text-[#E8C15A] transition-colors">ICPC HUE</span>
+                                <span className={`text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] leading-none mt-1.5 ${isAr ? 'text-right' : 'text-left'}`}>University of Hue</span>
+                            </div>
                         </Link>
 
-                        {/* Desktop Navigation */}
-                        <div className="hidden md:flex items-center gap-8" dir="ltr">
-                            {/* Links removed as per request */}
-
-                            <div className="flex items-center gap-3">
+                        {/* Desktop Actions */}
+                        <div className="hidden md:flex items-center gap-6" dir={isAr ? 'rtl' : 'ltr'}>
+                            <div className="flex items-center gap-2">
                                 <button
                                     onClick={toggleLanguage}
-                                    className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                                    title={language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
+                                    className="group relative flex items-center gap-2 px-4 py-2.5 rounded-2xl text-white/70 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/10"
                                 >
-                                    <Globe size={20} strokeWidth={2} />
+                                    <Languages {...iconProps} className="text-[#E8C15A]" />
+                                    <span className="text-sm font-bold tracking-wide">{t.switchLang}</span>
                                 </button>
 
                                 <button
                                     onClick={() => setSocialOpen(true)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                    className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold text-white/80 hover:text-white hover:bg-white/10 transition-all border border-white/5 hover:border-white/20"
                                 >
-                                    <Share2 size={18} strokeWidth={2} />
-                                    <span>{t.phone}</span>
+                                    <Share2 {...iconProps} size={18} />
+                                    <span>{t.socials}</span>
                                 </button>
 
+                                <div className="w-px h-8 bg-white/10 mx-3" />
+
                                 {isAuthenticated ? (
-                                    <Link
-                                        href="/dashboard"
-                                        className="flex items-center gap-2 bg-[#E8C15A] hover:bg-[#D4AF37] text-black px-4 py-2 rounded-lg font-bold text-sm transition-transform active:scale-95"
-                                    >
-                                        <User size={18} />
-                                        <span>Profile</span>
+                                    <Link href="/dashboard" className="flex items-center gap-2 bg-[#E8C15A] hover:bg-white hover:text-black text-black px-6 py-3 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-xl shadow-[#E8C15A]/10">
+                                        <User {...iconProps} size={18} strokeWidth={2} />
+                                        <span>{t.profile}</span>
                                     </Link>
                                 ) : (
                                     <Link
                                         href="/login"
-                                        className="bg-[#E8C15A] hover:bg-[#D4AF37] text-black px-5 py-2 rounded-lg font-bold text-sm transition-transform active:scale-95"
+                                        className="group flex items-center gap-2 bg-[#E8C15A] hover:bg-white text-black px-8 py-3 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-xl shadow-[#E8C15A]/10"
                                     >
-                                        Login
+                                        <span>{t.login}</span>
+                                        <ArrowUpRight size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                     </Link>
                                 )}
                             </div>
                         </div>
 
-                        {/* Mobile Actions */}
-                        <div className="flex md:hidden items-center gap-3">
-                            {/* Login/Profile visible on Mobile Header */}
-                            {isAuthenticated ? (
-                                <Link
-                                    href="/dashboard"
-                                    className="flex items-center gap-2 bg-[#E8C15A] text-black px-3 py-1.5 rounded-lg font-bold text-xs transition-transform active:scale-95"
-                                >
-                                    <User size={16} />
-                                    <span>Profile</span>
-                                </Link>
-                            ) : (
-                                <Link
-                                    href="/login"
-                                    className="bg-[#E8C15A] text-black px-4 py-1.5 rounded-lg font-bold text-xs transition-transform active:scale-95"
-                                >
-                                    Login
-                                </Link>
-                            )}
-
+                        {/* Mobile Menu Toggle */}
+                        <div className="flex md:hidden items-center">
                             <button
                                 onClick={() => setOpen(!open)}
-                                className="p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
-                                aria-label="Toggle menu"
+                                className={`p-3 rounded-2xl transition-all duration-300 ${open ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                             >
-                                {open ? <X size={24} /> : <Menu size={24} />}
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={open ? 'close' : 'open'}
+                                        initial={{ opacity: 0, rotate: -45 }}
+                                        animate={{ opacity: 1, rotate: 0 }}
+                                        exit={{ opacity: 0, rotate: 45 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        {open ? <X size={24} /> : <Menu size={24} />}
+                                    </motion.div>
+                                </AnimatePresence>
                             </button>
                         </div>
                     </div>
 
-                    {/* Mobile Menu */}
-                    {open && (
-                        <div className="md:hidden border-t border-white/10 bg-black/40 backdrop-blur-xl">
-                            <div className="px-4 py-4 space-y-2">
-                                <button
-                                    onClick={() => { toggleLanguage(); setOpen(false); }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors font-medium"
-                                >
-                                    <Globe size={18} />
-                                    <span>{language === 'en' ? 'Switch to Arabic' : 'Switch to English'}</span>
-                                </button>
+                    {/* Mobile Menu (Animated Dropdown) */}
+                    <AnimatePresence>
+                        {open && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="md:hidden border-t border-white/5 overflow-hidden bg-black/40 backdrop-blur-xl"
+                            >
+                                <div className="px-5 py-8 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            onClick={() => { toggleLanguage(); setOpen(false); }}
+                                            className="flex flex-col items-center justify-center gap-3 p-6 rounded-[24px] bg-white/5 border border-white/5 text-white/80 active:bg-[#E8C15A]/10 active:border-[#E8C15A]/30 transition-all"
+                                        >
+                                            <Languages size={24} className="text-[#E8C15A]" />
+                                            <span className="font-bold text-xs uppercase tracking-widest">{t.switchLang}</span>
+                                        </button>
+                                        <button
+                                            onClick={() => { setSocialOpen(true); setOpen(false); }}
+                                            className="flex flex-col items-center justify-center gap-3 p-6 rounded-[24px] bg-white/5 border border-white/5 text-white/80 active:bg-[#E8C15A]/10 active:border-[#E8C15A]/30 transition-all"
+                                        >
+                                            <Share2 size={24} className="text-[#E8C15A]" />
+                                            <span className="font-bold text-xs uppercase tracking-widest">{t.socialMedia}</span>
+                                        </button>
+                                    </div>
 
-                                <button
-                                    onClick={() => { setSocialOpen(true); setOpen(false); }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors font-medium"
-                                >
-                                    <Share2 size={18} strokeWidth={2} />
-                                    <span>Social Media</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                                    {isAuthenticated ? (
+                                        <Link
+                                            href="/dashboard"
+                                            className="w-full flex items-center justify-center gap-3 bg-[#E8C15A] text-black p-5 rounded-[24px] font-black uppercase tracking-tighter text-lg"
+                                        >
+                                            <User size={20} strokeWidth={2.5} />
+                                            {t.profile}
+                                        </Link>
+                                    ) : (
+                                        <Link
+                                            href="/login"
+                                            className="w-full flex items-center justify-center gap-3 bg-[#E8C15A] text-black p-5 rounded-[24px] font-black uppercase tracking-tighter text-lg"
+                                        >
+                                            <User size={20} strokeWidth={2.5} />
+                                            {t.login}
+                                        </Link>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
-            {/* Social Media Drawer */}
+            {/* Side Hub Overlay */}
             <AnimatePresence>
                 {socialOpen && (
-                    <motion.div
-                        className="fixed inset-0 z-[60]"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                    >
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSocialOpen(false)} />
+                    <>
                         <motion.div
-                            className="absolute right-0 top-0 h-full w-80 bg-[#121212] border-l border-white/10 shadow-2xl p-6 flex flex-col"
+                            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-2xl"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSocialOpen(false)}
+                        />
+                        <motion.div
+                            className={`fixed right-0 top-0 h-full w-[85vw] md:w-[30vw] bg-[#080808] z-[101] border-l border-white/5 shadow-[0_0_100px_rgba(0,0,0,1)] p-8 flex flex-col`}
                             initial={{ x: "100%" }}
                             animate={{ x: 0 }}
                             exit={{ x: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            transition={{ type: "spring", damping: 35, stiffness: 400 }}
+                            dir={isAr ? 'rtl' : 'ltr'}
                         >
-                            <div className="flex items-center justify-between mb-8">
-                                <h3 className="text-xl font-bold text-white">Connect With Us</h3>
-                                <button onClick={() => setSocialOpen(false)} className="p-2 text-white/50 hover:text-white transition-colors">
-                                    <X size={20} />
+                            <div className="flex items-center justify-between mb-12">
+                                <div className="space-y-2">
+                                    <h3 className="text-3xl font-black text-white tracking-tighter uppercase">{t.connect}</h3>
+                                    <p className="text-sm text-white/40 font-medium">{t.tagline}</p>
+                                </div>
+                                <button
+                                    onClick={() => setSocialOpen(false)}
+                                    className="p-4 rounded-full bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                                >
+                                    <X size={24} />
                                 </button>
                             </div>
 
-                            <div className="space-y-4 flex-1">
-                                {socialLinks.map((social) => {
+                            <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                {socialLinks.map((social, index) => {
                                     const Icon = social.icon;
                                     return (
-                                        <a
+                                        <motion.a
                                             key={social.name}
                                             href={social.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all group"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.05 }}
+                                            className="group flex items-center justify-between p-5 rounded-[24px] bg-white/[0.02] border border-white/5 hover:border-[#E8C15A]/40 hover:bg-[#E8C15A]/5 transition-all"
                                         >
-                                            <div className="p-2.5 rounded-lg bg-[#E8C15A]/10 text-[#E8C15A] group-hover:scale-110 transition-transform">
-                                                <Icon size={20} />
+                                            <div className="flex items-center gap-5">
+                                                <div
+                                                    className="p-3.5 rounded-2xl bg-white/5 group-hover:bg-[#E8C15A] transition-all duration-500"
+                                                    style={{ color: social.color }}
+                                                >
+                                                    <Icon size={24} strokeWidth={1.5} className="group-hover:text-black group-hover:scale-110 transition-transform" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-white text-lg tracking-tight leading-none group-hover:text-[#E8C15A] transition-colors">{social.name}</h4>
+                                                    <p className="text-xs text-white/30 font-bold mt-1.5 uppercase tracking-widest">{social.name === 'X (Twitter)' ? '@ICPCHUE' : 'ICPC HUE'}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="font-bold text-white">{social.name}</h4>
-                                                <p className="text-xs text-white/50">Follow on {social.name}</p>
+                                            <div className="p-2 rounded-full opacity-0 group-hover:opacity-100 group-hover:bg-white/10 transition-all -translate-x-4 group-hover:translate-x-0">
+                                                {isAr ? <ChevronRight size={20} className="rotate-180" /> : <ChevronRight size={20} />}
                                             </div>
-                                        </a>
+                                        </motion.a>
                                     );
                                 })}
                             </div>
 
-                            <p className="text-center text-xs text-white/30 mt-8">
-                                © 2026 ICPC HUE. All rights reserved. | Dev tg @yousefmsm1
-                            </p>
+                            <div className="mt-10 pt-10 border-t border-white/5 flex flex-col items-center gap-4">
+                                <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest text-center">
+                                    © 2026 Innovation Hub · ICPC Regionals
+                                </p>
+                            </div>
                         </motion.div>
-                    </motion.div>
+                    </>
                 )}
             </AnimatePresence>
+
+            <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(232, 193, 90, 0.1); border-radius: 20px; }
+        * { -webkit-tap-highlight-color: transparent; shape-rendering: geometricPrecision; }
+      `}</style>
         </header>
     );
 }

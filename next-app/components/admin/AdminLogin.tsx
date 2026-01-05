@@ -5,13 +5,14 @@ import { Lock, User, Key, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react
 
 interface AdminLoginProps {
     onLogin: () => void;
+    defaultToken?: string;
 }
 
-export default function AdminLogin({ onLogin }: AdminLoginProps) {
+export default function AdminLogin({ onLogin, defaultToken = '' }: AdminLoginProps) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [totp, setTotp] = useState('');
-    const [token, setToken] = useState('');
+    const [token, setToken] = useState(defaultToken);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -28,7 +29,8 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
             const res = await fetch('/api/admin/statistics/website', {
                 headers: {
                     'x-admin-token': token,
-                    'Authorization': `Basic ${credentials}`
+                    'Authorization': `Basic ${credentials}`,
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             });
 
@@ -70,6 +72,8 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Secret Token Field Removed - Handled via URL */}
+                    {/*
                     <div>
                         <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Secret Token</label>
                         <div className="relative">
@@ -84,6 +88,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
                             />
                         </div>
                     </div>
+                    */}
 
                     <div>
                         <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Username</label>

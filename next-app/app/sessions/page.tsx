@@ -16,9 +16,6 @@ function SessionLibraryContent() {
                         <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                         <span>Back to Home</span>
                     </Link>
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-xl font-bold bg-gradient-to-r from-[#d59928] to-[#e6b04a] bg-clip-text text-transparent">ICPC HUE</h1>
-                    </div>
                 </header>
 
                 {/* Hero Section */}

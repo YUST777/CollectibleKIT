@@ -777,11 +777,7 @@ a:active {
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   }
 
-  /* Brighten form container */
-  .min-h-screen.bg-black form {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-  }
+  /* Form styling is handled by parent card - no extra styling needed */
 }
 
 /* Improve error message visibility on mobile */

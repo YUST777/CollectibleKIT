@@ -313,8 +313,45 @@ function ApplicationFormContent() {
                         </h1>
                     </div>
 
+                    {/* Getting Started Guide */}
+                    <div className="mb-12 sm:mb-16">
+                        <h2 className="text-2xl font-bold text-white mb-6 text-center">Getting Started</h2>
+                        <p className="text-center text-white/60 max-w-2xl mx-auto mb-8">Follow this comprehensive guide to set up your account and access the training platform. The process involves three simple steps ensuring you get the correct access for your level.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Step 1 */}
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6 relative group hover:border-[#d59928]/50 transition-colors">
+                                <span className="absolute -top-4 -left-4 w-10 h-10 rounded-xl bg-[#d59928] flex items-center justify-center text-black font-bold text-xl shadow-lg rotate-3 group-hover:rotate-6 transition-transform">1</span>
+                                <h3 className="text-xl font-bold text-white mb-2 ml-2">Fill the Form</h3>
+                                <p className="text-sm text-white/60 mb-4 ml-2">Complete the initial application form below to apply for the training camp.</p>
+                                <a href="#application-form" className="inline-flex items-center text-sm font-bold text-[#d59928] hover:underline ml-2">
+                                    Start Below <ArrowRight className="w-4 h-4 ml-1" />
+                                </a>
+                            </div>
+
+                            {/* Step 2 */}
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6 relative group hover:border-[#d59928]/50 transition-colors">
+                                <span className="absolute -top-4 -left-4 w-10 h-10 rounded-xl bg-[#222] border border-white/20 text-white flex items-center justify-center font-bold text-xl shadow-lg -rotate-2 group-hover:-rotate-6 transition-transform">2</span>
+                                <h3 className="text-xl font-bold text-white mb-2 ml-2">Register Account</h3>
+                                <p className="text-sm text-white/60 mb-4 ml-2">Create your account on this platform using your approved details.</p>
+                                <Link href="/register" className="inline-flex items-center text-sm font-bold text-white hover:text-[#d59928] transition-colors ml-2">
+                                    Go to Register <ArrowRight className="w-4 h-4 ml-1" />
+                                </Link>
+                            </div>
+
+                            {/* Step 3 */}
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6 relative group hover:border-[#d59928]/50 transition-colors">
+                                <span className="absolute -top-4 -left-4 w-10 h-10 rounded-xl bg-[#222] border border-white/20 text-white flex items-center justify-center font-bold text-xl shadow-lg rotate-1 group-hover:rotate-3 transition-transform">3</span>
+                                <h3 className="text-xl font-bold text-white mb-2 ml-2">Login & Learn</h3>
+                                <p className="text-sm text-white/60 mb-4 ml-2">Access your dashboard, view sessions, and solve training sheets.</p>
+                                <Link href="/login" className="inline-flex items-center text-sm font-bold text-white hover:text-[#d59928] transition-colors ml-2">
+                                    Go to Login <ArrowRight className="w-4 h-4 ml-1" />
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Progress Bar */}
-                    <div className="mb-6 sm:mb-8 bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-white/20 relative">
+                    <div id="application-form" className="mb-6 sm:mb-8 bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-white/20 relative">
                         <div className={`absolute top-3 sm:top-4 ${language === 'ar' ? 'left-3 sm:left-4' : 'right-3 sm:right-4'}`}>
                             {applicationType === 'trainer' ? (
                                 <TrainerIcon className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12" color="#d59928" />

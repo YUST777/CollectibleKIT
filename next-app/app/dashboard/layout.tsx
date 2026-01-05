@@ -66,11 +66,19 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex min-h-screen bg-[#0B0B0C] text-[#DCDCDC] font-sans selection:bg-[#CFA144] selection:text-[#121212]">
             {/* Mobile Header */}
             <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#0B0B0C] border-b border-white/10 px-4 py-3 flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-2.5">
-                    <Image src="/icpchue-logo.webp" alt="ICPCHUE" width={40} height={40} className="w-10 h-10" />
-                    <div className="flex flex-col leading-tight">
-                        <span className="text-lg font-bold text-white">ICPCHUE</span>
-                        <span className="text-xs font-bold text-[#E8C15A]">Community</span>
+                <Link href="/" className="flex items-center gap-3">
+                    <div className="relative w-8 h-8 flex items-center justify-center">
+                        <Image
+                            src="/icons/icon-512.png"
+                            alt="ICPC HUE Logo"
+                            width={32}
+                            height={32}
+                            className="object-contain"
+                        />
+                    </div>
+                    <div className="flex flex-col justify-center">
+                        <span className="text-white font-black text-lg leading-none tracking-tight">ICPC HUE</span>
+                        <span className="text-[9px] text-white/40 font-bold uppercase tracking-[0.2em] leading-none mt-1">Community</span>
                     </div>
                 </Link>
                 <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-white/80 hover:text-white">
@@ -80,46 +88,38 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
             {/* Mobile Menu Overlay */}
             {mobileMenuOpen && (
-                <>
-                    <div className="fixed inset-0 z-40 bg-black/50 md:hidden backdrop-blur-[2px]" onClick={() => setMobileMenuOpen(false)} />
-                    <div className="fixed top-[60px] right-4 z-50 md:hidden w-56 bg-[#121212] border border-white/10 rounded-xl shadow-2xl p-2">
-                        <nav className="flex flex-col space-y-1">
-                            <button onClick={() => router.push('/')} className="flex items-center gap-3 p-3 rounded-lg text-[#A0A0A0] hover:bg-white/5 hover:text-[#F2F2F2] transition-colors w-full text-left">
-                                <Home size={18} /><span className="font-medium text-sm">Home Website</span>
-                            </button>
-                            <button onClick={() => handleNav('/dashboard/settings')} className="flex items-center gap-3 p-3 rounded-lg text-[#A0A0A0] hover:bg-white/5 hover:text-[#F2F2F2] transition-colors w-full text-left">
-                                <Settings size={18} /><span className="font-medium text-sm">Settings</span>
-                            </button>
-                            <div className="h-px bg-white/5 my-1" />
-                            <button onClick={handleLogout} className="flex items-center gap-3 p-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors w-full text-left">
-                                <LogOut size={18} /><span className="font-medium text-sm">Logout</span>
-                            </button>
+                <div className="md:hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}>
+                    <div className="absolute top-16 left-0 right-0 bg-[#0B0B0C] border-b border-white/10 p-4" onClick={e => e.stopPropagation()}>
+                        <nav className="space-y-2">
+                            <NavItem icon={<Home size={20} />} label="Home" onClick={() => { router.push('/'); setMobileMenuOpen(false); }} />
+                            <NavItem icon={<Settings size={20} />} label="Settings" active={activePage === 'Settings'} onClick={() => handleNav('/dashboard/settings')} />
+                            <div className="border-t border-white/10 pt-2 mt-2">
+                                <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors w-full">
+                                    <LogOut size={20} /><span className="text-sm font-medium">Logout</span>
+                                </button>
+                            </div>
                         </nav>
                     </div>
-                </>
-            )}
-
-            {/* Mobile Bottom Nav */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0B0B0C] border-t border-white/10 z-50 px-1 py-2">
-                <div className="flex justify-around items-center">
-                    <MobileNavItem icon={<LayoutDashboard size={20} />} label="Home" active={activePage === 'Dashboard'} onClick={() => handleNav('/dashboard')} />
-                    <MobileNavItem icon={<Code size={20} />} label="Profile" active={activePage === 'My Profile'} onClick={() => handleNav('/dashboard/profile')} />
-                    <MobileNavItem icon={<Play size={20} />} label="Sessions" active={activePage === 'Sessions'} onClick={() => handleNav('/dashboard/sessions')} />
-                    <MobileNavItem icon={<BookOpen size={20} />} label="Sheets" active={activePage === 'Training Sheets'} onClick={() => handleNav('/dashboard/sheets')} />
-                    <MobileNavItem icon={<Trophy size={20} />} label="Rank" active={activePage === 'Leaderboard'} onClick={() => handleNav('/dashboard/leaderboard')} />
-                    <MobileNavItem icon={<Bell size={20} />} label="News" active={activePage === 'Team News'} onClick={() => handleNav('/dashboard/news')} />
                 </div>
-            </nav>
+            )}
 
             {/* Desktop Sidebar */}
             <aside className="w-64 bg-[#0B0B0C] border-r border-white/10 flex-col justify-between shrink-0 fixed h-full z-10 overflow-y-auto hidden md:flex scrollbar-hide">
                 <div>
                     <div className="p-6 flex items-center justify-between">
-                        <Link href="/" className="flex items-center gap-3">
-                            <Image src="/icpchue-logo.webp" alt="ICPCHUE" width={48} height={48} className="w-12 h-12" />
-                            <div className="flex flex-col leading-tight">
-                                <span className="text-xl font-bold text-white tracking-wide">ICPCHUE</span>
-                                <span className="text-sm font-bold text-[#E8C15A] tracking-wide drop-shadow-[0_2px_10px_rgba(232,193,90,0.2)]">Community</span>
+                        <Link href="/" className="flex items-center gap-4 group">
+                            <div className="relative w-10 h-10 flex items-center justify-center">
+                                <Image
+                                    src="/icons/icon-512.png"
+                                    alt="ICPC HUE Logo"
+                                    width={40}
+                                    height={40}
+                                    className="object-contain transition-transform group-hover:scale-105"
+                                />
+                            </div>
+                            <div className="flex flex-col justify-center">
+                                <span className="text-white font-black text-xl leading-none tracking-tight group-hover:text-[#E8C15A] transition-colors">ICPC HUE</span>
+                                <span className="text-[10px] text-white/40 font-bold uppercase tracking-[0.3em] leading-none mt-1.5 group-hover:text-white/60 transition-colors">Community</span>
                             </div>
                         </Link>
                     </div>
@@ -151,6 +151,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     {children}
                 </div>
             </main>
+
+            {/* Mobile Bottom Navigation */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0B0B0C] border-t border-white/10 px-1 py-1 flex items-center justify-around safe-area-inset-bottom">
+                <MobileNavItem icon={<LayoutDashboard size={18} />} label="Dashboard" active={activePage === 'Dashboard'} onClick={() => handleNav('/dashboard')} />
+                <MobileNavItem icon={<Code size={18} />} label="Profile" active={activePage === 'My Profile'} onClick={() => handleNav('/dashboard/profile')} />
+                <MobileNavItem icon={<Play size={18} />} label="Sessions" active={activePage === 'Sessions'} onClick={() => handleNav('/dashboard/sessions')} />
+                <MobileNavItem icon={<BookOpen size={18} />} label="Sheets" active={activePage === 'Training Sheets'} onClick={() => handleNav('/dashboard/sheets')} />
+                <MobileNavItem icon={<Trophy size={18} />} label="Rank" active={activePage === 'Leaderboard'} onClick={() => handleNav('/dashboard/leaderboard')} />
+                <MobileNavItem icon={<Bell size={18} />} label="News" active={activePage === 'Team News'} onClick={() => handleNav('/dashboard/news')} />
+            </nav>
         </div>
     );
 }

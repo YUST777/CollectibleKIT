@@ -29,6 +29,26 @@ function RegisterContent() {
         }
     }, [isAuthenticated, router]);
 
+    // Smart email auto-complete: detects student IDs (7-8 digits) and appends @horus.edu.eg
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+
+        // If user is deleting or the value already contains @, don't interfere
+        if (value.includes('@') || value.length < email.length) {
+            setEmail(value);
+            return;
+        }
+
+        // Check if the value is purely 7 or 8 digits (Horus student ID pattern)
+        const digitsOnly = value.replace(/\D/g, '');
+        if (/^\d{7,8}$/.test(value) && (value.length === 7 || value.length === 8)) {
+            // Auto-append @horus.edu.eg
+            setEmail(value + '@horus.edu.eg');
+        } else {
+            setEmail(value);
+        }
+    };
+
     const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     const getPasswordStrength = (pwd: string) => {
@@ -127,7 +147,7 @@ function RegisterContent() {
         setError('');
 
         if (!password) { setError('Please enter a password'); return; }
-        if (password.length < 6) { setError('Password must be at least 6 characters long'); return; }
+        if (password.length < 8) { setError('Password must be at least 8 characters long'); return; }
         if (!confirmPassword) { setError('Please confirm your password'); return; }
         if (password !== confirmPassword) { setError('Passwords do not match. Please try again.'); return; }
 
@@ -241,7 +261,7 @@ function RegisterContent() {
                             <div>
                                 <label htmlFor="email" className="block text-sm font-medium text-white/80 mb-2">Email used in your application</label>
                                 <div className="relative">
-                                    <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" className="w-full px-4 py-3 pl-11 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d59928]/50 focus:border-[#d59928]/50 transition-all" required autoComplete="email" dir="ltr" />
+                                    <input id="email" type="email" value={email} onChange={handleEmailChange} placeholder="Enter your student ID" className="w-full px-4 py-3 pl-11 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d59928]/50 focus:border-[#d59928]/50 transition-all" required autoComplete="email" dir="ltr" />
                                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
                                 </div>
                                 <p className="text-white/40 text-xs mt-2">Must be the same email from your application form</p>
@@ -321,7 +341,7 @@ function RegisterContent() {
                                 {confirmPassword && !passwordsMatch && <p className="text-red-400 text-xs mt-1">Passwords do not match</p>}
                             </div>
 
-                            <button type="submit" disabled={loading || !password || !confirmPassword || !passwordsMatch || password.length < 6} className="w-full py-3 px-4 bg-[#d59928] hover:bg-[#c08820] text-black font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#d59928]/20">
+                            <button type="submit" disabled={loading || !password || !confirmPassword || !passwordsMatch || password.length < 8} className="w-full py-3 px-4 bg-[#d59928] hover:bg-[#c08820] text-black font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#d59928]/20">
                                 {loading ? <><Loader2 className="animate-spin" size={20} />Creating Account...</> : <><UserPlus size={20} />Create Account</>}
                             </button>
 

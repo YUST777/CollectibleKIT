@@ -1,5 +1,6 @@
-import { Terminal, Info, AlertTriangle, FileText, X, Check, Loader2 } from 'lucide-react';
+import { Terminal, Info, AlertTriangle, FileText, X, Check, Loader2, ArrowRight } from 'lucide-react';
 import React from 'react';
+import Link from 'next/link';
 
 // --- content components ---
 
@@ -619,39 +620,43 @@ export const camps: Camp[] = [
                 content: (
                     <div className="space-y-12 text-white/90">
                         <section className="space-y-6">
-                            <div className="grid md:grid-cols-2 gap-12 items-center">
-                                <div className="space-y-6">
-                                    <div className="space-y-4">
-                                        <h3 className="text-xl font-bold text-white">Getting Started</h3>
-                                        <p className="text-white/60 leading-relaxed">
-                                            Follow this comprehensive guide to set up your account and access the training platform.
-                                            The process involves three simple steps ensuring you get the correct access for your level.
-                                        </p>
-                                    </div>
+                            <div className="text-center mb-8">
+                                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">Getting Started Guide</h3>
+                                <p className="text-white/60 max-w-2xl mx-auto leading-relaxed">
+                                    Follow this comprehensive guide to set up your account and access the training platform.
+                                    The process involves three simple steps ensuring you get the correct access for your level.
+                                </p>
+                            </div>
 
-                                    <div className="space-y-4">
-                                        <div className="flex gap-4">
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#d59928]/10 flex items-center justify-center text-[#d59928] font-bold border border-[#d59928]/20">1</div>
-                                            <div>
-                                                <h4 className="font-bold text-white mb-1">Fill the Form</h4>
-                                                <p className="text-sm text-white/50">Complete the initial Google Form to apply for the training camp.</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-4">
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#d59928]/10 flex items-center justify-center text-[#d59928] font-bold border border-[#d59928]/20">2</div>
-                                            <div>
-                                                <h4 className="font-bold text-white mb-1">Register Account</h4>
-                                                <p className="text-sm text-white/50">Create your account on this platform using your approved details.</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-4">
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#d59928]/10 flex items-center justify-center text-[#d59928] font-bold border border-[#d59928]/20">3</div>
-                                            <div>
-                                                <h4 className="font-bold text-white mb-1">Login & Learn</h4>
-                                                <p className="text-sm text-white/50">Access your dashboard, view sessions, and solve training sheets.</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* Step 1 */}
+                                <div className="bg-[#111] border border-white/10 rounded-xl p-6 relative group hover:border-[#d59928]/50 transition-colors">
+                                    <span className="absolute -top-4 -left-4 w-10 h-10 rounded-xl bg-[#d59928] flex items-center justify-center text-black font-bold text-xl shadow-lg rotate-3 group-hover:rotate-6 transition-transform">1</span>
+                                    <h3 className="text-xl font-bold text-white mb-2 ml-2">Fill the Form</h3>
+                                    <p className="text-sm text-white/60 mb-4 ml-2">Complete the initial Google Form to apply for the training camp.</p>
+                                    <Link href="/apply" className="inline-flex items-center text-sm font-bold text-[#d59928] hover:underline ml-2">
+                                        Go to Apply <ArrowRight className="w-4 h-4 ml-1" />
+                                    </Link>
+                                </div>
+
+                                {/* Step 2 */}
+                                <div className="bg-[#111] border border-white/10 rounded-xl p-6 relative group hover:border-[#d59928]/50 transition-colors">
+                                    <span className="absolute -top-4 -left-4 w-10 h-10 rounded-xl bg-[#222] border border-white/20 text-white flex items-center justify-center font-bold text-xl shadow-lg -rotate-2 group-hover:-rotate-6 transition-transform">2</span>
+                                    <h3 className="text-xl font-bold text-white mb-2 ml-2">Register Account</h3>
+                                    <p className="text-sm text-white/60 mb-4 ml-2">Create your account on this platform using your approved details.</p>
+                                    <Link href="/register" className="inline-flex items-center text-sm font-bold text-white hover:text-[#d59928] transition-colors ml-2">
+                                        Go to Register <ArrowRight className="w-4 h-4 ml-1" />
+                                    </Link>
+                                </div>
+
+                                {/* Step 3 */}
+                                <div className="bg-[#111] border border-white/10 rounded-xl p-6 relative group hover:border-[#d59928]/50 transition-colors">
+                                    <span className="absolute -top-4 -left-4 w-10 h-10 rounded-xl bg-[#222] border border-white/20 text-white flex items-center justify-center font-bold text-xl shadow-lg rotate-1 group-hover:rotate-3 transition-transform">3</span>
+                                    <h3 className="text-xl font-bold text-white mb-2 ml-2">Login & Learn</h3>
+                                    <p className="text-sm text-white/60 mb-4 ml-2">Access your dashboard, view sessions, and solve training sheets.</p>
+                                    <Link href="/login" className="inline-flex items-center text-sm font-bold text-white hover:text-[#d59928] transition-colors ml-2">
+                                        Go to Login <ArrowRight className="w-4 h-4 ml-1" />
+                                    </Link>
                                 </div>
                             </div>
                         </section>

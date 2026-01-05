@@ -28,6 +28,25 @@ export default function Login() {
         }
     }, [isAuthenticated, authLoading, router]);
 
+    // Smart email auto-complete: detects student IDs (7-8 digits) and appends @horus.edu.eg
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+
+        // If user is deleting or the value already contains @, don't interfere
+        if (value.includes('@') || value.length < email.length) {
+            setEmail(value);
+            return;
+        }
+
+        // Check if the value is purely 7 or 8 digits (Horus student ID pattern)
+        if (/^\d{7,8}$/.test(value) && (value.length === 7 || value.length === 8)) {
+            // Auto-append @horus.edu.eg
+            setEmail(value + '@horus.edu.eg');
+        } else {
+            setEmail(value);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -98,8 +117,8 @@ export default function Login() {
                                 id="email"
                                 type="email"
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="your@email.com"
+                                onChange={handleEmailChange}
+                                placeholder="Enter your student ID"
                                 className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d59928]/50 focus:border-[#d59928]/50 transition-all"
                                 required
                                 dir="ltr"

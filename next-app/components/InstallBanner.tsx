@@ -82,7 +82,10 @@ export default function InstallBanner() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     {isIOS ? (
-                        <button className="flex items-center gap-1 px-3 py-1.5 bg-black text-[#E8C15A] rounded-lg text-xs font-bold">
+                        <button
+                            onClick={handleDismiss}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-black text-[#E8C15A] rounded-lg text-xs font-bold"
+                        >
                             <Share size={14} /> Share
                         </button>
                     ) : (

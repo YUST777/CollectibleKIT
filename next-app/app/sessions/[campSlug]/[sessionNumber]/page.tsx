@@ -97,7 +97,7 @@ function SessionContent() {
                         <span className="hidden sm:inline">Back to {camp.title}</span>
                     </Link>
                     <div className="font-bold text-lg">
-                        <span className="text-white/50 mr-2">{camp.title}</span>
+                        {/* <span className="text-white/50 mr-2">{camp.title}</span> */}
                         Session <span className="text-[#d59928]">{session.displayNumber || session.number}</span>
                     </div>
                     <div className="w-20"></div>

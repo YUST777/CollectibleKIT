@@ -6,10 +6,20 @@ export const translations = {
       contact: 'Join Now',
       phone: 'ICPC HUE',
       getQuote: 'Apply Now',
+      // New Navbar Keys
+      socials: 'Connect',
+      profile: 'Account',
+      login: 'Sign In',
+      switchLang: 'العربية',
+      connect: 'Social Network',
+      follow: 'Join our community on',
+      socialMedia: 'Connect',
+      tagline: 'Stay updated with the latest news.',
     },
     hero: {
       title: 'ICPC HUE — First ICPC Community in Horus University',
-      description: 'Welcome to ICPC HUE, the premier competitive programming community at Horus University. We provide a comprehensive ecosystem for students to master data structures, algorithms, and problem-solving skills. Access cutting-edge training sessions, curated study materials, and a collaborative environment designed to foster excellence. Whether you are a beginner looking to write your first line of code or an advanced programmer preparing for international collegiate programming contests, our structured roadmap guides you every step of the way. Join a vibrant network of peers and mentors dedicated to pushing the boundaries of what is possible in computer science and algorithmic thinking.',
+      description: 'Master data structures and algorithms with Horus University\'s premier competitive programming community. From beginner-friendly roadmaps to advanced contest simulations, we provide the complete ecosystem you need to excel.',
+      shortDescription: 'Master data structures and algorithms with Horus University\'s premier competitive programming community. From beginner friendly roadmaps to advanced contest simulations, we provide the ecosystem you need to excel.',
       requestQuote: 'Join Training',
       exploreSolutions: 'Explore Resources',
       stats: {
@@ -24,22 +34,22 @@ export const translations = {
         {
           tag: 'Training',
           title: 'Structured learning path',
-          description: 'Follow our comprehensive roadmap from beginner to expert with curated problems, tutorials, and video lessons.',
+          description: 'Follow our comprehensive roadmap from syntax to algorithms with curated problems and video lessons.',
         },
         {
           tag: 'Resources',
-          title: 'Complete learning materials',
-          description: 'Access our extensive library of PDFs, video episodes, code examples, and tutorials covering all competitive programming topics.',
+          title: 'Rich problem library',
+          description: 'Access hundreds of classified problems from Codeforces and LeetCode, filtered by difficulty and topic.',
         },
         {
           tag: 'Community',
-          title: 'Collaborative environment',
-          description: 'Join a supportive community of competitive programmers, share solutions, discuss strategies, and grow together.',
+          title: 'Active community',
+          description: 'Join weekly contests, discuss solutions, and grow with peers in a collaborative competitive environment.',
         },
         {
-          tag: 'Practice',
-          title: 'Real competition experience',
-          description: 'Participate in mock contests, solve problems from LeetCode and Codeforces, and prepare for actual ICPC competitions.',
+          tag: 'Tracking',
+          title: 'Progress tracking',
+          description: 'Visualize your improvement with detailed stats, rank changes, and solved problem history.',
         },
       ],
     },
@@ -49,7 +59,7 @@ export const translations = {
     services: {
       sectionTag: 'Our Resources',
       title: 'Resources built for competitive programming',
-      description: 'Our platform offers a diverse range of resources meticulously tailored for competitive programming enthusiasts. Dive into our extensive library of recorded sessions, interactive quizzes, and challenging problem sets sourced from top platforms like Codeforces and LeetCode. We believe in practical, hands-on learning, which is why our curriculum focuses on real-world application and contest simulations. From mastering basic syntax to tackling complex dynamic programming challenges, our resources are designed to accelerate your growth and prepare you for the rigors of the ICPC circuit.',
+      description: 'Access our extensive library of recorded sessions, interactive quizzes, and problem sets from Codeforces and LeetCode. Our practical, hands-on curriculum takes you from basic syntax to advanced dynamic programming, measuring progress with real contest simulations.',
       solutions: [
         {
           title: 'Session Library',
@@ -67,12 +77,12 @@ export const translations = {
     network: {
       sectionTag: 'Learning Path',
       title: 'Your journey to ICPC',
-      description: 'Embark on a clearly defined learning path that takes you from the fundamentals of programming to advanced algorithmic concepts. Our three-stage roadmap—Fundamentals, Problem Solving, and Competition Ready—ensures a logical progression of skills. Start with syntax and logic, move on to mastering sophisticated data structures, and finally, hone your competitive edge with mock contests and advanced strategy sessions. We track your progress and provide the guidance needed to ensure you are always moving forward towards your goal of becoming a top-tier competitive programmer.',
+      description: 'Our three-stage roadmap—Fundamentals, Problem Solving, and Competition Ready—ensures a logical progression from syntax to advanced algorithms, tracking your growth every step of the way.',
       stats: {
         countries: 'Topics',
         offices: 'Problems',
-        ports: 'Video Lessons',
-        team: 'Community Members',
+        ports: 'Videos',
+        team: 'Members',
       },
       regions: [
         { name: 'Fundamentals', hubs: ['Syntax & Logic', 'Data Structures', 'Basic Algorithms'] },
@@ -151,10 +161,20 @@ export const translations = {
       contact: 'انضم الآن',
       phone: 'ICPC HUE',
       getQuote: 'قدم الآن',
+      // New Navbar Keys
+      socials: 'تواصل',
+      profile: 'حسابي',
+      login: 'دخول',
+      switchLang: 'English',
+      connect: 'شبكتنا الاجتماعية',
+      follow: 'انضم لمجتمعنا على',
+      socialMedia: 'تواصل معنا',
+      tagline: 'ابق على اطلاع بآخر الأخبار.',
     },
     hero: {
       title: 'ICPC HUE — أول مجتمع ICPC في جامعة حورس',
       description: 'موارد البرمجة التنافسية، مواد التدريب، وأدوات التعاون الجماعي. انضم إلى برنامجنا التدريبي وكن جزءاً من أول مجتمع ICPC في جامعة حورس. هل أنت مستعد لرفع مهاراتك إلى المستوى التالي؟',
+      shortDescription: 'أتقن الخوارزميات وهياكل البيانات مع مجتمع البرمجة التنافسية الأول في جامعة حورس. من المبتدئين إلى المسابقات الدولية، نحن معك في كل خطوة.',
       requestQuote: 'انضم للتدريب',
       exploreSolutions: 'استكشف الموارد',
       stats: {

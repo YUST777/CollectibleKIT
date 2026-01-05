@@ -14,6 +14,25 @@ function ForgotPasswordContent() {
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
 
+    // Smart email auto-complete: detects student IDs (7-8 digits) and appends @horus.edu.eg
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+
+        // If user is deleting or the value already contains @, don't interfere
+        if (value.includes('@') || value.length < email.length) {
+            setEmail(value);
+            return;
+        }
+
+        // Check if the value is purely 7 or 8 digits (Horus student ID pattern)
+        if (/^\d{7,8}$/.test(value) && (value.length === 7 || value.length === 8)) {
+            // Auto-append @horus.edu.eg
+            setEmail(value + '@horus.edu.eg');
+        } else {
+            setEmail(value);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email) return;
@@ -76,7 +95,7 @@ function ForgotPasswordContent() {
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-white/80">Email Address</label>
                                 <div className="relative">
-                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d59928]/50 focus:border-[#d59928]/50 transition-all pl-10" placeholder="your@email.com" required dir="ltr" />
+                                    <input type="email" value={email} onChange={handleEmailChange} className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#d59928]/50 focus:border-[#d59928]/50 transition-all pl-10" placeholder="Enter your student ID" required dir="ltr" />
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                                 </div>
                             </div>
