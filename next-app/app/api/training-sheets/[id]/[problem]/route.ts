@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProblem, isProblemAvailable } from '@/lib/problems';
+import { query } from '@/lib/db';
 
 export async function GET(
     req: NextRequest,
@@ -20,6 +21,28 @@ export async function GET(
             }, { status: 400 });
         }
 
+        // Fetch sample test cases from database (for UI display)
+        const samplesResult = await query(
+            `SELECT input, expected_output as output FROM problem_test_cases
+             WHERE sheet_id = $1 AND problem_id = $2 AND is_sample = TRUE
+             ORDER BY ordinal ASC`,
+            [sheetId, problemId]
+        );
+
+        // Get total test count from DB
+        const countResult = await query(
+            `SELECT COUNT(*) as count FROM problem_test_cases
+             WHERE sheet_id = $1 AND problem_id = $2`,
+            [sheetId, problemId]
+        );
+
+        // Use DB samples if available, otherwise fallback to hardcoded examples
+        const examples = samplesResult.rows.length > 0
+            ? samplesResult.rows
+            : problem.examples;
+
+        const testCaseCount = parseInt(countResult.rows[0]?.count || '0') || problem.testCases.length;
+
         return NextResponse.json({
             success: true,
             problem: {
@@ -30,8 +53,8 @@ export async function GET(
                 statement: problem.statement,
                 inputFormat: problem.inputFormat,
                 outputFormat: problem.outputFormat,
-                examples: problem.examples,
-                testCaseCount: problem.testCases.length, // Only return count, NOT actual test cases
+                examples: examples,
+                testCaseCount: testCaseCount,
                 note: problem.note || null,
             }
         });

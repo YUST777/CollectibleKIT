@@ -72,13 +72,13 @@ function ApplicationFormContent() {
     const totalSteps = 3;
 
     useEffect(() => {
+        // Load reCAPTCHA silently in background - completely optional
         const siteKey = SITE_KEY;
-        if (!siteKey) {
-            console.error('NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set in environment variables');
+        if (siteKey) {
+            loadRecaptcha(siteKey).catch(() => {
+                // Silently ignore - reCAPTCHA is optional
+            });
         }
-        loadRecaptcha(siteKey).catch((error) => {
-            console.warn('reCAPTCHA loading warning:', error);
-        });
     }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

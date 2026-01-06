@@ -117,7 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 try {
                     // Add timeout to prevent infinite loading
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
                     const response = await fetch(`/api/auth/me?_v=${CACHE_VERSION}`, {
                         headers: {

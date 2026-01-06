@@ -163,41 +163,101 @@ export async function POST(req: NextRequest) {
         );
         const attemptNumber = parseInt(attemptResult.rows[0]?.count || '0') + 1;
 
-        // Run against all test cases
+        // Fetch test cases from Database (Migrated from file)
+        const testCasesResult = await query(
+            `SELECT input, expected_output as "expectedOutput" FROM problem_test_cases 
+             WHERE sheet_id = $1 AND problem_id = $2 
+             ORDER BY is_sample DESC, ordinal ASC`,
+            [sheetId, problemId]
+        );
+        const testCases = testCasesResult.rows;
+
+        // Fallback to file if DB empty (during transition) or if problem not in DB yet
+        if (testCases.length === 0 && problem.testCases) {
+            console.warn(`[Judge] Using fallback file test cases for ${sheetId}-${problemId}`);
+            testCases.push(...problem.testCases);
+        }
+
+        // ============================================
+        // BATCH SUBMISSION TO JUDGE0 (Optimized)
+        // ============================================
+
+        // Prepare batch submission payload
+        const batchPayload = {
+            submissions: testCases.map(tc => ({
+                source_code: Buffer.from(sourceCode).toString('base64'),
+                language_id: CPP_LANGUAGE_ID,
+                stdin: Buffer.from(tc.input).toString('base64'),
+                expected_output: Buffer.from(tc.expectedOutput).toString('base64'),
+                cpu_time_limit: problem.timeLimit / 1000,
+                memory_limit: problem.memoryLimit * 1024,
+            }))
+        };
+
+        // Submit batch (1 call instead of N)
+        const batchResponse = await fetch(`${JUDGE0_API_URL}/submissions/batch?base64_encoded=true`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(batchPayload),
+        });
+
+        if (!batchResponse.ok) {
+            const errorText = await batchResponse.text();
+            console.error('Judge0 Batch API error:', errorText);
+            return NextResponse.json({
+                error: 'Judge service temporarily unavailable',
+                details: process.env.NODE_ENV === 'development' ? errorText : undefined
+            }, { status: 503 });
+        }
+
+        const batchTokens = await batchResponse.json();
+
+        // Check for partial submission errors (individual test errors)
+        const validTokens = batchTokens.filter((t: any) => t.token);
+        if (validTokens.length === 0) {
+            console.error('Judge0 Batch: No valid submissions returned', batchTokens);
+            return NextResponse.json({
+                error: 'Failed to submit code for judging',
+            }, { status: 500 });
+        }
+
+        // Poll for results (wait for all to complete)
+        const tokenString = validTokens.map((t: any) => t.token).join(',');
+        let submissions: any[] = [];
+        let pollAttempts = 0;
+        const maxPollAttempts = 30; // 30 seconds max
+
+        while (pollAttempts < maxPollAttempts) {
+            await new Promise(r => setTimeout(r, 1000)); // 1 second delay
+            pollAttempts++;
+
+            const resultsResponse = await fetch(
+                `${JUDGE0_API_URL}/submissions/batch?tokens=${tokenString}&base64_encoded=true&fields=token,stdout,stderr,status_id,time,memory,compile_output`,
+                { headers: { 'Content-Type': 'application/json' } }
+            );
+
+            if (!resultsResponse.ok) {
+                console.error('Judge0 poll error:', await resultsResponse.text());
+                continue;
+            }
+
+            const pollData = await resultsResponse.json();
+            submissions = pollData.submissions || [];
+
+            // Check if all completed (status_id >= 3 means finished)
+            const allDone = submissions.every((s: any) => s.status_id >= 3);
+            if (allDone) break;
+        }
+
+        // Process results
         const results = [];
         let allPassed = true;
         let totalTimeMs = 0;
         let maxMemoryKb = 0;
 
-        for (let i = 0; i < problem.testCases.length; i++) {
-            const testCase = problem.testCases[i];
-
-            // Submit to self-hosted Judge0
-            const submission = await fetch(`${JUDGE0_API_URL}/submissions?base64_encoded=true&wait=true`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    source_code: Buffer.from(sourceCode).toString('base64'),
-                    language_id: CPP_LANGUAGE_ID,
-                    stdin: Buffer.from(testCase.input).toString('base64'),
-                    expected_output: Buffer.from(testCase.expectedOutput).toString('base64'),
-                    cpu_time_limit: problem.timeLimit / 1000,
-                    memory_limit: problem.memoryLimit * 1024,
-                }),
-            });
-
-            if (!submission.ok) {
-                const errorText = await submission.text();
-                console.error('Judge0 API error:', errorText);
-                return NextResponse.json({
-                    error: 'Judge service temporarily unavailable',
-                    details: process.env.NODE_ENV === 'development' ? errorText : undefined
-                }, { status: 503 });
-            }
-
-            const result = await submission.json();
+        for (let i = 0; i < submissions.length; i++) {
+            const result = submissions[i];
+            const testCase = testCases[i];
 
             // Decode outputs
             const stdout = result.stdout ? Buffer.from(result.stdout, 'base64').toString('utf-8').trim() : '';
@@ -212,9 +272,8 @@ export async function POST(req: NextRequest) {
             let verdict: string;
             let passed = false;
 
-            switch (result.status?.id) {
+            switch (result.status_id) {
                 case 3: // Accepted
-                    // Use new epsilon comparison logic
                     if (compareOutputs(testCase.expectedOutput, stdout)) {
                         verdict = 'Accepted';
                         passed = true;
@@ -249,7 +308,7 @@ export async function POST(req: NextRequest) {
                     allPassed = false;
                     break;
                 default:
-                    verdict = result.status?.description || 'Unknown';
+                    verdict = 'Unknown';
                     allPassed = false;
             }
 
@@ -259,13 +318,13 @@ export async function POST(req: NextRequest) {
                 passed,
                 time: result.time ? `${result.time}s` : null,
                 memory: result.memory ? `${Math.round(result.memory / 1024)}MB` : null,
-                output: stdout, // Include actual output for debugging
+                output: stdout,
                 ...(verdict === 'Compilation Error' && { compileError: compileOutput }),
                 ...(verdict === 'Runtime Error' && { runtimeError: stderr }),
             });
 
-            // Stop on first failure (like Codeforces)
-            if (!passed) break;
+            // For "stop on first failure" behavior, we still track but don't break
+            // since we already submitted all tests. Just mark allPassed = false.
         }
 
         // Final verdict
@@ -358,7 +417,7 @@ export async function POST(req: NextRequest) {
                     Math.round(totalTimeMs),
                     maxMemoryKb,
                     passedCount,
-                    problem.testCases.length,
+                    testCases.length,
                     compileError,
                     runtimeError,
                     ipAddress,
@@ -377,7 +436,7 @@ export async function POST(req: NextRequest) {
                 verdict: finalVerdict,
                 passed: allPassed,
                 testsPassed: passedCount,
-                totalTests: problem.testCases.length,
+                totalTests: testCases.length,
                 time: `${Math.round(totalTimeMs)}ms`,
                 memory: `${Math.round(maxMemoryKb)}KB`,
                 attemptNumber,
@@ -396,7 +455,7 @@ export async function POST(req: NextRequest) {
                 verdict: finalVerdict,
                 passed: allPassed,
                 testsPassed: passedCount,
-                totalTests: problem.testCases.length,
+                totalTests: testCases.length,
                 results,
                 warning: 'Submission not saved to history',
                 problem: {

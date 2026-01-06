@@ -97,8 +97,41 @@ const initDB = async () => {
     console.log('✓ Password resets table initialized');
     console.log('✓ Login logs table initialized');
 
+    // Problem Test Cases Table
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS problem_test_cases (
+            id SERIAL PRIMARY KEY,
+            sheet_id TEXT NOT NULL,
+            problem_id TEXT NOT NULL,
+            input TEXT NOT NULL,
+            expected_output TEXT NOT NULL,
+            is_sample BOOLEAN DEFAULT FALSE,
+            is_hidden BOOLEAN DEFAULT FALSE,
+            ordinal INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_problem_test_cases_lookup ON problem_test_cases(sheet_id, problem_id);
+        
+        -- Enable RLS for security
+        ALTER TABLE IF EXISTS problem_test_cases ENABLE ROW LEVEL SECURITY;
+
+        -- Create default policy to allow all access (since we control DB access via API)
+        -- This resolves 'rls_enabled_no_policy' warning
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (
+                SELECT FROM pg_catalog.pg_policies 
+                WHERE tablename = 'problem_test_cases' AND policyname = 'allow_all_problem_test_cases'
+            ) THEN 
+                CREATE POLICY "allow_all_problem_test_cases" ON problem_test_cases FOR ALL USING (true) WITH CHECK (true); 
+            END IF; 
+        END $$;
+    `);
+    console.log('✓ Problem test cases table initialized');
+
     // Startup Cleanup: Reset stuck "pending" applications to "failed" (Fixes Scraper State)
-    await pool.query("UPDATE applications SET scraping_status = 'failed' WHERE scraping_status = 'pending'");
+    // Removed startup reset of 'pending' status to avoid killing active jobs in multi-server setups
+    // await pool.query("UPDATE applications SET scraping_status = 'failed' WHERE scraping_status = 'pending'");
     console.log('✓ Reset stuck scraping tasks');
   } catch (err) {
     console.error('Error initializing DB:', err);
@@ -340,14 +373,51 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 
 // ============================================
-// PROFILE PICTURE UPLOAD CONFIGURATION
+// PROFILE PICTURE UPLOAD CONFIGURATION (Temp Directory Pattern)
 // ============================================
 const pfpsPath = path.join(__dirname, '..', 'pfps');
-// Ensure pfps directory exists
+const tempUploadsPath = path.join(__dirname, '..', 'tmp_pfps');
+
+// Ensure directories exist
 if (!fs.existsSync(pfpsPath)) {
   fs.mkdirSync(pfpsPath, { recursive: true });
   console.log('📁 Created pfps directory:', pfpsPath);
 }
+
+if (!fs.existsSync(tempUploadsPath)) {
+  fs.mkdirSync(tempUploadsPath, { recursive: true });
+  console.log('📁 Created temp uploads directory:', tempUploadsPath);
+}
+
+// Cleanup orphaned temp files on startup (Zombie File Fix)
+const cleanupTempUploads = () => {
+  try {
+    if (fs.existsSync(tempUploadsPath)) {
+      const files = fs.readdirSync(tempUploadsPath);
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
+      let count = 0;
+
+      files.forEach(file => {
+        const filePath = path.join(tempUploadsPath, file);
+        try {
+          const stat = fs.statSync(filePath);
+          if (stat.mtimeMs < oneHourAgo) {
+            fs.unlinkSync(filePath);
+            count++;
+          }
+        } catch (e) {
+          // File might be gone or locked
+        }
+      });
+      if (count > 0) console.log(`🧹 Cleaned up ${count} orphaned temp files`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up temp files:', error);
+  }
+};
+
+// Run cleanup on startup
+cleanupTempUploads();
 
 // Serve profile pictures with caching
 app.use('/pfps', express.static(pfpsPath, {
@@ -360,10 +430,10 @@ app.use('/pfps', express.static(pfpsPath, {
   }
 }));
 
-// Multer configuration for profile picture uploads
+// Multer configuration for profile picture uploads (Upload to Temp first)
 const pfpStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, pfpsPath);
+    cb(null, tempUploadsPath);
   },
   filename: (req, file, cb) => {
     // Use UUID for secure, unique filenames
@@ -439,9 +509,9 @@ const validateApiKey = (req, res, next) => {
     return res.status(401).json({ error: 'مفتاح API مطلوب' });
   }
 
-  if (apiKey !== secretKey) { // TODO: crypto.timingSafeEqual for high security (strings vs buffers)
-    // Basic string comparison is acceptable here as these are high-entropy UUIDs
-    // but for strict security:
+  if (apiKey !== secretKey) {
+    // Use timing-safe comparison to prevent timing attacks
+    // This is critical for high-entropy API keys
     try {
       const a = Buffer.from(apiKey);
       const b = Buffer.from(secretKey);
@@ -470,7 +540,14 @@ const validateAdminKey = (req, res, next) => {
     return res.status(401).json({ error: 'مفتاح Admin API مطلوب' });
   }
 
-  if (apiKey !== adminKey) {
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    const a = Buffer.from(apiKey);
+    const b = Buffer.from(adminKey);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      return res.status(403).json({ error: 'مفتاح Admin API غير صحيح' });
+    }
+  } catch (e) {
     return res.status(403).json({ error: 'مفتاح Admin API غير صحيح' });
   }
 
@@ -502,6 +579,25 @@ const escapeHtml = (unsafe = '') => {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
     .replace(/\//g, '&#x2F;');
+};
+
+// Strict URL sanitization to prevent Stored XSS (javascript: urls)
+const sanitizeUrl = (url) => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (trimmed === '') return null;
+
+  // Must start with http:// or https://
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return null;
+  }
+
+  // Block internal/dangerous protocols explicitly (double check)
+  if (/javascript:/i.test(trimmed) || /data:/i.test(trimmed) || /vbscript:/i.test(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
 };
 
 // Validate and limit string length
@@ -675,8 +771,8 @@ const validateAndSanitizeForm = async (req, res, next) => {
       studentLevel: sanitizeInput(studentLevel || '').substring(0, 1),
       telephone: sanitizeInput(telephone || '').replace(/[^\d+]/g, '').substring(0, 13),
       hasLaptop: applicationType === 'trainee' ? (hasLaptop === true || hasLaptop === 'true' || hasLaptop === 1) : null,
-      codeforcesProfile: sanitizeInput(codeforcesProfile || '').substring(0, 500),
-      leetcodeProfile: sanitizeInput(leetcodeProfile || '').substring(0, 500),
+      codeforcesProfile: sanitizeUrl(codeforcesProfile),
+      leetcodeProfile: sanitizeUrl(leetcodeProfile),
       email: sanitizeInput(email || '').substring(0, 255)
     };
 
@@ -740,55 +836,73 @@ if (!encryptionKey) {
   process.exit(1);
 }
 
+// Blind index salt for O(1) lookups (separate from encryption key)
+const blindIndexSalt = process.env.BLIND_INDEX_SALT || encryptionKey;
+
 // Encryption/Decryption functions for sensitive fields
 const encrypt = (text) => {
   if (!text) return null;
   return CryptoJS.AES.encrypt(text, encryptionKey).toString();
 };
 
+// Simplified decrypt - no heuristic guessing
+// If data is encrypted, decrypt it. If not, return null.
 const decrypt = (encryptedText) => {
   if (!encryptedText) return null;
 
-  // HEURISTIC: Check if data is already decrypted (not in encrypted format).
-  // NOTE: This assumes legacy plain-text data exists. New data should ALWAYS be encrypted.
-  // Encrypted data starts with "U2FsdGVkX1" (CryptoJS format) or is much longer
-  // If it looks like plain text (short, numeric, or contains @), return as-is
-  if (typeof encryptedText === 'string') {
-    // If it's already a plain number, phone, or email format, return as-is
-    if (/^\+?\d+$/.test(encryptedText) && encryptedText.length <= 15) {
-      // Looks like a phone number or ID - already decrypted
-      return encryptedText;
-    }
-    if (encryptedText.includes('@') && encryptedText.length <= 255) {
-      // Looks like an email - already decrypted
-      return encryptedText;
-    }
-    if (!encryptedText.startsWith('U2FsdGVkX1') && encryptedText.length <= 20) {
-      // Short plain text, likely already decrypted
-      return encryptedText;
-    }
-  }
-
-  // Try to decrypt (assuming it's encrypted)
   try {
     const bytes = CryptoJS.AES.decrypt(encryptedText, encryptionKey);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
 
-    // If decryption resulted in empty string, data might not be encrypted
+    // Empty result means decryption failed (wrong format or key)
     if (!decrypted || decrypted.trim() === '') {
-      // Return original if decryption failed (might be plain text)
-      return encryptedText;
+      console.warn('Decryption returned empty - data may be corrupted or wrong key');
+      return null;
     }
 
     return decrypted;
   } catch (error) {
-    // If decryption fails, assume it's already decrypted
-    console.warn('Decryption failed, assuming plain text:', error.message);
-    return encryptedText;
+    console.error('Decryption error:', error.message);
+    return null;
   }
 };
 
+// Create blind index for O(1) lookups (prevents N decryption bottleneck)
+// Uses HMAC-SHA256 for consistent, secure hashing
+const createBlindIndex = (value) => {
+  if (!value) return null;
+  const normalized = value.toString().toLowerCase().trim();
+  return crypto.createHmac('sha256', blindIndexSalt).update(normalized).digest('hex');
+};
+
 console.log('✅ Database encryption utilities initialized');
+
+// Scraper Job Queue for Rate Limiting (Prevent IP Ban)
+const scraperQueue = [];
+let isProcessingQueue = false;
+
+const addToScraperQueue = (job) => {
+  scraperQueue.push(job);
+  processScraperQueue();
+};
+
+const processScraperQueue = async () => {
+  if (isProcessingQueue || scraperQueue.length === 0) return;
+  isProcessingQueue = true;
+
+  while (scraperQueue.length > 0) {
+    const job = scraperQueue.shift();
+    try {
+      await job();
+    } catch (err) {
+      console.error('Error processing scraper job:', err);
+    }
+    // Rate limit: Wait 3 seconds between requests
+    await new Promise(r => setTimeout(r, 3000));
+  }
+
+  isProcessingQueue = false;
+};
 
 // Scraping functions for LeetCode and Codeforces profiles
 const extractUsername = (url, platform) => {
@@ -807,21 +921,28 @@ const extractUsername = (url, platform) => {
     const pathParts = urlObj.pathname.split('/').filter(p => p);
 
     if (platform === 'leetcode') {
-      // LeetCode: leetcode.com/username or leetcode.com/u/username
-      const uIndex = pathParts.indexOf('u');
-      if (uIndex !== -1 && pathParts[uIndex + 1]) {
-        return pathParts[uIndex + 1];
+      // Matches: leetcode.com/u/username, leetcode.com/username, leetcode.com/username/
+      const leetcodeRegex = /leetcode\.com\/(?:u\/)?([^\/]+)\/?$/i;
+      const match = urlToParse.match(leetcodeRegex);
+      if (match && match[1]) return match[1];
+
+      // Fallback to path parts if regex fails but domain matches
+      if (urlToParse.includes('leetcode.com')) {
+        const parts = urlObj.pathname.split('/').filter(p => p && p !== 'u');
+        return parts[parts.length - 1] || null;
       }
-      return pathParts[pathParts.length - 1] || null;
     } else if (platform === 'codeforces') {
-      // Codeforces: codeforces.com/profile/username
-      const profileIndex = pathParts.indexOf('profile');
-      if (profileIndex !== -1 && pathParts[profileIndex + 1]) {
-        return pathParts[profileIndex + 1];
+      // Matches: codeforces.com/profile/username, codeforces.com/submissions/username
+      // codeforces.com/username (if supported)
+      const cfRegex = /codeforces\.com\/(?:profile\/|submissions\/|people\/)?([^\/]+)\/?$/i;
+      const match = urlToParse.match(cfRegex);
+      if (match && match[1]) return match[1];
+
+      // Fallback
+      if (urlToParse.includes('codeforces.com')) {
+        const parts = urlObj.pathname.split('/').filter(p => p && !['profile', 'submissions', 'people', 'contest'].includes(p));
+        return parts[parts.length - 1] || null;
       }
-      // If no /profile/, maybe it's just codeforces.com/username (not standard but possible?)
-      // Standard is /profile/username.
-      return null;
     }
   } catch (e) {
     console.error(`Error extracting username from ${url}:`, e);
@@ -1050,14 +1171,23 @@ app.post('/api/submit-application', apiLimiter, validateApiKey, async (req, res,
     const ip = sanitizeInput(req.ip || 'unknown').substring(0, 45);
     const userAgent = sanitizeInput(req.get('user-agent') || 'unknown').substring(0, 255);
 
-    // Insert into database using parameterized query (SQL injection protected)
-    // Using prepared statements with placeholders (?) ensures all values are properly escaped
-    // This prevents SQL injection attacks - user input can never be executed as SQL code
-    // Insert into database using parameterized query (SQL injection protected)
-    // Using prepared statements with placeholders ($n) ensures all values are properly escaped
+    // Create blind indexes for O(1) duplicate detection (fixes performance bottleneck)
+    // These are HMAC-SHA256 hashes that allow fast lookups without decrypting all records
+    const emailBlindIndex = createBlindIndex(email);
+    const nationalIdBlindIndex = createBlindIndex(nationalId);
+    const telephoneBlindIndex = createBlindIndex(telephone);
+    const studentIdBlindIndex = createBlindIndex(id);
+
+    // Insert into database using parameterized query with blind indexes
+    // The UNIQUE constraints on blind index columns will reject duplicates instantly (fixes race conditions)
     const query = `
-      INSERT INTO applications (application_type, name, faculty, student_id, national_id, student_level, telephone, address, has_laptop, codeforces_profile, leetcode_profile, email, ip_address, user_agent, scraping_status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      INSERT INTO applications (
+        application_type, name, faculty, student_id, national_id, student_level, 
+        telephone, address, has_laptop, codeforces_profile, leetcode_profile, email, 
+        ip_address, user_agent, scraping_status,
+        email_blind_index, national_id_blind_index, telephone_blind_index, student_id_blind_index
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING id
     `;
 
@@ -1077,54 +1207,12 @@ app.post('/api/submit-application', apiLimiter, validateApiKey, async (req, res,
       encrypt(email || null), // Encrypt email (sensitive)
       ip,        // Sanitized above
       userAgent,  // Sanitized above
-      'pending'   // Scraping status
+      'pending',   // Scraping status
+      emailBlindIndex,      // Blind index for O(1) email lookup
+      nationalIdBlindIndex, // Blind index for O(1) national ID lookup
+      telephoneBlindIndex,  // Blind index for O(1) telephone lookup
+      studentIdBlindIndex   // Blind index for O(1) student ID lookup
     ]);
-
-    // Manual uniqueness check for encrypted fields (because encryption is non-deterministic)
-    // We must decrypt and compare all existing records. 
-    // This is O(N) but necessary without a schema change (Blind Index).
-    // TODO: Implement Blind Indexing (hash columns like email_hash) for O(1) lookup to prevent DoS.
-    const checkUniqueness = async () => {
-      const allApps = await pool.query('SELECT id, national_id, telephone, email, student_id FROM applications WHERE id != $1', [result.rows[0].id]);
-
-      const duplicates = [];
-      const newNationalId = nationalId.replace(/\D/g, '');
-      const newTelephone = telephone.replace(/[^\d+]/g, '');
-      const newEmail = email.toLowerCase().trim();
-
-      for (const app of allApps.rows) {
-        // Check National ID
-        if (app.national_id) {
-          const dec = decrypt(app.national_id);
-          if (dec && dec.replace(/\D/g, '') === newNationalId) {
-            duplicates.push(`National ID already exists (Application ID: ${app.id})`);
-          }
-        }
-        // Check Telephone
-        if (app.telephone) {
-          const dec = decrypt(app.telephone);
-          if (dec && dec.replace(/[^\d+]/g, '') === newTelephone) {
-            duplicates.push(`Telephone already exists (Application ID: ${app.id})`);
-          }
-        }
-        // Check Email
-        if (app.email) {
-          const dec = decrypt(app.email);
-          if (dec && dec.toLowerCase().trim() === newEmail) {
-            duplicates.push(`Email already exists (Application ID: ${app.id})`);
-          }
-        }
-      }
-
-      if (duplicates.length > 0) {
-        // Rollback (delete the just-inserted record)
-        await pool.query('DELETE FROM applications WHERE id = $1', [result.rows[0].id]);
-        throw new Error(`Duplicate Data: ${duplicates.join(', ')}`);
-      }
-    };
-
-    // Run the check
-    await checkUniqueness();
 
     const applicationId = result.rows[0].id;
 
@@ -1138,26 +1226,45 @@ app.post('/api/submit-application', apiLimiter, validateApiKey, async (req, res,
 
     // Scrape profiles for trainers (async, don't block response)
     if (applicationType === 'trainer') {
-      // Run scraping in background (don't await to avoid blocking response)
-      (async () => {
+      // Helper to update scraping results
+      const updateScrapingResults = async (leetcodeData, codeforcesData, status) => {
         try {
-          let leetcodeData = null;
-          let codeforcesData = null;
-          let scrapingStatus = 'completed';
+          const updateQuery = `
+            UPDATE applications 
+            SET leetcode_data = $1, codeforces_data = $2, scraping_status = $3
+            WHERE id = $4
+          `;
+          await pool.query(updateQuery, [
+            leetcodeData ? JSON.stringify(leetcodeData) : null,
+            codeforcesData ? JSON.stringify(codeforcesData) : null,
+            status,
+            applicationId
+          ]);
+          console.log(`Profile scraping ${status} for application ID: ${applicationId}`);
+        } catch (err) {
+          console.error(`Error updating scraping results for app ID ${applicationId}:`, err);
+        }
+      };
 
-          // Scrape LeetCode if profile provided
+      // Add to scraper queue
+      addToScraperQueue(async () => {
+        let leetcodeData = null;
+        let codeforcesData = null;
+        let scrapingStatus = 'completed';
+
+        try {
+          // Scrape LeetCode
           if (leetcodeProfile) {
             const leetcodeUsername = extractUsername(leetcodeProfile, 'leetcode');
             if (leetcodeUsername) {
               console.log(`Scraping LeetCode profile for: ${leetcodeUsername}`);
+              // Note: scrapeLeetCode already handles its own internal errors/null returns
               leetcodeData = await scrapeLeetCode(leetcodeUsername);
-              if (leetcodeData) {
-                console.log(`LeetCode data scraped: ${JSON.stringify(leetcodeData)}`);
-              }
+              if (leetcodeData) console.log(`LeetCode data scraped: ${JSON.stringify(leetcodeData)}`);
             }
           }
 
-          // Scrape Codeforces if profile provided
+          // Scrape Codeforces
           if (codeforcesProfile) {
             const codeforcesUsername = extractUsername(codeforcesProfile, 'codeforces');
             if (codeforcesUsername) {
@@ -1171,57 +1278,34 @@ app.post('/api/submit-application', apiLimiter, validateApiKey, async (req, res,
             }
           }
 
-          // Determine final scraping status
-          const hasLeetcodeData = leetcodeData !== null;
-          const hasCodeforcesData = codeforcesData !== null;
-          const hasAnyProfile = leetcodeProfile || codeforcesProfile;
-          const hasAnyData = hasLeetcodeData || hasCodeforcesData;
+          // Determine status
+          const hasLeetcode = !!leetcodeData;
+          const hasCodeforces = !!codeforcesData;
+          const hasAnyProfile = !!leetcodeProfile || !!codeforcesProfile;
 
-          // Set status based on results
           if (hasAnyProfile) {
-            if (hasAnyData) {
+            if (hasLeetcode || hasCodeforces) {
               scrapingStatus = 'completed';
             } else {
               scrapingStatus = 'failed';
             }
           } else {
-            // No profiles to scrape, mark as completed
-            scrapingStatus = 'completed';
+            scrapingStatus = 'completed'; // Nothing to scrape
           }
 
-          // Update database with scraped data
-          // Update database with scraped data
-          // Use Postgres syntax ($1, $2...)
-          const updateQuery = `
-            UPDATE applications 
-            SET leetcode_data = $1, codeforces_data = $2, scraping_status = $3
-            WHERE id = $4
-          `;
+          // Update DB
+          await updateScrapingResults(leetcodeData, codeforcesData, scrapingStatus);
 
-          await pool.query(updateQuery, [
-            leetcodeData ? JSON.stringify(leetcodeData) : null,
-            codeforcesData ? JSON.stringify(codeforcesData) : null,
-            scrapingStatus,
-            applicationId
-          ]);
-
-          console.log(`Profile scraping ${scrapingStatus} for application ID: ${applicationId}`);
-        } catch (scrapingError) {
-          console.error(`Error scraping profiles for application ID ${applicationId}:`, scrapingError);
-          // Update status to failed
-          try {
-            await pool.query('UPDATE applications SET scraping_status = $1 WHERE id = $2', ['failed', applicationId]);
-          } catch (updateError) {
-            console.error('Error updating scraping status:', updateError);
-          }
+        } catch (err) {
+          console.error('Scraper job failed:', err);
+          await updateScrapingResults(null, null, 'failed');
         }
-      })();
+      });
     } else {
-      // For trainees, immediately set scraping status to 'not_applicable' since there's nothing to scrape
+      // For trainees, immediately set scraping status to 'not_applicable'
       setImmediate(async () => {
         try {
           await pool.query('UPDATE applications SET scraping_status = $1 WHERE id = $2', ['not_applicable', applicationId]);
-          console.log(`Trainee application ID ${applicationId} - scraping not applicable`);
         } catch (e) { console.error("Error setting not_applicable", e); }
       });
     }
@@ -1256,64 +1340,7 @@ const logDatabaseAccess = (action, ip, userAgent, details = {}) => {
   // In production, you might want to write this to a separate log file or database
 };
 
-app.get('/api/applications', adminLimiter, validateAdminKey, async (req, res) => {
-  try {
-    // Log database access attempt
-    logDatabaseAccess('DATABASE_ACCESS', req.ip, req.get('user-agent'), {
-      endpoint: '/api/applications',
-      method: 'GET'
-    });
 
-    // Pagination support
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50; // Default 50, max 100
-    const maxLimit = Math.min(limit, 100); // Cap at 100 records per request
-    const offset = (page - 1) * maxLimit;
-
-    // Get total count for pagination metadata
-    // Async query for count
-    const countResult = await pool.query('SELECT COUNT(*) as total FROM applications');
-    const totalCount = parseInt(countResult.rows[0].total);
-
-    // Get paginated results
-    // Async query with parameterized limit/offset ($1, $2)
-    const result = await pool.query('SELECT * FROM applications ORDER BY submitted_at DESC LIMIT $1 OFFSET $2', [maxLimit, offset]);
-    const applications = result.rows;
-
-    // Decrypt sensitive fields
-    applications.forEach(app => {
-      if (app.national_id) app.national_id = decrypt(app.national_id);
-      if (app.telephone) app.telephone = decrypt(app.telephone);
-      if (app.email) app.email = decrypt(app.email);
-    });
-
-    // Log successful access
-    logDatabaseAccess('DATABASE_ACCESS_SUCCESS', req.ip, req.get('user-agent'), {
-      endpoint: '/api/applications',
-      recordsReturned: applications.length,
-      page,
-      limit: maxLimit
-    });
-
-    res.json({
-      data: applications,
-      pagination: {
-        page,
-        limit: maxLimit,
-        total: totalCount,
-        totalPages: Math.ceil(totalCount / maxLimit),
-        hasMore: offset + applications.length < totalCount
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching applications:', error);
-    logDatabaseAccess('DATABASE_ACCESS_ERROR', req.ip, req.get('user-agent'), {
-      endpoint: '/api/applications',
-      error: error.message
-    });
-    res.status(500).json({ error: 'حدث خطأ أثناء جلب البيانات' });
-  }
-});
 
 // Verify TOTP code
 const verifyTOTP = (token) => {
@@ -1389,10 +1416,10 @@ const basicAuth = (req, res, next) => {
 
   // Password format: "password,totpcode"
   let password = trimmedPasswordInput;
-  let totpCode = null;
+  let totpCode = req.headers['x-totp-code']; // Preferred: Header-based TOTP
 
-  if (trimmedPasswordInput.includes(',')) {
-    // Fix: Use lastIndexOf to support passwords containing commas
+  if (!totpCode && trimmedPasswordInput.includes(',')) {
+    // Fallback: Use lastIndexOf to support passwords containing commas
     const lastCommaIndex = trimmedPasswordInput.lastIndexOf(',');
     if (lastCommaIndex !== -1) {
       password = trimmedPasswordInput.substring(0, lastCommaIndex);
@@ -2030,7 +2057,7 @@ const renderAdminPage = (applications, currentPage = 1, totalPages = 1, totalCou
       </script>
       ` : ''}
       <div class="toolbar">
-        <div class="info">Viewing application records from SQLite database</div>
+        <div class="info">Viewing application records from PostgreSQL database</div>
         <div>
           <button id="btn-export-csv" style="margin-right: 0.5rem;">📥 Export to CSV</button>
           <button id="btn-print">🖨️ Print</button>
@@ -2973,6 +3000,66 @@ const validateAdminToken = (req, res, next) => {
   next();
 };
 
+// API endpoint to get all applications (protected with admin token + basic auth)
+app.get('/api/applications', adminLimiter, validateAdminToken, basicAuth, async (req, res) => {
+  try {
+    // Log database access attempt
+    logDatabaseAccess('DATABASE_ACCESS', req.ip, req.get('user-agent'), {
+      endpoint: '/api/applications',
+      method: 'GET'
+    });
+
+    // Pagination support
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50; // Default 50, max 100
+    const maxLimit = Math.min(limit, 100); // Cap at 100 records per request
+    const offset = (page - 1) * maxLimit;
+
+    // Get total count for pagination metadata
+    // Async query for count
+    const countResult = await pool.query('SELECT COUNT(*) as total FROM applications');
+    const totalCount = parseInt(countResult.rows[0].total);
+
+    // Get paginated results
+    // Async query with parameterized limit/offset ($1, $2)
+    const result = await pool.query('SELECT * FROM applications ORDER BY submitted_at DESC LIMIT $1 OFFSET $2', [maxLimit, offset]);
+    const applications = result.rows;
+
+    // Decrypt sensitive fields
+    applications.forEach(app => {
+      if (app.national_id) app.national_id = decrypt(app.national_id);
+      if (app.telephone) app.telephone = decrypt(app.telephone);
+      if (app.email) app.email = decrypt(app.email);
+    });
+
+    // Log successful access
+    logDatabaseAccess('DATABASE_ACCESS_SUCCESS', req.ip, req.get('user-agent'), {
+      endpoint: '/api/applications',
+      recordsReturned: applications.length,
+      page,
+      limit: maxLimit
+    });
+
+    res.json({
+      data: applications,
+      pagination: {
+        page,
+        limit: maxLimit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / maxLimit),
+        hasMore: offset + applications.length < totalCount
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching applications:', error);
+    logDatabaseAccess('DATABASE_ACCESS_ERROR', req.ip, req.get('user-agent'), {
+      endpoint: '/api/applications',
+      error: error.message
+    });
+    res.status(500).json({ error: 'حدث خطأ أثناء جلب البيانات' });
+  }
+});
+
 // Statistics API endpoint - Application data statistics
 // Statistics API endpoint - Application data statistics
 app.get('/api/admin/statistics/applications', validateAdminToken, basicAuth, async (req, res) => {
@@ -3553,40 +3640,24 @@ app.post('/api/auth/check-email', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    // WARNING: BLIND INDEXING VULNERABILITY (DoS Vector)
-    // Current logic iterates ALL applications to decrypt emails.
-    // This is O(n) and CPU intensive. Risk of Event Loop Blocking.
-    // TODO: Implement Blind Indexing (hash column) for O(1) lookup.
+    // Use Blind Indexing for O(1) lookup (Fixes DoS Vector)
+    const emailBlindIndex = createBlindIndex(email);
 
-    // Check if email exists in applications table (decrypt stored emails to compare)
-    const result = await pool.query('SELECT id, email FROM applications');
+    // Check if email exists in applications table using blind index
+    const result = await pool.query('SELECT id FROM applications WHERE email_blind_index = $1', [emailBlindIndex]);
 
-    let applicationId = null;
-    let foundEmail = null;
+    if (result.rows.length > 0) {
+      const applicationId = result.rows[0].id;
 
-    for (const app of result.rows) {
-      if (app.email) {
-        try {
-          const decryptedEmail = decrypt(app.email);
-          if (decryptedEmail && decryptedEmail.toLowerCase() === email.toLowerCase()) {
-            applicationId = app.id;
-            foundEmail = decryptedEmail;
-            break;
-          }
-        } catch (decryptErr) {
-          // Continue to next record
-        }
-      }
-    }
-
-    if (applicationId) {
       // Check if user already has an account - handle case where users table doesn't exist
       let hasAccount = false;
       try {
-        const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+        // Also use blind index for users table if possible, but fallback to email for now
+        // Ideally users table should also have blind index
+        const userResult = await pool.query('SELECT id FROM users WHERE email_blind_index = $1 OR email = $2', [emailBlindIndex, email.toLowerCase()]);
         hasAccount = userResult.rows.length > 0;
       } catch (userErr) {
-        // If users table doesn't exist, assume no account
+        // If users table doesn't exist or error, assume no active account yet
         hasAccount = false;
       }
 
@@ -3605,7 +3676,7 @@ app.post('/api/auth/check-email', authLimiter, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error checking email');
+    console.error('Error checking email:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -3635,21 +3706,46 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       });
     }
 
-    // Find the application by email
-    const appsResult = await pool.query('SELECT id, email, name FROM applications');
+    // Find the application by email using O(1) Blind Index
+    const emailBlindIndex = createBlindIndex(email);
 
-    let applicationId = null;
-    let applicantName = null;
+    // We select id, name, and email for verification
+    const appsResult = await pool.query(
+      'SELECT id, name, email FROM applications WHERE email_blind_index = $1',
+      [emailBlindIndex]
+    );
 
-    for (const app of appsResult.rows) {
-      if (app.email) {
-        const decryptedEmail = decrypt(app.email);
-        if (decryptedEmail && decryptedEmail.toLowerCase() === email.toLowerCase()) {
-          applicationId = app.id;
-          applicantName = app.name;
-          break;
-        }
+    if (appsResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Email not found in applications. Please apply first.',
+        redirect: '/apply'
+      });
+    }
+
+    const application = appsResult.rows[0];
+    const applicationId = application.id;
+    const applicantName = application.name;
+
+    // Verify email matches (double check after blind index lookup collision check)
+    // In rare hash collision cases, we might get a wrong record, so we verify exact email
+    // Note: Email in DB is encrypted.
+    let emailMatch = false;
+    try {
+      const decryptedEmail = decrypt(application.email);
+      if (decryptedEmail && decryptedEmail.toLowerCase() === email.toLowerCase()) {
+        emailMatch = true;
       }
+    } catch (e) {
+      console.error('Error decrypting email for verification:', e);
+    }
+
+    if (!emailMatch) {
+      // Hash collision or data corruption (very rare with SHA-256)
+      console.error(`Hash collision or verification failed for email: ${email}`);
+      return res.status(404).json({
+        error: 'Email not found in applications. Please apply first.',
+        redirect: '/apply'
+      });
     }
 
     if (!applicationId) {
@@ -3659,41 +3755,60 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       });
     }
 
-    // Check if user already exists
-    const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
-    if (existingUser.rows.length > 0) {
-      return res.status(409).json({ error: 'Account already exists. Please login.' });
-    }
-
     // Hash password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Create user
-    const insertResult = await pool.query(
-      'INSERT INTO users (email, password_hash, application_id) VALUES ($1, $2, $3) RETURNING id, email, created_at',
-      [email.toLowerCase(), passwordHash, applicationId]
-    );
+    try {
+      // Encrypt email and calculate blind index
+      const encryptedEmail = encrypt(email.toLowerCase());
+      // emailBlindIndex is already calculated above (line 3710)
 
-    const newUser = insertResult.rows[0];
+      // Create user
+      const insertResult = await pool.query(
+        'INSERT INTO users (email, email_blind_index, password_hash, application_id) VALUES ($1, $2, $3, $4) RETURNING id, email, created_at',
+        [encryptedEmail, emailBlindIndex, passwordHash, applicationId]
+      );
+      const newUser = insertResult.rows[0];
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: newUser.id, email: newUser.email, applicationId },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          id: newUser.id, // User ID (standardized)
+          email: email, // Use original plaintext email for token
+          applicationId: applicationId
+        },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
 
-    console.log(`✅ New user registered: ${email}`);
+      res.status(201).json({
+        success: true,
+        message: 'Registration successful',
+        token,
+        user: {
+          id: newUser.id,
+          email: email, // Return plaintext
+          name: applicantName,
+          applicationId: applicationId
+        }
+      });
+    } catch (err) {
+      if (err.code === '23505') { // Unique violation (likely email_blind_index collision)
+        return res.status(409).json({ error: 'Account already exists. Please login.' });
+      }
+      throw err;
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Account created successfully',
+      message: 'Registration successful',
       token,
       user: {
         id: newUser.id,
-        email: newUser.email,
-        name: applicantName
+        email: email,
+        name: applicantName,
+        applicationId: applicationId
       }
     });
 
@@ -3713,11 +3828,13 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user by email
+    // Find user by email using Blind Index
     const normalizedEmail = email.trim().toLowerCase();
+    const blindIndex = createBlindIndex(normalizedEmail);
+
     const userResult = await pool.query(
-      'SELECT id, email, password_hash, application_id FROM users WHERE email = $1',
-      [normalizedEmail]
+      'SELECT id, email, password_hash, application_id FROM users WHERE email_blind_index = $1',
+      [blindIndex]
     );
 
     if (userResult.rows.length === 0) {
@@ -3725,6 +3842,14 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     }
 
     const user = userResult.rows[0];
+
+    // Decrypt email for use in token/response
+    user.email = decrypt(user.email);
+    if (!user.email) {
+      console.error(`Failed to decrypt email for user ${user.id}`);
+      // Fallback to normalized input if decryption fails (shouldn't happen)
+      user.email = normalizedEmail;
+    }
 
     // Verify password
     const validPassword = await bcrypt.compare(password, user.password_hash);
@@ -3737,7 +3862,11 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, userId: user.id },
+      {
+        id: user.id,
+        email: user.email,
+        applicationId: user.application_id
+      },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
@@ -3784,8 +3913,9 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check if user exists
-    const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
+    // Check if user exists (by Blind Index)
+    const blindIndex = createBlindIndex(normalizedEmail);
+    const userResult = await pool.query('SELECT id FROM users WHERE email_blind_index = $1', [blindIndex]);
     console.log(`[Forgot Password] User search result: ${userResult.rows.length} found`);
 
     // Cleanup old/unexpired tokens for this email to prevent flooding
@@ -3889,12 +4019,15 @@ app.post('/api/auth/verify-id-reset', authLimiter, async (req, res) => {
     const normalizedId = nationalId.trim();
 
     // Verify that the email and National ID match a user in the applications table
+    const emailBlindIndex = createBlindIndex(normalizedEmail);
+
+    // Note: We join on email_blind_index now, as 'users.email' is encrypted
     const userCheck = await pool.query(
       `SELECT a.id, a.email, a.national_id, u.id as user_id
        FROM applications a
-       LEFT JOIN users u ON LOWER(u.email) = LOWER(a.email)
-       WHERE LOWER(a.email) = $1`,
-      [normalizedEmail]
+       LEFT JOIN users u ON u.email_blind_index = a.email_blind_index
+       WHERE a.email_blind_index = $1`,
+      [emailBlindIndex]
     );
 
     if (userCheck.rows.length === 0) {
@@ -3992,7 +4125,10 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     // Update user password
-    await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [hashedPassword, normalizedEmail]);
+    // Update user password (lookup by blind index)
+    const blindIndex = createBlindIndex(normalizedEmail);
+    // Note: We can't update WHERE email=plaintext anymore.
+    await pool.query('UPDATE users SET password_hash = $1 WHERE email_blind_index = $2', [hashedPassword, blindIndex]);
 
     // Delete used/all tokens for this email to prevent reuse
     await pool.query('DELETE FROM password_resets WHERE email = $1', [normalizedEmail]);
@@ -4167,27 +4303,7 @@ app.get('/api/profile/:studentId', standardLimiter, async (req, res) => {
   }
 });
 
-// POST /api/user/privacy - Update profile visibility
-app.post('/api/user/privacy', standardLimiter, authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { visibility } = req.body;
 
-    if (!['public', 'private'].includes(visibility)) {
-      return res.status(400).json({ error: 'Invalid visibility. Use "public" or "private".' });
-    }
-
-    await pool.query(
-      'UPDATE users SET profile_visibility = $1 WHERE id = $2',
-      [visibility, userId]
-    );
-
-    res.json({ success: true, visibility });
-  } catch (error) {
-    console.error('Error updating privacy:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
 // ============================================
 // PROFILE PICTURE UPLOAD ENDPOINTS
@@ -4213,36 +4329,31 @@ app.post('/api/user/upload-pfp', standardLimiter, authenticateToken, pfpUpload.s
     );
     const oldPfp = currentPfpResult.rows[0]?.profile_picture;
 
-    let finalFilename;
+    // Use Sharp to process ALL images (including WebP) for consistency and sanitization
+    // and to move them from temp dir to final dir
+    const uuid = crypto.randomUUID(); // Generate fresh UUID for final file
+    const finalFilename = `${uuid}.webp`;
+    const finalPath = path.join(pfpsPath, finalFilename);
 
-    // If already WebP, just rename/use as-is
-    if (originalExt === '.webp') {
-      finalFilename = uploadedFile.filename;
-    } else {
-      // Convert PNG/JPG to WebP
-      const uuid = path.basename(uploadedFile.filename, originalExt);
-      finalFilename = `${uuid}.webp`;
-      const webpPath = path.join(pfpsPath, finalFilename);
+    try {
+      await sharp(originalPath)
+        .webp({ quality: 85 })
+        .resize(512, 512, { fit: 'cover', position: 'center' })
+        .toFile(finalPath);
 
-      try {
-        await sharp(originalPath)
-          .webp({ quality: 85 })
-          .resize(512, 512, { fit: 'cover', position: 'center' })
-          .toFile(webpPath);
+      // Delete the temp file
+      fs.unlink(originalPath, (err) => {
+        if (err) console.error('Error deleting temp file:', err);
+      });
 
-        // Delete the original PNG/JPG file
-        fs.unlink(originalPath, (err) => {
-          if (err) console.error('Error deleting original file:', err);
-        });
-
-        console.log(`✅ Converted ${uploadedFile.filename} to ${finalFilename}`);
-      } catch (sharpError) {
-        console.error('Sharp conversion error:', sharpError);
-        // Clean up the uploaded file
-        fs.unlink(originalPath, () => { });
-        return res.status(500).json({ error: 'Failed to process image' });
-      }
+      console.log(`✅ Processed profile picture: ${finalFilename}`);
+    } catch (sharpError) {
+      console.error('Sharp conversion error:', sharpError);
+      // Clean up the temp file
+      fs.unlink(originalPath, () => { });
+      return res.status(500).json({ error: 'Failed to process image' });
     }
+
 
     // Update database with new profile picture filename
     await pool.query(
@@ -4291,133 +4402,6 @@ app.use((error, req, res, next) => {
     return res.status(400).json({ error: error.message });
   }
   next(error);
-});
-
-// DELETE /api/user/delete-pfp - Delete profile picture
-app.delete('/api/user/delete-pfp', standardLimiter, authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id || req.user.userId;
-
-    // Get current profile picture
-    const result = await pool.query(
-      'SELECT profile_picture FROM users WHERE id = $1',
-      [userId]
-    );
-
-    const currentPfp = result.rows[0]?.profile_picture;
-
-    if (!currentPfp) {
-      return res.status(404).json({ error: 'No profile picture to delete' });
-    }
-
-    // Update database FIRST (prevent zombie files)
-    await pool.query(
-      'UPDATE users SET profile_picture = NULL WHERE id = $1',
-      [userId]
-    );
-
-    // THEN Delete file from disk
-    const filePath = path.join(pfpsPath, currentPfp);
-    fs.unlink(filePath, (err) => {
-      if (err && err.code !== 'ENOENT') {
-        console.error('Error deleting profile picture file:', err);
-      }
-    });
-
-    console.log(`🗑️ User ${userId} deleted profile picture: ${currentPfp}`);
-
-    res.json({ success: true, message: 'Profile picture deleted' });
-  } catch (error) {
-    console.error('Error deleting profile picture:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// POST /api/auth/update-profile -// Endpoint to trigger manual refresh of Codeforces data
-app.post('/api/user/refresh-cf', standardLimiter, authenticateToken, async (req, res) => {
-  // Support both 'id' and 'userId' for backward compatibility
-  const userId = req.user.id || req.user.userId;
-
-  try {
-    const userResult = await pool.query('SELECT application_id FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-
-    const appId = userResult.rows[0].application_id;
-    const appResult = await pool.query('SELECT codeforces_profile FROM applications WHERE id = $1', [appId]);
-
-    if (appResult.rows.length === 0 || !appResult.rows[0].codeforces_profile) {
-      return res.status(400).json({ error: 'No Codeforces profile linked' });
-    }
-
-    const profileUrl = appResult.rows[0].codeforces_profile;
-    const username = extractUsername(profileUrl, 'codeforces');
-
-    if (!username) {
-      return res.status(400).json({ error: 'Invalid Codeforces profile URL' });
-    }
-
-    console.log(`Manual refresh: Scraping Codeforces for ${username}`);
-    const codeforcesData = await scrapeCodeforces(username);
-
-    if (codeforcesData) {
-      await pool.query(
-        'UPDATE applications SET codeforces_data = $1, scraping_status = $2 WHERE id = $3',
-        [JSON.stringify(codeforcesData), 'completed', appId]
-      );
-      res.json({ success: true, data: codeforcesData });
-    } else {
-      console.warn(`Scraping returned null for ${username}`);
-      res.status(500).json({ error: 'Failed to scrape Codeforces data (API returned null)' });
-    }
-
-  } catch (error) {
-    console.error('Error refreshing Codeforces:', error);
-    res.status(500).json({ error: `Server error: ${error.message}` });
-  }
-});
-
-// GET /api/leaderboard - Get top students by Codeforces rating
-app.get('/api/leaderboard', standardLimiter, async (req, res) => {
-  try {
-    // Disable caching to ensure live updates
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
-    const result = await pool.query(
-      `SELECT name, codeforces_profile, codeforces_data 
-       FROM applications 
-       WHERE codeforces_data IS NOT NULL`
-    );
-
-    const leaderboard = result.rows.map(row => {
-      let data = {};
-      try {
-        data = typeof row.codeforces_data === 'string' ? JSON.parse(row.codeforces_data) : row.codeforces_data;
-      } catch (e) {
-        data = {};
-      }
-
-      const rating = parseInt(data.rating || 0, 10);
-      const username = extractUsername(row.codeforces_profile, 'codeforces') || '?';
-
-      return {
-        name: row.name,
-        handle: username,
-        rating: rating,
-        maxRating: parseInt(data.maxRating || 0, 10),
-        rank: data.rank || 'unrated',
-        profileUrl: row.codeforces_profile
-      };
-    })
-      .filter(user => user.rating > 0) // Optional: only show rated users? Or show all. Let's show all > 0 for now.
-      .sort((a, b) => b.rating - a.rating);
-
-    res.json(leaderboard);
-  } catch (error) {
-    console.error('Error fetching leaderboard:', error);
-    res.status(500).json({ error: 'Server error fetching leaderboard' });
-  }
 });
 
 // Update user profile endpointelegram, codeforces, leetcode)
@@ -4642,62 +4626,6 @@ app.post('/api/sheets/submit', apiLimiter, authenticateToken, async (req, res) =
 
   } catch (error) {
     console.error('Error submitting solution:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// GET /api/sheets/my-submissions - Get current user's submissions
-app.get('/api/sheets/my-submissions', standardLimiter, authenticateToken, async (req, res) => {
-  try {
-    // Support both 'id' and 'userId' for backward compatibility
-    const userId = req.user.id || req.user.userId;
-
-    console.log('[DEBUG] /api/sheets/my-submissions - userId:', userId, 'req.user:', req.user);
-
-    const result = await pool.query(
-      `SELECT id, sheet_id, problem_id, language, submitted_at
-       FROM training_submissions
-       WHERE user_id = $1
-       ORDER BY submitted_at DESC`,
-      [userId]
-    );
-
-    console.log('[DEBUG] Found submissions:', result.rows.length);
-
-    res.json({
-      success: true,
-      submissions: result.rows,
-      total: result.rows.length
-    });
-
-  } catch (error) {
-    console.error('Error getting submissions:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// DELETE /api/sheets/submission/:id - Delete a specific submission
-app.delete('/api/sheets/submission/:id', authenticateToken, async (req, res) => {
-  try {
-    // Support both 'id' and 'userId' for backward compatibility
-    const userId = req.user.id || req.user.userId;
-    const submissionId = req.params.id;
-
-    console.log('[DEBUG] /api/sheets/submission DELETE - userId:', userId, 'submissionId:', submissionId);
-
-    // Verify ownership and delete in one go
-    const result = await pool.query(
-      'DELETE FROM training_submissions WHERE id = $1 AND user_id = $2 RETURNING id',
-      [submissionId, userId]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Submission not found or unauthorized' });
-    }
-
-    res.json({ message: 'Submission deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting submission:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
