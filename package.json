@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@telegram-apps/analytics": "^1.4.4",
-    "react-hot-toast": "^2.6.0"
-  }
-}

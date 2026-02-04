@@ -53,9 +53,6 @@ const nextConfig = {
   experimental: {
     // Enable Turbopack filesystem caching for development
     turbopackFileSystemCacheForDev: true,
-    turbopack: {
-      root: '/root/01studio/CollectibleKIT/webapp-nextjs',
-    },
   },
   async headers() {
     return [

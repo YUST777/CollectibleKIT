@@ -1,524 +1,451 @@
+<p align="center"><img src="assets/collectablekit.jpg" alt="CollectibleKIT Banner" width="100%"></p>
+
 <div align="center">
 
-# 🎁 CollectibleKIT
+# CollectibleKIT
 
-### **The Ultimate Telegram Star Gifts Portfolio Manager**
+### Your Complete Telegram Gift & Sticker Management Platform
 
-[![Telegram](https://img.shields.io/badge/Telegram-Mini%20App-blue?style=for-the-badge&logo=telegram)](https://t.me/CollectibleKITbot)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python)](https://python.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=for-the-badge&logo=typescript)](https://typescriptlang.org/)
+<br/>
 
-**Track, manage, and analyze your Telegram Star Gifts collection with real-time pricing and portfolio insights**
-
-[Features](#-features) • [Tech Stack](#-tech-stack) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API](#-api-endpoints)
+[![Telegram Mini App](https://img.shields.io/badge/Telegram-Mini_App-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://telegram.org/blog/telegram-stars)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![TON](https://img.shields.io/badge/TON-Blockchain-0088CC?style=for-the-badge&logo=ton&logoColor=white)](https://ton.org/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 </div>
 
----
+<br/>
 
-## ✨ Features
+<div align="center">
+<a href="https://youtu.be/rPYZdzh5t1U">
+<img src="https://img.youtube.com/vi/rPYZdzh5t1U/0.jpg" alt="Watch CollectibleKIT Demo" width="800" style="border-radius: 8px;">
+</a>
+<br>
+<p><i>Click to watch CollectibleKIT in action</i></p>
+</div>
 
-### 🎯 Core Functionality
+<br/>
 
-- **📊 Portfolio Management**
-  - Real-time gift price tracking from Portal Market
-  - Automatic portfolio synchronization
-  - Upgraded & unupgraded gift categorization
-  - Channel gifts support
-  - Custom gift additions
+<div align="center">
+<table>
+<tr>
+<td align="center"><img src="assets/collection box.png" width="200"><br><b>Gift Designer</b></td>
+<td align="center"><img src="assets/emoji box.png" width="200"><br><b>Emoji Game</b></td>
+<td align="center"><img src="assets/zoom box.png" width="200"><br><b>Zoom Game</b></td>
+<td align="center"><img src="assets/story box.png" width="200"><br><b>Story Game</b></td>
+</tr>
+</table>
+</div>
 
-- **💰 Price Tracking**
-  - Live price updates from Portal Market API
-  - Historical price charts (24h, 3d, 1w, 1m, 3m)
-  - Profit/Loss calculations
-  - Daily portfolio snapshots
-  - Price alerts and notifications
+<br/>
 
-- **🎨 Gift Designer**
-  - Create custom gift designs
-  - Model, background, and pattern selection
-  - Real-time preview
-  - Collection management
-  - Story sharing integration
-
-- **🏆 Gamification**
-  - Daily quiz challenges
-  - Leaderboard rankings
-  - Achievement system
-  - Streak tracking
-  - Reward system
-
-- **👥 Social Features**
-  - Referral program
-  - Public collections
-  - Collection likes
-  - Feed events
-  - User profiles
-
-- **💳 Monetization**
-  - TON wallet integration
-  - Credit system
-  - Premium subscriptions
-  - Ad integration
-  - Withdrawal system
+> [!TIP]
+> **New!** Track your Telegram gift portfolio in real-time with live TON prices, profit/loss analytics, and custom sticker collections. Built for collectors, by collectors.
 
 ---
 
-## 🛠 Tech Stack
+## Overview
 
-### Frontend
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript
-- **UI Library:** React 18
-- **Styling:** Tailwind CSS
-- **State Management:** Zustand
-- **Icons:** Heroicons, Lucide React
-- **Animations:** Lottie React
-- **Notifications:** React Hot Toast
+CollectibleKIT is a comprehensive **Telegram Mini App** that brings professional portfolio management and creative tools to Telegram gift and sticker collectors. Track your collection's value, design custom gifts, play interactive games, and manage everything in one beautiful interface.
 
-### Backend
-- **Runtime:** Node.js
-- **API:** Next.js API Routes
-- **Database:** SQLite
-- **Authentication:** Telegram WebApp SDK
+**Built on TON Blockchain. Powered by Telegram Stars.**
 
-### Python Services
-- **Telegram API:** Telethon
-- **Market API:** Portal Market (Multi-account)
-- **Price Caching:** Global price cache system
-- **Portfolio Sync:** Background Python scripts
+### Key Capabilities
 
-### Infrastructure
-- **Web Server:** Nginx
-- **Process Manager:** Systemd
-- **Deployment:** Linux Server
-- **CDN:** Static asset serving
+- **📊 Portfolio Tracker**: Real-time gift valuation with TON price integration
+- **🎨 Gift Designer**: Create custom gifts with 93+ templates and patterns
+- **🎮 Interactive Games**: Emoji quiz, zoom challenge, and story builder
+- **💎 Sticker Manager**: Track 218+ sticker collections with live prices
+- **💰 Premium System**: Telegram Stars payment integration
+- **🔗 TON Wallet**: Connect your TON wallet for withdrawals
+- **📈 Analytics**: Profit/loss tracking, price charts, and market insights
 
 ---
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-```bash
-# Node.js 18+
-node --version
-
-# Python 3.10+
-python3 --version
-
-# Git
-git --version
-```
-
-### Installation
-
-#### 1. Clone Repository
-
-```bash
-git clone https://github.com/YUST777/CollectibleKIT.git
-cd CollectibleKIT
-```
-
-#### 2. Backend Setup (Python)
-
-```bash
-# Install Python dependencies
-pip3 install -r bot_requirements.txt
-
-# Configure Telegram credentials
-cp bot/config.py.example bot/config.py
-# Edit bot/config.py with your credentials
-```
-
-#### 3. Frontend Setup (Next.js)
-
-```bash
-cd webapp-nextjs
-
-# Install dependencies
-npm install
-
-# Configure environment (if needed)
-cp .env.example .env.local
-# Edit .env.local with your settings
-```
-
-#### 4. Database Setup
-
-```bash
-# Database is auto-created on first run
-# Located at: bot/bot_data.db
-```
-
-#### 5. Run Development Server
-
-```bash
-# Terminal 1: Next.js dev server
-cd webapp-nextjs
-npm run dev
-
-# Terminal 2: Python bot (if needed)
-cd bot
-python3 telegram_bot.py
-```
-
-#### 6. Production Deployment
-
-```bash
-# Build Next.js app
-cd webapp-nextjs
-npm run build
-npm start
-
-# Setup Nginx (see deployment section)
-# Setup systemd service (see deployment section)
-```
-
----
-
-## 🏗 Architecture
-
-### System Overview
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Telegram Mini App                     │
-│              (Next.js Frontend + API Routes)            │
-└────────────────────┬────────────────────────────────────┘
-                     │
-         ┌─────────┴─────────┐
-         │                      │
-    ┌────▼────┐         ┌─────▼─────┐
-    │ SQLite  │         │  Python   │
-    │ Database│         │  Services │
-    └─────────┘         └─────┬─────┘
-                             │
-                    ┌────────┴────────┐
-                    │                 │
-              ┌─────▼─────┐    ┌─────▼─────┐
-              │  Telethon │    │   Portal   │
-              │    API    │    │   Market   │
-              └───────────┘    └────────────┘
-```
-
-### Key Components
-
-#### 1. **Frontend (Next.js)**
-- **Location:** `webapp-nextjs/`
-- **Pages:** App Router with dynamic routes
-- **Components:** Modular React components
-- **State:** Zustand store for global state
-- **API:** Next.js API routes for backend logic
-
-#### 2. **Backend Services (Python)**
-- **Location:** `bot/`
-- **Main Scripts:**
-  - `get_profile_gifts.py` - Portfolio synchronization
-  - `portal_market_api.py` - Market price fetching
-  - `global_price_cache.py` - Price caching system
-  - `create_portfolio_snapshot.py` - Daily snapshots
-
-#### 3. **Database (SQLite)**
-- **Location:** `bot/bot_data.db`
-- **Tables:**
-  - `users` - User accounts and preferences
-  - `portfolio_auto_gifts_cache` - Cached portfolio data
-  - `portfolio_snapshots` - Historical portfolio data
-  - `referrals` - Referral system data
-  - `tasks` - Task completion tracking
-  - `payments` - Payment transactions
-
-#### 4. **API Endpoints**
-- **User Management:** `/api/user/*`
-- **Portfolio:** `/api/portfolio/*`
-- **Referrals:** `/api/referral/*`
-- **Tasks:** `/api/tasks/*`
-- **Games:** `/api/game/*`
-- **Collections:** `/api/collection/*`
-
----
-
-## 📡 API Endpoints
-
-### User Endpoints
-
-```typescript
-POST   /api/user/init          // Initialize user account
-GET    /api/user/info          // Get user information
-```
-
-### Portfolio Endpoints
-
-```typescript
-GET    /api/portfolio/gifts              // Get user portfolio
-GET    /api/portfolio/preload            // Preload portfolio (background)
-GET    /api/portfolio/chart              // Portfolio chart data
-GET    /api/portfolio/profit-loss        // P/L calculations
-GET    /api/portfolio/stickers           // Sticker portfolio
-GET    /api/portfolio/custom-gifts       // Custom gifts
-```
-
-### Referral Endpoints
-
-```typescript
-POST   /api/referral                     // Add referral
-GET    /api/referral                     // Get invited users
-GET    /api/referral/stats               // Referral statistics
-```
-
-### Game Endpoints
-
-```typescript
-GET    /api/game/daily-question          // Daily quiz question
-POST   /api/game/submit-answer           // Submit quiz answer
-GET    /api/game/random-gift             // Random gift for quiz
-```
-
-### Collection Endpoints
-
-```typescript
-GET    /api/collection/load              // Load user collection
-POST   /api/collection/save              // Save collection
-DELETE /api/collection/delete            // Delete collection
-GET    /api/collections/public            // Public collections
-```
-
----
-
-## 🎨 Key Features Deep Dive
+## Features
 
 ### Portfolio Management
 
-- **Real-time Sync:** Automatic synchronization with Telegram Star Gifts
-- **Price Tracking:** Live prices from Portal Market with caching
-- **Filtering:** Advanced filters (status, collection, model, background, price range)
-- **Charts:** Interactive price charts with multiple timeframes
-- **Snapshots:** Daily portfolio snapshots for P/L tracking
+Track your entire Telegram gift collection with professional-grade analytics:
 
-### Gift Designer
+- **Live Valuation**: Real-time portfolio value in TON and USD
+- **Price Charts**: Historical price data with 1D, 1W, 1M, 3M, 1Y views
+- **Profit/Loss**: Track gains and losses across your collection
+- **Gift Metadata**: Detailed info on 93+ Telegram gifts
+- **Channel Gifts**: Monitor gifts in your channels
+- **Account Gifts**: Track gifts sent to specific accounts
+- **Custom Collections**: Organize gifts your way
 
-- **Custom Designs:** Create unique gift combinations
-- **Preview:** Real-time preview of designs
-- **Collections:** Organize gifts into collections
-- **Sharing:** Share designs as Telegram stories
-- **Templates:** Pre-built templates for quick creation
+### Gift Designer Tool
 
-### Referral System
+Create stunning custom gift designs with professional tools:
 
-- **Invite Friends:** Share referral links
-- **Track Invites:** See all invited users
-- **Statistics:** Total and recent referral counts
-- **Rewards:** Task completion rewards for referrals
+- **93+ Gift Templates**: Choose from all Telegram gift types
+- **Pattern Library**: Hundreds of emoji patterns and designs
+- **Model Variations**: Multiple design variations per gift
+- **Backdrop Colors**: Custom color schemes and gradients
+- **Real-time Preview**: See your design instantly
+- **Export Options**: Download as PNG or share directly
+- **Collection Management**: Save and organize your designs
 
-### Price Optimization
+### Interactive Games
 
-- **Multi-Account:** Multiple Portal Market accounts for rate limiting
-- **Global Cache:** Shared price cache across users
-- **Background Updates:** Non-blocking price updates
-- **Smart Caching:** 10-minute TTL with intelligent invalidation
+Three engaging games to test your gift knowledge:
+
+#### 🎯 Emoji Game
+- Guess the gift from emoji patterns
+- Daily challenges with leaderboards
+- Earn credits for correct answers
+- 93+ gifts to discover
+
+#### 🔍 Zoom Game
+- Identify gifts from zoomed-in details
+- Progressive difficulty levels
+- Time-based scoring
+- Compete with friends
+
+#### 📖 Story Game
+- Build stories with gift pieces
+- Creative storytelling mode
+- Share your creations
+- Community voting
+
+### Sticker Collections
+
+Comprehensive sticker collection management:
+
+- **218+ Collections**: Track all major Telegram sticker packs
+- **Live Prices**: Real-time floor prices from Stickers.tools
+- **Supply Data**: Monitor availability and rarity
+- **Collection Browser**: Organized by artist and theme
+- **Price Alerts**: Get notified of price changes
+- **Marketplace Links**: Direct access to MRKT and Palace
+
+### Premium Features
+
+Unlock advanced capabilities with Telegram Stars:
+
+- **Ad-Free Experience**: Clean, distraction-free interface
+- **Priority Support**: Get help faster
+- **Advanced Analytics**: Deeper insights into your portfolio
+- **Custom Branding**: Personalize your profile
+- **Early Access**: New features before everyone else
+- **99 Stars/Month**: Affordable premium access
+
+### TON Integration
+
+Full TON blockchain integration for seamless transactions:
+
+- **Wallet Connect**: Link your TON wallet via TON Connect
+- **Reward Withdrawals**: Cash out game credits to TON
+- **Transaction History**: Track all your TON transactions
+- **Secure Payments**: End-to-end encrypted transactions
+- **Multi-Wallet**: Support for all major TON wallets
 
 ---
 
-## 🔧 Configuration
+## Tech Stack
+
+### Frontend
+- **Next.js 16**: React framework with App Router
+- **TypeScript**: Type-safe development
+- **Tailwind CSS**: Utility-first styling
+- **TON Connect**: Wallet integration
+- **Telegram SDK**: Mini App integration
+- **Lottie**: Smooth animations
+
+### Backend
+- **Python 3.12+**: Core backend services
+- **FastAPI**: High-performance API framework
+- **SQLite**: Local database storage
+- **Supabase**: Cloud database backup
+- **Telethon**: Telegram API client
+
+### APIs & Services
+- **Portal API**: Gift price data
+- **MRKT API**: Market analytics
+- **Stickers.tools**: Sticker collection data
+- **CoinGecko**: TON price feeds
+- **Telegram Bot API**: Bot functionality
+
+---
+
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph "Frontend - Next.js Mini App"
+        A[Telegram Mini App] --> B[Portfolio Dashboard]
+        A --> C[Gift Designer]
+        A --> D[Games Hub]
+        A --> E[Sticker Browser]
+    end
+    
+    subgraph "Backend Services"
+        B --> F[Portfolio API]
+        C --> G[Collection API]
+        D --> H[Game API]
+        E --> I[Sticker API]
+        
+        F --> J[database.py<br/>SQLite Manager]
+        G --> J
+        H --> J
+        I --> J
+    end
+    
+    subgraph "External APIs"
+        F --> K[Portal API<br/>Gift Prices]
+        F --> L[CoinGecko<br/>TON Price]
+        I --> M[Stickers.tools<br/>Collection Data]
+        F --> N[MRKT API<br/>Market Data]
+    end
+    
+    subgraph "TON Blockchain"
+        B --> O[TON Connect<br/>Wallet Integration]
+        O --> P[TON Wallet<br/>Transactions]
+        P --> Q[Reward Withdrawals]
+    end
+    
+    subgraph "Telegram Integration"
+        A --> R[Telegram Bot API]
+        R --> S[Payment System<br/>Telegram Stars]
+        R --> T[User Authentication]
+    end
+    
+    subgraph "Data Storage"
+        J --> U[(SQLite Database<br/>Local Storage)]
+        J --> V[(Supabase<br/>Cloud Backup)]
+    end
+```
+
+---
+
+## Project Structure
+
+```
+CollectibleKIT/
+├── frontend/                    # Next.js Mini App
+│   ├── src/
+│   │   ├── app/                # App Router pages
+│   │   │   ├── api/           # API routes (54 endpoints)
+│   │   │   ├── page.tsx       # Home page
+│   │   │   └── layout.tsx     # Root layout
+│   │   ├── components/        # React components
+│   │   ├── lib/               # Utilities
+│   │   └── styles/            # Global styles
+│   ├── public/                # Static assets
+│   └── package.json           # Dependencies
+│
+├── backend/                     # Python Backend
+│   ├── core/                  # Core functionality
+│   │   ├── database.py        # Database manager
+│   │   ├── telegram_bot.py    # Bot logic
+│   │   ├── payment.py         # Payment processing
+│   │   └── ton_wallet.py      # TON integration
+│   ├── services/              # External API clients
+│   │   ├── portal_market_api.py
+│   │   ├── get_gift_price.py
+│   │   └── get_sticker_profile.py
+│   ├── scripts/               # Utility scripts
+│   │   ├── start_bot.py
+│   │   └── backup.py
+│   └── utils/                 # Helper functions
+│
+├── data/                        # Sticker Collections
+│   ├── pudgy_penguins/        # 218+ collections
+│   ├── dogs_og/               # Organized by artist
+│   └── not_pixel/             # With metadata
+│
+├── assets/                      # Static Assets
+│   ├── Gift Collection Images/ # 93+ gift images
+│   └── svg icons/             # UI icons
+│
+├── config/                      # Configuration
+│   ├── .env.example           # Environment template
+│   └── netlify.toml           # Deployment config
+│
+└── docs/                        # Documentation
+    ├── PITCH_DECK.txt         # Project overview
+    └── NETLIFY_READY_SUMMARY.txt
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Python 3.12+
+- Telegram Bot Token
+- TON Wallet (optional)
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/CollectibleKIT.git
+cd CollectibleKIT
+```
+
+2. **Setup Frontend**
+```bash
+cd frontend
+npm install
+cp ../config/.env.example .env.local
+# Edit .env.local with your configuration
+```
+
+3. **Setup Backend**
+```bash
+cd ../backend
+pip install -r ../requirements.txt
+cp ../config/.env.example .env
+# Edit .env with your Telegram bot token
+```
+
+4. **Run Development Server**
+```bash
+# Frontend (in frontend/ directory)
+npm run dev
+
+# Backend (in backend/ directory)
+python scripts/start_bot.py
+```
+
+5. **Open in Telegram**
+- Add your bot to Telegram
+- Open the Mini App
+- Start tracking your collection!
 
 ### Environment Variables
 
-```bash
-# Telegram Bot (bot/config.py)
-BOT_TOKEN=your_bot_token
-API_ID=your_api_id
-API_HASH=your_api_hash
+Create `.env` files based on the examples in `config/`:
 
-# Portal Market Accounts
-PORTAL_ACCOUNTS=[
-    {"phone": "+1234567890", "password": "password1"},
-    {"phone": "+0987654321", "password": "password2"}
-]
-
-# Next.js (webapp-nextjs/.env.local)
-NEXT_PUBLIC_BOT_USERNAME=CollectibleKITbot
+**Frontend (.env.local)**
+```env
+NEXT_PUBLIC_BOT_USERNAME=your_bot_username
+NEXT_PUBLIC_APP_URL=https://your-app.com
 ```
 
-### Database Schema
-
-Key tables:
-- `users` - User accounts with credits, premium status
-- `portfolio_auto_gifts_cache` - Cached portfolio with TTL
-- `portfolio_snapshots` - Daily portfolio history
-- `referrals` - Referral relationships
-- `tasks` - Task completion tracking
-
----
-
-## 📊 Performance
-
-### Optimization Features
-
-- ✅ **Cache-First Architecture:** Instant responses with background updates
-- ✅ **Global Price Cache:** Shared cache reduces API calls by 90%+
-- ✅ **Multi-Account System:** Parallel fetching with rate limit distribution
-- ✅ **Background Processing:** Non-blocking Python script execution
-- ✅ **Smart Rate Limiting:** 60-second cooldown with cache fallback
-- ✅ **Lazy Loading:** Components loaded on demand
-- ✅ **Image Optimization:** Optimized asset delivery
-
-### Performance Metrics
-
-- **Cache Hit Rate:** >95%
-- **Average Response Time:** <50ms (cached), <2s (fresh)
-- **Price Fetch Success Rate:** >96%
-- **Portfolio Sync Time:** 30-120 seconds (background)
+**Backend (.env)**
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+```
 
 ---
 
-## 🚢 Deployment
+## Deployment
 
-### Production Setup
-
-#### 1. Build Next.js App
+### Vercel (Recommended for Frontend)
 
 ```bash
-cd webapp-nextjs
+cd frontend
 npm run build
+vercel deploy
 ```
 
-#### 2. Setup Nginx
-
-```nginx
-server {
-    listen 80;
-    server_name collectablekit.01studio.xyz;
-
-    location / {
-        proxy_pass http://localhost:3003;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-#### 3. Setup Systemd Service
+### Netlify
 
 ```bash
-# Create service file
-sudo nano /etc/systemd/system/collectiblekit.service
+cd frontend
+npm run build
+netlify deploy --prod
+```
 
-# Enable and start
+### Backend Deployment
+
+The Python backend can run on any VPS:
+
+```bash
+# Using systemd service
+sudo cp config/app.service.example /etc/systemd/system/collectiblekit.service
 sudo systemctl enable collectiblekit
 sudo systemctl start collectiblekit
 ```
 
-#### 4. Setup Cron Jobs
+---
 
-```bash
-# Daily portfolio snapshots
-0 0 * * * /root/01studio/CollectibleKIT/bot/create_portfolio_snapshot.py
-```
+## API Documentation
+
+### Portfolio Endpoints
+
+- `GET /api/portfolio/gifts` - Get user's gift collection
+- `GET /api/portfolio/preload` - Preload portfolio data
+- `GET /api/portfolio/profit-loss` - Calculate P&L
+- `GET /api/portfolio/gift-chart` - Get price chart data
+- `GET /api/portfolio/gift-metadata` - Get gift details
+
+### Collection Endpoints
+
+- `GET /api/collection/gifts` - List all available gifts
+- `GET /api/collection/backdrops` - Get backdrop colors
+- `POST /api/collection/save` - Save custom collection
+- `GET /api/collection/load` - Load saved collection
+
+### Game Endpoints
+
+- `GET /api/game/daily-question` - Get daily challenge
+- `POST /api/game/submit-answer` - Submit game answer
+- `GET /api/game/random-gift` - Get random gift for game
+- `GET /api/game/models` - Get gift models
+- `GET /api/game/patterns` - Get gift patterns
+
+### Premium Endpoints
+
+- `GET /api/premium/status` - Check premium status
+- `POST /api/premium/upgrade` - Purchase premium
+- `GET /api/credits/conversions` - Get credit history
+
+See full API documentation in the code comments.
 
 ---
 
-## 🧪 Testing
+## Contributing
 
-### Test Scripts
-
-```bash
-# Test referral system
-./test_referral_apis.sh
-
-# Test full referral flow
-./test_full_referral_flow.sh
-
-# Test portfolio APIs
-curl http://localhost:3003/api/portfolio/gifts
-```
-
-### Manual Testing
-
-1. **User Initialization:** Test `/api/user/init` with Telegram WebApp
-2. **Portfolio Sync:** Verify portfolio loads and updates
-3. **Price Fetching:** Check price accuracy and caching
-4. **Referral System:** Test referral link and tracking
-5. **Gift Designer:** Create and save custom gifts
-
----
-
-## 📝 Development
-
-### Project Structure
-
-```
-CollectibleKIT/
-├── bot/                    # Python backend services
-│   ├── get_profile_gifts.py
-│   ├── portal_market_api.py
-│   ├── global_price_cache.py
-│   └── config.py
-├── webapp-nextjs/          # Next.js frontend
-│   ├── src/
-│   │   ├── app/           # App Router pages & API
-│   │   ├── components/    # React components
-│   │   └── lib/           # Utilities & services
-│   └── public/            # Static assets
-├── assets/                # Shared assets
-└── bot_data.db           # SQLite database
-```
-
-### Code Style
-
-- **TypeScript:** Strict mode enabled
-- **Python:** PEP 8 style guide
-- **React:** Functional components with hooks
-- **API:** RESTful conventions
-
----
-
-## 🤝 Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
 ---
 
-## 📄 License
+## License
 
-This project is proprietary and confidential.
-
----
-
-## 📞 Support
-
-- **Telegram Bot:** [@CollectibleKITbot](https://t.me/CollectibleKITbot)
-- **Issues:** GitHub Issues
-- **Documentation:** See code comments and inline docs
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🎯 Roadmap
+## Acknowledgments
 
-- [ ] Mobile app (React Native)
-- [ ] Advanced analytics dashboard
-- [ ] Social trading features
-- [ ] NFT marketplace integration
-- [ ] Multi-language support
-- [ ] Advanced charting tools
-- [ ] Portfolio sharing
-- [ ] Gift trading system
+- **Telegram** - For the amazing Mini App platform
+- **TON Foundation** - For blockchain infrastructure
+- **Portal Market** - For gift price data
+- **Stickers.tools** - For sticker collection data
+- **The Community** - For feedback and support
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for the Telegram Star Gifts community**
+### Built for Telegram Gift Collectors
 
-[⭐ Star this repo](https://github.com/YUST777/CollectibleKIT) • [🐛 Report Bug](https://github.com/YUST777/CollectibleKIT/issues) • [💡 Request Feature](https://github.com/YUST777/CollectibleKIT/issues)
+*CollectibleKIT is a community project. We appreciate your feedback and contributions!*
+
+<sub>Made with ❤️ for the Telegram ecosystem</sub>
+
+<br/>
+
+[![Telegram](https://img.shields.io/badge/Telegram-Contact-2CA5E0?style=flat-square&logo=telegram)](https://t.me/yourusername)
+[![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=flat-square&logo=github)](https://github.com/yourusername)
 
 </div>
-

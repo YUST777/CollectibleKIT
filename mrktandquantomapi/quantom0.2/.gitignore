@@ -1,5 +1,0 @@
-*.session
-*.session-journal
-gifts_data.json
-__pycache__/
-*.pyc

@@ -131,3 +131,41 @@ bot_data.db
 study me /
 study me/
 
+
+# ============================================
+# Sensitive Files
+# ============================================
+*.session
+*.session-journal
+*.db
+*.db-journal
+.env
+.env.local
+.env.*.local
+
+# ============================================
+# Backup & Temp Files
+# ============================================
+*_backup_*
+backup_*/
+*.tmp
+temp/
+tmp/
+
+# ============================================
+# Build & Dependencies
+# ============================================
+node_modules/
+__pycache__/
+*.pyc
+.next/
+dist/
+build/
+
+# ============================================
+# IDE & OS
+# ============================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
